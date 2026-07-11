@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "basePackage": "com.example",
+  "bizTypes": [],
+  "enums": [],
+  "groups": [],
+  "tables": [
+    {
+      "code": "T",
+      "name": "T",
+      "fields": [{ "prop": "id", "name": "主键", "dataType": "LONG" }]
+    }
+  ]
+}

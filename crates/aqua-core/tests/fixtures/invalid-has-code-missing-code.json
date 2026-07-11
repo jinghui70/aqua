@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0",
+  "basePackage": "com.example",
+  "bizTypes": [],
+  "enums": [
+    {
+      "code": "EnumGender",
+      "name": "性别",
+      "package": "enum",
+      "hasCode": true,
+      "values": [
+        { "id": "MALE", "name": "男", "code": "M" },
+        { "id": "FEMALE", "name": "女" }
+      ]
+    }
+  ],
+  "groups": [{ "code": "core", "name": "核心" }],
+  "tables": [
+    {
+      "code": "T",
+      "name": "T",
+      "group": "core",
+      "fields": [{ "prop": "id", "code": "ID", "name": "主键", "dataType": "LONG" }]
+    }
+  ]
+}

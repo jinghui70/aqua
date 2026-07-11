@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "basePackage": "com.example",
+  "bizTypes": [],
+  "enums": [],
+  "groups": [{ "code": "core", "name": "核心" }],
+  "tables": [
+    {
+      "code": "T",
+      "name": "T",
+      "group": "core",
+      "fields": [
+        {
+          "prop": "status",
+          "code": "STATUS",
+          "name": "状态",
+          "dataType": "INT",
+          "enum": "EnumStatus"
+        }
+      ]
+    }
+  ]
+}

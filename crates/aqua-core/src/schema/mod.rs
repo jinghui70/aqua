@@ -2,9 +2,20 @@
 //!
 //! 移植自 `~/work/aqua-legacy/packages/core/src/schema/`(TS),对齐 `docs/design.md` §3 数据模型。
 //! 类型加 `serde` derive 以支持 JSON 序列化。
-//!
-//! TODO(Trellis 任务): 依次移植 project / table / field / bizType / enum / dataType,
-//! 含校验逻辑(validate)与默认值推导。
 
-// 移植起点: 从 legacy 的 schema/*.ts 逐个对应为 Rust struct + serde。
-// 参考: ~/work/aqua-legacy/packages/core/src/schema/
+mod biz_type;
+mod data_type;
+mod enum_def;
+mod field;
+mod project;
+mod table;
+mod validate;
+
+// Re-export 公共类型
+pub use biz_type::{BizTypeData, BizTypeDataField, BizTypeDefine, SupportedDataType};
+pub use data_type::DataType;
+pub use enum_def::{EnumColor, EnumDefine, EnumValue, InlineEnum};
+pub use field::{AutoGenerate, Field, FieldEnum, GenerateTiming};
+pub use project::{GroupDefine, Project};
+pub use table::{Index, Table};
+pub use validate::{parse_project, validate_project, ParseError, ValidationError};

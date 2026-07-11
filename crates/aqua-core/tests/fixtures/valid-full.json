@@ -1,0 +1,116 @@
+{
+  "version": "1.0.0",
+  "basePackage": "com.example",
+  "bizTypes": [
+    {
+      "bizType": "Date8",
+      "name": "8位日期",
+      "description": "yyyyMMdd 格式日期",
+      "supportedDataTypes": [{ "dataType": "VARCHAR", "defaultLength": 8 }],
+      "bizTypeData": {
+        "fields": [
+          { "name": "format", "type": "string", "description": "日期格式", "required": true }
+        ]
+      }
+    }
+  ],
+  "enums": [
+    {
+      "code": "EnumGender",
+      "name": "性别",
+      "package": "enum",
+      "hasCode": true,
+      "values": [
+        { "id": "MALE", "name": "男", "code": "M", "color": "blue" },
+        { "id": "FEMALE", "name": "女", "code": "F", "color": "red" }
+      ]
+    },
+    {
+      "code": "EnumStatus",
+      "name": "状态",
+      "package": "enum",
+      "hasCode": false,
+      "values": [
+        { "id": "ACTIVE", "name": "启用", "color": "success" },
+        { "id": "DISABLED", "name": "禁用", "color": "grey" }
+      ]
+    }
+  ],
+  "groups": [{ "code": "core", "name": "核心模块" }],
+  "tables": [
+    {
+      "code": "SYS_USER",
+      "name": "用户",
+      "group": "core",
+      "comment": "用户表",
+      "fields": [
+        {
+          "prop": "id",
+          "code": "ID",
+          "name": "主键",
+          "dataType": "LONG",
+          "isKey": true,
+          "notNull": true
+        },
+        {
+          "prop": "userName",
+          "code": "USER_NAME",
+          "name": "用户名",
+          "dataType": "VARCHAR",
+          "length": 64,
+          "notNull": true
+        },
+        {
+          "prop": "gender",
+          "code": "GENDER",
+          "name": "性别",
+          "dataType": "VARCHAR",
+          "length": 2,
+          "enum": "EnumGender"
+        },
+        {
+          "prop": "status",
+          "code": "STATUS",
+          "name": "状态",
+          "dataType": "VARCHAR",
+          "length": 16,
+          "enum": {
+            "name": "用户状态",
+            "hasCode": false,
+            "values": [{ "id": "ACTIVE", "name": "启用", "color": "success" }]
+          }
+        },
+        {
+          "prop": "amount",
+          "code": "AMOUNT",
+          "name": "金额",
+          "dataType": "DECIMAL",
+          "precision": 12,
+          "scale": 2
+        },
+        {
+          "prop": "remark",
+          "code": "REMARK",
+          "name": "备注",
+          "dataType": "CLOB"
+        },
+        {
+          "prop": "createTime",
+          "code": "CREATE_TIME",
+          "name": "创建时间",
+          "dataType": "DATETIME",
+          "autoGenerate": {
+            "enabled": true,
+            "strategy": "now",
+            "param": "yyyy-MM-dd HH:mm:ss",
+            "timing": "INSERT"
+          }
+        }
+      ],
+      "indexes": [
+        { "fields": ["USER_NAME"], "unique": true },
+        { "name": "IDX_GENDER", "fields": ["GENDER"], "unique": false }
+      ]
+    }
+  ]
+}
