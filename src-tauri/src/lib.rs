@@ -5,8 +5,6 @@
 //!
 //! commands 是前端(Tauri invoke)与 aqua-core 之间的薄桥。
 
-use tauri::Manager;
-
 /// 示例 command: 验证前后端链路通。后续替换为真实能力(project open/save, generate, import...)。
 #[tauri::command]
 fn greet(name: &str) -> String {

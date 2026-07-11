@@ -4,7 +4,13 @@
   "private": true,
   "packageManager": "pnpm@11.8.0",
   "scripts": {
-    "dev": "pnpm --filter @aqua/app dev",
-    "build": "pnpm --filter @aqua/app build"
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "app:dev": "pnpm --filter @aqua/app dev"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
   }
 }
+

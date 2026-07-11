@@ -1,16 +1,17 @@
 <!-- TRELLIS:START -->
 # Trellis Instructions
 
-This project is managed by Trellis. Run `trellis init` to bootstrap `.trellis/` for the new Rust architecture (or copy the template framework from `~/work/aqua-legacy/.trellis/` and rewrite specs for Rust).
+These instructions are for AI assistants working in this project.
 
-- `.trellis/workflow.md` - development phases, task lifecycle
-- `.trellis/spec/` - layer-scoped coding contracts (rewrite for Rust, not TS)
-- `.trellis/tasks/` - active and archived tasks
-- `.trellis/workspace/` - per-developer journals
+This project is managed by Trellis. The working knowledge you need lives under `.trellis/`:
 
-If a Trellis command is available (`/trellis:finish-work`, `/trellis:continue`), prefer it over manual steps.
+- `.trellis/workflow.md` — development phases, when to create tasks, skill routing
+- `.trellis/spec/` — package- and layer-scoped coding guidelines (read before writing code in a given layer)
+- `.trellis/workspace/` — per-developer journals and session traces
+- `.trellis/tasks/` — active and archived tasks (PRDs, research, jsonl context)
 
-Managed by Trellis. Edits inside this block may be overwritten by a future `trellis update`.
+If a Trellis command is available on your platform (e.g. `/trellis:finish-work`, `/trellis:continue`), prefer it over manual steps. Not every platform exposes every command.
+
 <!-- TRELLIS:END -->
 
 ## Project Design

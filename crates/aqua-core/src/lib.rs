@@ -11,8 +11,8 @@
 //! - `driver`: `trait Driver` + native(MySQL/PG)/Jdbc(Java connector) 两实现
 //! - `diff`: JSON vs JSON diff + ALTER 生成(新功能)
 
+pub mod generators;
 pub mod schema;
-// pub mod generators;
 // pub mod dataset;
 // pub mod import;
 // pub mod driver;

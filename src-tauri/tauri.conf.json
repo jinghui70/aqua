@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../app/dist",
     "devUrl": "http://localhost:1420",
-    "beforeDevCommand": "cd ../app && pnpm dev",
-    "beforeBuildCommand": "cd ../app && pnpm build"
+    "beforeDevCommand": "pnpm --filter @aqua/app dev",
+    "beforeBuildCommand": "pnpm --filter @aqua/app build"
   },
   "app": {
     "windows": [
