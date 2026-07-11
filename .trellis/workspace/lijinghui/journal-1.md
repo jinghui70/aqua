@@ -39,3 +39,37 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: 完成项目编码规范填充 (Bootstrap Guidelines)
+
+**Date**: 2026-07-12
+**Task**: 完成项目编码规范填充 (Bootstrap Guidelines)
+**Branch**: `main`
+
+### Summary
+
+完成 00-bootstrap-guidelines 任务。填充全部 3 个包的编码规范(aqua-core/aqua/app),共 19 个 spec 文件。aqua-core:serde/clippy/测试/Driver trait/日志脱敏。aqua:Tauri command/GUI+CLI/spawn connector。app:组合式 API/TS strict/element-plus/composables。后续 AI 会话自动加载规范,确保一致性。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9e28f81` | (see git log) |
+| `2059f3d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
