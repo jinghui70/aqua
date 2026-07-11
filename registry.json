@@ -1,0 +1,30 @@
+{
+  "mysql": {
+    "driverClass": "com.mysql.cj.jdbc.Driver",
+    "urlPattern": "jdbc:mysql://{host}:{port}/{database}?useSSL=false&serverTimezone=UTC"
+  },
+  "postgresql": {
+    "driverClass": "org.postgresql.Driver",
+    "urlPattern": "jdbc:postgresql://{host}:{port}/{database}"
+  },
+  "oracle": {
+    "driverClass": "oracle.jdbc.OracleDriver",
+    "urlPattern": "jdbc:oracle:thin:@{host}:{port}/{database}"
+  },
+  "dm": {
+    "driverClass": "dm.jdbc.driver.DmDriver",
+    "urlPattern": "jdbc:dm://{host}:{port}/{database}"
+  },
+  "kingbase": {
+    "driverClass": "com.kingbase8.Driver",
+    "urlPattern": "jdbc:kingbase8://{host}:{port}/{database}"
+  },
+  "gbase": {
+    "driverClass": "com.gbasedbt.jdbc.Driver",
+    "urlPattern": "jdbc:gbasedbt-sqli://{host}:{port}/{database}"
+  },
+  "h2": {
+    "driverClass": "org.h2.Driver",
+    "urlPattern": "jdbc:h2:mem:{database};DB_CLOSE_DELAY=-1"
+  }
+}
