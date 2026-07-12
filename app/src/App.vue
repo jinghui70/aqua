@@ -192,14 +192,14 @@ function handleDeleteTable() {
 <template>
   <div class="h-screen flex flex-col">
     <!-- 顶部工具栏 -->
-    <el-header class="flex justify-between items-center border-b border-gray-200 px-5">
-      <div class="flex items-baseline gap-3">
-        <h1 class="text-lg m-0">aqua v2</h1>
-        <span v-if="project.currentPath.value" class="text-gray-500 text-xs">
+    <el-header class="flex justify-between items-center border-b border-gray-200 px-20">
+      <div class="flex items-baseline gap-12">
+        <h1 class="text-18 m-0">aqua v2</h1>
+        <span v-if="project.currentPath.value" class="text-gray-500 text-12">
           {{ project.currentPath.value }}
         </span>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-8">
         <el-button @click="handleNew">新建</el-button>
         <el-button @click="handleOpen">打开</el-button>
         <el-button type="primary" @click="handleSave">保存</el-button>
@@ -235,7 +235,7 @@ function handleDeleteTable() {
         <!-- 左侧表树 -->
         <el-aside width="260px" class="border-r border-gray-200 flex flex-col">
           <div
-            class="flex justify-between items-center p-3 border-b border-gray-200 font-bold"
+            class="flex justify-between items-center p-12 border-b border-gray-200 font-bold"
           >
             <span>表列表</span>
             <el-button size="small" type="primary" link @click="handleAddTable">
@@ -253,7 +253,7 @@ function handleDeleteTable() {
               :index="t.code"
             >
               <span>{{ t.code }}</span>
-              <span class="text-gray-500 text-xs ml-2">{{ t.name }}</span>
+              <span class="text-gray-500 text-12 ml-8">{{ t.name }}</span>
             </el-menu-item>
           </el-menu>
           <el-empty
@@ -263,9 +263,9 @@ function handleDeleteTable() {
         </el-aside>
 
         <!-- 右侧字段面板 -->
-        <el-main class="p-5 overflow-y-auto">
+        <el-main class="p-20 overflow-y-auto">
           <template v-if="project.currentTable.value">
-            <div class="flex items-baseline gap-3 mb-4">
+            <div class="flex items-baseline gap-12 mb-16">
               <el-input
                 v-model="project.currentTable.value.code"
                 style="width: 200px"
@@ -371,7 +371,7 @@ function handleDeleteTable() {
       :title="genType === 'ddl' ? 'DDL 预览' : 'Java 实体预览'"
       width="70%"
     >
-      <div class="mb-3">
+      <div class="mb-12">
         <el-button size="small" @click="copyOutput">复制</el-button>
       </div>
       <el-input v-model="genOutput" type="textarea" :rows="20" readonly />

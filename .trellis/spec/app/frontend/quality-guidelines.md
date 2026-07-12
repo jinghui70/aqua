@@ -13,8 +13,27 @@ aqua 前端遵循 Vue 3 组合式 API + TypeScript strict 模式 + element-plus 
 - Vue 3 (`<script setup lang="ts">`)
 - element-plus (组件库)
 - **unocss** (原子类样式,替代 scoped CSS)
+  - `presetRemToPx({ baseFontSize: 4 })`: 1 单位 = 1px(如 `p-20` = 20px)
+  - 自定义规则 `text-{n}` = `{n}px`(如 `text-14` = 14px)
+  - **所有尺寸用 px 单位,数值即像素值**
 - Tauri invoke (前后端通信)
 - pnpm (包管理,禁用 npm)
+
+## unocss 尺寸规则
+
+baseFontSize: 4 使 1 个 unocss 单位 = 1px,数值即像素值,直观:
+
+| 类名 | 生成 CSS | 说明 |
+|------|----------|------|
+| `p-20` | `padding: 20px` | 内边距 20px |
+| `px-20` | `padding-left: 20px; padding-right: 20px` | 水平内边距 |
+| `gap-8` | `gap: 8px` | 间距 8px |
+| `mb-16` | `margin-bottom: 16px` | 下边距 16px |
+| `text-14` | `font-size: 14px` | 字号 14px(自定义规则) |
+| `w-140` | `width: 140px` | 宽度 140px |
+
+**禁止**: 使用 `text-xs`/`text-lg` 等预设字号(baseFontSize=4 会使其过小),改用 `text-{n}` 数字。
+**禁止**: 使用 `rem`/`em` 单位,统一 `px`。
 
 ---
 

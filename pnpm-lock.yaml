@@ -30,6 +30,9 @@ importers:
         specifier: ^4.5
         version: 4.6.4(vue@3.5.39(typescript@5.6.2))
     devDependencies:
+      '@unocss/preset-rem-to-px':
+        specifier: ^66.7.5
+        version: 66.7.5
       '@unocss/preset-uno':
         specifier: ^66.7.5
         version: 66.7.5
@@ -664,6 +667,9 @@ packages:
 
   '@unocss/preset-mini@66.7.5':
     resolution: {integrity: sha512-o37TSl4ecT0dKu+3/TYuTYht75h82SEwDNl476m9ve0KW4Pv1O2tT/9TWd7N5cutEpySr8/YtjMwtWBD+drxBg==}
+
+  '@unocss/preset-rem-to-px@66.7.5':
+    resolution: {integrity: sha512-revTFpLOk0P30myLjL7YpjrSL99WiIWeu6ZzQDVr9XcHszHO8jBNHaZb337CU0IP6p7iSty/EWeps923Ycg5wg==}
 
   '@unocss/preset-tagify@66.7.5':
     resolution: {integrity: sha512-/8YB1tXVi+WmNKPhsCdtO1xnQKEkshSnWDp6AbvVP3f6qOF7adlMYpAt3kpWCoVUBsfOQ06ZQlnfricMjObyoQ==}
@@ -1563,6 +1569,10 @@ snapshots:
       '@unocss/core': 66.7.5
       '@unocss/extractor-arbitrary-variants': 66.7.5
       '@unocss/rule-utils': 66.7.5
+
+  '@unocss/preset-rem-to-px@66.7.5':
+    dependencies:
+      '@unocss/core': 66.7.5
 
   '@unocss/preset-tagify@66.7.5':
     dependencies:

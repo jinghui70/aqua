@@ -16,6 +16,7 @@
     "vue-router": "^4.5"
   },
   "devDependencies": {
+    "@unocss/preset-rem-to-px": "^66.7.5",
     "@unocss/preset-uno": "^66.7.5",
     "@vitejs/plugin-vue": "^5.2",
     "typescript": "^5.6",
