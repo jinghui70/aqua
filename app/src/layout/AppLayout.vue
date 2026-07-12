@@ -16,7 +16,7 @@ const store = useProjectStore();
 </script>
 
 <template>
-  <div class="h-screen flex flex-col">
+  <div class="h-full flex flex-col overflow-hidden">
     <!-- 无项目: 全屏欢迎页 -->
     <Welcome v-if="!store.currentProject" class="flex-1 overflow-auto" />
 
