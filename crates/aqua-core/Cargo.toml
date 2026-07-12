@@ -24,7 +24,7 @@ tokio-postgres = { version = "0.7", features = ["with-chrono-0_4"] }
 deadpool-postgres = "0.14"
 
 # dataset SQLite 载体
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.32", features = ["bundled", "backup"] }
 
 # data source 密码加密 (design.md AES-256-GCM)
 aes-gcm = "0.10"

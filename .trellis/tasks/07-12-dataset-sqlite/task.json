@@ -3,7 +3,7 @@
   "name": "dataset-sqlite",
   "title": "dataset 模块: SQLite 容器实现",
   "description": "",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
