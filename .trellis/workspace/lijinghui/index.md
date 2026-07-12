@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 9
+- **Total Sessions**: 10
 - **Last Active**: 2026-07-12
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~315 | Active |
+| `journal-1.md` | ~349 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 10 | 2026-07-12 | 完成所有 Tauri commands,P1 进 5/9 | `1218171`, `d24098f` | `main` |
 | 9 | 2026-07-12 | 完成 tauri-commands-project,P1 进 3/9 | `4357542` | `main` |
 | 8 | 2026-07-12 | 完成 5 个任务,P1 推进 | `7843090`, `6a71b8d`, `7353082` | `main` |
 | 7 | 2026-07-12 | 完成 cli-mode,P1 启动 | `88660a5`, `c7c8f26` | `main` |
