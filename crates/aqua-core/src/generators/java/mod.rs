@@ -3,6 +3,7 @@
 //! 移植自 `~/work/aqua-legacy/packages/core/src/generators/java-entity/`。
 
 pub mod entity;
+pub mod enum_class;
 pub mod naming;
 pub mod types;
 

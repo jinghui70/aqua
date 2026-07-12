@@ -69,6 +69,7 @@ pub fn run() {
             generate::generate_ddl_command,
             generate::generate_java_command,
             generate::generate_frontend_json_command,
+            generate::generate_enum_command,
             import::test_connection_command,
             import::import_from_db_command,
         ])

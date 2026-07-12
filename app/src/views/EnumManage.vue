@@ -1,11 +1,13 @@
 <script setup lang="ts">
 // 枚举管理(§6.6):全局枚举列表 + 编辑。
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useProjectStore } from "@/stores/project";
+import { useTauri } from "@/composables/useTauri";
 import type { EnumDefine } from "@/types/schema";
 
 const store = useProjectStore();
+const tauri = useTauri();
 
 // §3.5 预置 13 色
 const COLORS = [
@@ -77,6 +79,34 @@ function addValue() {
 }
 function removeValue(idx: number) {
   current.value?.values.splice(idx, 1);
+}
+
+// Java 预览:选中枚举 + 编辑内容变化实时刷新
+const javaPreview = ref("");
+async function refreshJava() {
+  if (!store.currentProject || !current.value) {
+    javaPreview.value = "";
+    return;
+  }
+  try {
+    javaPreview.value = await tauri.generateEnum(
+      store.currentProject,
+      current.value.code
+    );
+  } catch {
+    /* 已提示 */
+  }
+}
+watch(current, refreshJava, { immediate: true });
+// 深度监听选中枚举的编辑(values/hasCode/package),实时刷新预览
+watch(
+  () => (current.value ? JSON.stringify(current.value) : ""),
+  refreshJava
+);
+
+async function copyJava() {
+  await navigator.clipboard.writeText(javaPreview.value);
+  ElMessage.success("已复制");
 }
 </script>
 
@@ -163,6 +193,19 @@ function removeValue(idx: number) {
             </template>
           </el-table-column>
         </el-table>
+
+        <!-- Java 预览 -->
+        <div class="mt-16 mb-8 font-bold text-14 flex items-center gap-12">
+          Java 枚举类
+          <el-button size="small" link @click="copyJava">复制</el-button>
+        </div>
+        <el-input
+          :model-value="javaPreview"
+          type="textarea"
+          :rows="14"
+          readonly
+          class="font-mono"
+        />
       </template>
       <el-empty v-else description="选择或新建枚举" />
     </div>

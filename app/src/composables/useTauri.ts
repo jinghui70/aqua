@@ -40,6 +40,8 @@ export function useTauri() {
       }),
     generateFrontendJson: (project: Project, table: string) =>
       invoke<string>("generate_frontend_json_command", { project, table }),
+    generateEnum: (project: Project, enumCode: string) =>
+      invoke<string>("generate_enum_command", { project, enumCode }),
 
     // 导入
     testConnection: (config: DbConfig) =>
