@@ -46,11 +46,7 @@ fn build_menu<R: tauri::Runtime>(
 /// 启动 GUI 模式,注册原生菜单 + Tauri commands。
 pub fn run() {
     tauri::Builder::default()
-        .setup(|app| {
-            let menu = build_menu(app.handle())?;
-            app.set_menu(menu)?;
-            Ok(())
-        })
+        .menu(|handle| build_menu(handle))
         .on_menu_event(|app, event| {
             // 菜单项 id 发到前端,由 useMenuActions 分发
             let _ = app.emit("menu", event.id().0.clone());
