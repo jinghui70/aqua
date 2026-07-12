@@ -6,6 +6,7 @@ import TabWorkspace from "./TabWorkspace.vue";
 import StatusBar from "./StatusBar.vue";
 import ExportDialog from "@/components/ExportDialog.vue";
 import DataSourceDialog from "@/components/DataSourceDialog.vue";
+import ImportWizard from "@/components/ImportWizard.vue";
 </script>
 
 <template>
@@ -22,5 +23,6 @@ import DataSourceDialog from "@/components/DataSourceDialog.vue";
     <!-- 全局弹窗 -->
     <ExportDialog />
     <DataSourceDialog />
+    <ImportWizard />
   </div>
 </template>

@@ -21,6 +21,8 @@ fn build_menu<R: tauri::Runtime>(
         .text("file.open", "打开项目")
         .text("file.save", "保存")
         .text("file.saveAs", "另存为")
+        .separator()
+        .text("file.import", "从数据库导入")
         .build()?;
     let config = SubmenuBuilder::new(app, "配置")
         .text("config.biztype", "业务类型管理")
@@ -74,6 +76,7 @@ pub fn run() {
             generate::generate_alter_command,
             import::test_connection_command,
             import::import_from_db_command,
+            import::list_tables_command,
         ])
         .run(tauri::generate_context!())
         .expect("aqua 启动失败");

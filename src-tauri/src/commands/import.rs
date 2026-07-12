@@ -30,3 +30,17 @@ pub async fn import_from_db_command(
         .await
         .map_err(|e| format!("导入失败: {}", e))
 }
+
+/// 列出数据库所有表名(导入向导 Step2 选表用)。
+#[tauri::command]
+pub async fn list_tables_command(config: DbConfig) -> Result<Vec<String>, String> {
+    let schema = config
+        .schema
+        .clone()
+        .unwrap_or_else(|| config.database.clone());
+    let driver = create_driver(config).map_err(|e| format!("创建驱动失败: {}", e))?;
+    driver
+        .list_tables(&schema)
+        .await
+        .map_err(|e| format!("列表失败: {}", e))
+}

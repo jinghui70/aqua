@@ -136,6 +136,44 @@ export const useProjectStore = defineStore("project", () => {
     closeTab(`table:${code}`);
   }
 
+  /**
+   * 合并导入的表进当前项目。
+   * @param imported 导入的完整 Project
+   * @param tableCodes 选中要导入的表 code
+   * @param group 目标分组
+   * @param overwrite 同名表 true=覆盖 false=跳过
+   */
+  function mergeImportedTables(
+    imported: Project,
+    tableCodes: string[],
+    group: string,
+    overwrite: boolean
+  ): { added: number; skipped: number } {
+    if (!currentProject.value) return { added: 0, skipped: 0 };
+    let added = 0;
+    let skipped = 0;
+    for (const code of tableCodes) {
+      const src = imported.tables.find((t) => t.code === code);
+      if (!src) continue;
+      const table = { ...src, group };
+      const existIdx = currentProject.value.tables.findIndex(
+        (t) => t.code === code
+      );
+      if (existIdx >= 0) {
+        if (overwrite) {
+          currentProject.value.tables[existIdx] = table;
+          added++;
+        } else {
+          skipped++;
+        }
+      } else {
+        currentProject.value.tables.push(table);
+        added++;
+      }
+    }
+    return { added, skipped };
+  }
+
   return {
     currentProject,
     currentPath,
@@ -153,5 +191,6 @@ export const useProjectStore = defineStore("project", () => {
     addTable,
     renameTable,
     deleteTable,
+    mergeImportedTables,
   };
 });

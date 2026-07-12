@@ -69,6 +69,8 @@ export function useTauri() {
       invoke<string>("test_connection_command", { config }),
     importFromDb: (config: DbConfig, basePackage?: string) =>
       invoke<Project>("import_from_db_command", { config, basePackage }),
+    listTables: (config: DbConfig) =>
+      invoke<string[]>("list_tables_command", { config }),
   };
 }
 

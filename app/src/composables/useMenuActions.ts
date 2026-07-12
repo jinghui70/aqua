@@ -38,6 +38,13 @@ export function useMenuActions() {
       case "file.saveAs":
         await doSave(true);
         break;
+      case "file.import":
+        if (!store.currentProject) {
+          ElMessage.warning("请先新建或打开项目");
+          break;
+        }
+        ui.openImport();
+        break;
       // 配置(路由标签)
       case "config.biztype":
         openConfigTab("biztype", "业务类型", "/biztype");
