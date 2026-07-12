@@ -1,13 +1,22 @@
 <script setup lang="ts">
-// fields Tab: 字段表格行内编辑 + 增删 + 排序。
-import { computed } from "vue";
+// fields Tab: 字段表格行内编辑 + 增删 + 排序 + 详情弹窗。
+import { computed, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { DataType, type Field } from "@/types/schema";
 import { useProjectStore } from "@/stores/project";
+import FieldDetailDialog from "./FieldDetailDialog.vue";
 
 const props = defineProps<{ fields: Field[] }>();
 
 const store = useProjectStore();
+
+// 详情弹窗
+const detailVisible = ref(false);
+const detailField = ref<Field | null>(null);
+function openDetail(field: Field) {
+  detailField.value = field;
+  detailVisible.value = true;
+}
 const dataTypes = Object.values(DataType);
 
 // bizType 下拉选项(来自项目定义的业务类型)
@@ -220,8 +229,9 @@ function copyField(idx: number) {
           <el-input v-model="row.comment" size="small" placeholder="-" />
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="150" align="center">
-        <template #default="{ $index }">
+      <el-table-column label="操作" width="180" align="center">
+        <template #default="{ row, $index }">
+          <el-button size="small" link type="primary" @click="openDetail(row)">详情</el-button>
           <el-button size="small" link @click="moveUp($index)">↑</el-button>
           <el-button size="small" link @click="moveDown($index)">↓</el-button>
           <el-button size="small" link @click="copyField($index)">复制</el-button>
@@ -232,5 +242,6 @@ function copyField(idx: number) {
       </el-table-column>
     </el-table>
     </div>
+    <FieldDetailDialog v-model="detailVisible" :field="detailField" />
   </div>
 </template>
