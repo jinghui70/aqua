@@ -1,15 +1,146 @@
 <script setup lang="ts">
+// 欢迎页:操作卡片 + 最近项目列表。
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { useProjectStore } from "@/stores/project";
+import { useUiStore } from "@/stores/ui";
+import { useRecentProjects, type RecentProject } from "@/composables/useRecentProjects";
 
+const router = useRouter();
 const store = useProjectStore();
+const ui = useUiStore();
+const recent = useRecentProjects();
+
+const recentList = ref<RecentProject[]>(recent.load());
+
+function refresh() {
+  recentList.value = recent.load();
+}
+
+function handleNew() {
+  store.newProject();
+  ElMessage.success("已新建项目");
+}
+
+async function handleOpen() {
+  try {
+    const { value } = await ElMessageBox.prompt("schema.json 文件路径", "打开项目", {
+      confirmButtonText: "打开",
+      cancelButtonText: "取消",
+      inputPlaceholder: "/path/to/schema.json",
+    });
+    if (value) await openPath(value);
+  } catch {
+    /* 取消 */
+  }
+}
+
+async function openPath(path: string) {
+  try {
+    await store.openProject(path);
+    ElMessage.success(`已打开 ${path}`);
+    refresh();
+  } catch {
+    // 打开失败(文件可能已删),从最近列表移除
+    recent.remove(path);
+    refresh();
+  }
+}
+
+function handleImport() {
+  if (!store.currentProject) {
+    ElMessage.warning("请先新建或打开项目");
+    return;
+  }
+  ui.openImport();
+}
+
+function removeRecent(path: string) {
+  recent.remove(path);
+  refresh();
+}
+
+function fmtTime(ts: number): string {
+  const d = new Date(ts);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function basename(path: string): string {
+  return path.split("/").pop() || path;
+}
 </script>
 
 <template>
-  <div class="h-full flex flex-col items-center justify-center text-gray-400">
-    <div class="text-24 mb-12">aqua v2</div>
-    <p v-if="!store.currentProject" class="text-14">
-      从「文件」菜单新建或打开项目
-    </p>
-    <p v-else class="text-14">从左侧分组树选择表,或新建表</p>
+  <div class="h-full flex flex-col items-center justify-center px-40">
+    <div class="w-full max-w-720">
+      <!-- 标题 -->
+      <div class="text-center mb-40">
+        <div class="text-32 font-bold text-gray-700">aqua v2</div>
+        <div class="text-14 text-gray-400 mt-8">JSON-SSOT 数据库结构管理工具</div>
+      </div>
+
+      <!-- 操作卡片 -->
+      <div class="flex gap-16 mb-40">
+        <div
+          class="flex-1 flex flex-col items-center py-24 border border-gray-200 rounded-8 cursor-pointer hover:border-blue-400 hover:shadow transition"
+          @click="handleNew"
+        >
+          <div class="text-32 mb-8">📄</div>
+          <div class="text-14 font-bold">新建项目</div>
+          <div class="text-12 text-gray-400 mt-4">空白 schema</div>
+        </div>
+        <div
+          class="flex-1 flex flex-col items-center py-24 border border-gray-200 rounded-8 cursor-pointer hover:border-blue-400 hover:shadow transition"
+          @click="handleOpen"
+        >
+          <div class="text-32 mb-8">📂</div>
+          <div class="text-14 font-bold">打开项目</div>
+          <div class="text-12 text-gray-400 mt-4">已有 schema.json</div>
+        </div>
+        <div
+          class="flex-1 flex flex-col items-center py-24 border border-gray-200 rounded-8 cursor-pointer hover:border-blue-400 hover:shadow transition"
+          @click="handleImport"
+        >
+          <div class="text-32 mb-8">🗄️</div>
+          <div class="text-14 font-bold">从数据库导入</div>
+          <div class="text-12 text-gray-400 mt-4">连库反解结构</div>
+        </div>
+      </div>
+
+      <!-- 最近项目 -->
+      <div>
+        <div class="text-13 font-bold text-gray-500 mb-12">最近项目</div>
+        <div v-if="recentList.length" class="flex flex-col gap-4">
+          <div
+            v-for="r in recentList"
+            :key="r.path"
+            class="flex items-center justify-between px-12 py-8 rounded-6 cursor-pointer hover:bg-gray-100 group"
+            @click="openPath(r.path)"
+          >
+            <div class="flex flex-col">
+              <span class="text-13">{{ basename(r.path) }}</span>
+              <span class="text-12 text-gray-400">{{ r.path }}</span>
+            </div>
+            <div class="flex items-center gap-12">
+              <span class="text-12 text-gray-400">{{ fmtTime(r.openedAt) }}</span>
+              <el-button
+                size="small"
+                link
+                type="danger"
+                class="opacity-0 group-hover:opacity-100"
+                @click.stop="removeRecent(r.path)"
+              >
+                移除
+              </el-button>
+            </div>
+          </div>
+        </div>
+        <div v-else class="text-13 text-gray-400 py-16 text-center">
+          暂无最近项目
+        </div>
+      </div>
+    </div>
   </div>
 </template>

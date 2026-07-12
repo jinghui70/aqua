@@ -4,6 +4,7 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import type { Project, Table } from "@/types/schema";
 import { useTauri } from "@/composables/useTauri";
+import { useRecentProjects } from "@/composables/useRecentProjects";
 
 /** 已打开的标签(表编辑 or 配置页)。 */
 export interface OpenedTab {
@@ -17,6 +18,7 @@ export interface OpenedTab {
 
 export const useProjectStore = defineStore("project", () => {
   const tauri = useTauri();
+  const recent = useRecentProjects();
 
   const currentProject = ref<Project | null>(null);
   const currentPath = ref<string>("");
@@ -44,6 +46,7 @@ export const useProjectStore = defineStore("project", () => {
     currentPath.value = path;
     openedTabs.value = [];
     activeTab.value = "";
+    recent.record(path);
   }
 
   /** 保存项目。 */
@@ -53,6 +56,7 @@ export const useProjectStore = defineStore("project", () => {
     if (!target) throw new Error("未指定保存路径");
     await tauri.projectSave(target, currentProject.value);
     currentPath.value = target;
+    recent.record(target);
   }
 
   /** 打开一个标签(不重复)。返回路由路径。 */
