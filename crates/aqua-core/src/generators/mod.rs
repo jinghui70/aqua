@@ -4,7 +4,7 @@
 
 pub mod ddl;
 pub mod java;
+pub mod strconst;
 
 // 后续其他 generators:
 // pub mod frontend_json;
-// pub mod strconst;
