@@ -48,9 +48,9 @@ export function useMenuActions() {
       case "config.dataset":
         openConfigTab("dataset", "数据集", "/dataset");
         break;
-      // 配置(弹窗)- 占位,各 child 实现
+      // 配置(弹窗)
       case "config.datasource":
-        ElMessage.info("数据源配置 — fe-datasource 任务实现");
+        ui.openDataSource();
         break;
       // 导出(弹窗)
       case "export.ddl":

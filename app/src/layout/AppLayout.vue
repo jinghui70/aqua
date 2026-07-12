@@ -5,6 +5,7 @@ import GroupTreeAside from "./GroupTreeAside.vue";
 import TabWorkspace from "./TabWorkspace.vue";
 import StatusBar from "./StatusBar.vue";
 import ExportDialog from "@/components/ExportDialog.vue";
+import DataSourceDialog from "@/components/DataSourceDialog.vue";
 </script>
 
 <template>
@@ -20,5 +21,6 @@ import ExportDialog from "@/components/ExportDialog.vue";
     <StatusBar />
     <!-- 全局弹窗 -->
     <ExportDialog />
+    <DataSourceDialog />
   </div>
 </template>
