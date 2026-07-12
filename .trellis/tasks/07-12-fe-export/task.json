@@ -3,7 +3,7 @@
   "name": "fe-export",
   "title": "导出 (DDL/diff/StrConst 弹窗)",
   "description": "",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

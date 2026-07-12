@@ -55,14 +55,20 @@ pub fn handle_generate(
 
 /// Tauri command: 生成 DDL。
 #[tauri::command]
-pub async fn generate_ddl_command(project: Project, dialect: String) -> Result<String, String> {
+pub async fn generate_ddl_command(
+    project: Project,
+    dialect: String,
+    tables: Option<Vec<String>>,
+    group: Option<String>,
+) -> Result<String, String> {
     let dialect = Dialect::parse(&dialect).ok_or_else(|| format!("不支持的方言: {}", dialect))?;
 
     Ok(generate_ddl(
         &project,
         &DdlOptions {
             dialect,
-            ..Default::default()
+            tables,
+            group,
         },
     ))
 }
@@ -110,4 +116,36 @@ pub async fn generate_enum_command(
         .find(|e| e.code == enum_code)
         .ok_or_else(|| format!("枚举不存在: {}", enum_code))?;
     Ok(generate_global_enum_class(&project, def))
+}
+
+/// Tauri command: 生成 StrConst 常量类(范围过滤 + 包名/类名)。
+#[tauri::command]
+pub async fn generate_strconst_command(
+    project: Project,
+    group: Option<String>,
+    package_suffix: Option<String>,
+    class_name: Option<String>,
+) -> Result<String, String> {
+    use aqua_core::generators::strconst::{generate_strconst, StrConstOptions};
+    let default = StrConstOptions::default();
+    let options = StrConstOptions {
+        package_suffix: package_suffix.unwrap_or(default.package_suffix),
+        class_name: class_name.unwrap_or(default.class_name),
+        group,
+    };
+    Ok(generate_strconst(&project, &options))
+}
+
+/// Tauri command: 生成 ALTER DDL(旧版 vs 当前 project 的 diff)。
+#[tauri::command]
+pub async fn generate_alter_command(
+    old_project: Project,
+    new_project: Project,
+    dialect: String,
+) -> Result<String, String> {
+    use aqua_core::alter::{generate_alter, AlterOptions};
+    use aqua_core::diff::diff_project;
+    let dialect = Dialect::parse(&dialect).ok_or_else(|| format!("不支持的方言: {}", dialect))?;
+    let diff = diff_project(&old_project, &new_project);
+    Ok(generate_alter(&diff, &new_project, &AlterOptions { dialect }))
 }

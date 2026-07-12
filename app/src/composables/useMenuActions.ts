@@ -7,10 +7,12 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useRouter } from "vue-router";
 import { useProjectStore } from "@/stores/project";
+import { useUiStore } from "@/stores/ui";
 
 export function useMenuActions() {
   const router = useRouter();
   const store = useProjectStore();
+  const ui = useUiStore();
   let unlisten: UnlistenFn | null = null;
 
   /** 打开配置类路由标签(单例)。 */
@@ -50,11 +52,15 @@ export function useMenuActions() {
       case "config.datasource":
         ElMessage.info("数据源配置 — fe-datasource 任务实现");
         break;
-      // 导出(弹窗)- 占位
+      // 导出(弹窗)
       case "export.ddl":
+        ui.openExport("ddl");
+        break;
       case "export.diff":
+        ui.openExport("diff");
+        break;
       case "export.strconst":
-        ElMessage.info(`导出 ${id.split(".")[1]} — fe-export 任务实现`);
+        ui.openExport("strconst");
         break;
       case "help.about":
         ElMessageBox.alert("aqua v2 — JSON-SSOT 数据库结构管理工具", "关于", {

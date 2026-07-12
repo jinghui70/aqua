@@ -4,6 +4,7 @@
 import GroupTreeAside from "./GroupTreeAside.vue";
 import TabWorkspace from "./TabWorkspace.vue";
 import StatusBar from "./StatusBar.vue";
+import ExportDialog from "@/components/ExportDialog.vue";
 </script>
 
 <template>
@@ -17,5 +18,7 @@ import StatusBar from "./StatusBar.vue";
       </main>
     </div>
     <StatusBar />
+    <!-- 全局弹窗 -->
+    <ExportDialog />
   </div>
 </template>

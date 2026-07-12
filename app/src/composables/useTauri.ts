@@ -24,8 +24,17 @@ export function useTauri() {
       invoke<string>("project_validate", { project }),
 
     // 生成器
-    generateDdl: (project: Project, dialect: string) =>
-      invoke<string>("generate_ddl_command", { project, dialect }),
+    generateDdl: (
+      project: Project,
+      dialect: string,
+      opts?: { tables?: string[]; group?: string }
+    ) =>
+      invoke<string>("generate_ddl_command", {
+        project,
+        dialect,
+        tables: opts?.tables,
+        group: opts?.group,
+      }),
     generateJava: (
       project: Project,
       table: string,
@@ -42,6 +51,18 @@ export function useTauri() {
       invoke<string>("generate_frontend_json_command", { project, table }),
     generateEnum: (project: Project, enumCode: string) =>
       invoke<string>("generate_enum_command", { project, enumCode }),
+    generateStrConst: (
+      project: Project,
+      opts?: { group?: string; packageSuffix?: string; className?: string }
+    ) =>
+      invoke<string>("generate_strconst_command", {
+        project,
+        group: opts?.group,
+        packageSuffix: opts?.packageSuffix,
+        className: opts?.className,
+      }),
+    generateAlter: (oldProject: Project, newProject: Project, dialect: string) =>
+      invoke<string>("generate_alter_command", { oldProject, newProject, dialect }),
 
     // 导入
     testConnection: (config: DbConfig) =>
