@@ -3,7 +3,7 @@
   "name": "alter-generator",
   "title": "ALTER DDL 生成 (基于 diff)",
   "description": "",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

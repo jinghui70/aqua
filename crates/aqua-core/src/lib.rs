@@ -1,3 +1,4 @@
+pub mod alter;
 pub mod diff;
 pub mod driver;
 pub mod generators;

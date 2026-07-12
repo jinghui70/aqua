@@ -8,6 +8,9 @@ mod table;
 pub mod types;
 
 pub use types::{DdlOptions, Dialect};
+// 供 alter 生成器复用
+pub use index::generate_index;
+pub use table::generate_table;
 
 use crate::schema::{Project, Table};
 
