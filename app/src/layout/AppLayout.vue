@@ -22,11 +22,11 @@ const store = useProjectStore();
 
     <!-- 有项目: 工作区布局 -->
     <template v-else>
-      <div class="flex-1 flex overflow-hidden">
+      <div class="flex-1 min-h-0 flex overflow-hidden">
         <aside class="w-260 border-r border-gray-200 flex-shrink-0">
           <GroupTreeAside />
         </aside>
-        <main class="flex-1 overflow-hidden">
+        <main class="flex-1 min-w-0 overflow-hidden">
           <TabWorkspace />
         </main>
       </div>
