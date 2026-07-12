@@ -1,10 +1,10 @@
 //! MySQL native 驱动实现。
 
+use crate::driver::{ColumnMeta, DbConfig, Driver, DriverError, IndexMeta};
+use crate::schema::DataType;
 use async_trait::async_trait;
 use mysql_async::prelude::*;
-use mysql_async::{Pool, OptsBuilder, Row};
-use crate::driver::{Driver, DbConfig, ColumnMeta, IndexMeta, DriverError};
-use crate::schema::DataType;
+use mysql_async::{OptsBuilder, Pool, Row};
 use std::collections::HashMap;
 
 /// MySQL native 驱动。
@@ -23,7 +23,7 @@ impl MysqlDriver {
             .pass(Some(&config.password))
             .db_name(Some(&config.database));
 
-        let pool = Pool::new(opts.into());
+        let pool = Pool::new(mysql_async::Opts::from(opts));
 
         Ok(Self {
             pool,
@@ -35,29 +35,42 @@ impl MysqlDriver {
 #[async_trait]
 impl Driver for MysqlDriver {
     async fn test_connection(&self) -> Result<(), DriverError> {
-        let mut conn = self.pool.get_conn().await
+        let mut conn = self
+            .pool
+            .get_conn()
+            .await
             .map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
 
         // 简单查询验证连接
-        let _: Option<i32> = conn.query_first("SELECT 1").await
+        let _: Option<i32> = conn
+            .query_first("SELECT 1")
+            .await
             .map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
 
         Ok(())
     }
 
     async fn list_tables(&self, schema: &str) -> Result<Vec<String>, DriverError> {
-        let mut conn = self.pool.get_conn().await
+        let mut conn = self
+            .pool
+            .get_conn()
+            .await
             .map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
 
         let sql = "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? ORDER BY TABLE_NAME";
-        let tables: Vec<String> = conn.exec(sql, (schema,)).await
+        let tables: Vec<String> = conn
+            .exec(sql, (schema,))
+            .await
             .map_err(|e| DriverError::QueryFailed(e.to_string()))?;
 
         Ok(tables)
     }
 
     async fn get_columns(&self, table: &str) -> Result<Vec<ColumnMeta>, DriverError> {
-        let mut conn = self.pool.get_conn().await
+        let mut conn = self
+            .pool
+            .get_conn()
+            .await
             .map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
 
         let sql = r"
@@ -76,7 +89,9 @@ impl Driver for MysqlDriver {
             ORDER BY ORDINAL_POSITION
         ";
 
-        let rows: Vec<Row> = conn.exec(sql, (&self.database, table)).await
+        let rows: Vec<Row> = conn
+            .exec(sql, (&self.database, table))
+            .await
             .map_err(|e| DriverError::QueryFailed(e.to_string()))?;
 
         let mut columns = Vec::new();
@@ -112,7 +127,10 @@ impl Driver for MysqlDriver {
     }
 
     async fn list_indexes(&self, table: &str) -> Result<Vec<IndexMeta>, DriverError> {
-        let mut conn = self.pool.get_conn().await
+        let mut conn = self
+            .pool
+            .get_conn()
+            .await
             .map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
 
         let sql = r"
@@ -125,7 +143,9 @@ impl Driver for MysqlDriver {
             ORDER BY INDEX_NAME, SEQ_IN_INDEX
         ";
 
-        let rows: Vec<Row> = conn.exec(sql, (&self.database, table)).await
+        let rows: Vec<Row> = conn
+            .exec(sql, (&self.database, table))
+            .await
             .map_err(|e| DriverError::QueryFailed(e.to_string()))?;
 
         // 按 INDEX_NAME 分组
@@ -141,13 +161,20 @@ impl Driver for MysqlDriver {
             }
 
             let unique = non_unique == 0;
-            index_map.entry(index_name.clone())
+            index_map
+                .entry(index_name.clone())
                 .or_insert_with(|| (Vec::new(), unique))
-                .0.push(column_name);
+                .0
+                .push(column_name);
         }
 
-        let indexes = index_map.into_iter()
-            .map(|(name, (fields, unique))| IndexMeta { name, fields, unique })
+        let indexes = index_map
+            .into_iter()
+            .map(|(name, (fields, unique))| IndexMeta {
+                name,
+                fields,
+                unique,
+            })
             .collect();
 
         Ok(indexes)
@@ -168,7 +195,7 @@ fn map_mysql_type(column_type: &str, length: Option<u32>) -> DataType {
         "BLOB" | "BINARY" | "VARBINARY" | "TINYBLOB" | "MEDIUMBLOB" | "LONGBLOB" => DataType::Blob,
         _ => {
             // 未知类型默认 VARCHAR
-            if length.map_or(false, |l| l > 255) {
+            if length.is_some_and(|l| l > 255) {
                 DataType::Clob
             } else {
                 DataType::Varchar

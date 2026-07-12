@@ -1,8 +1,8 @@
 //! Driver trait 定义。
 
-use async_trait::async_trait;
-use super::{ColumnMeta, IndexMeta};
 use super::error::Result;
+use super::{ColumnMeta, IndexMeta};
+use async_trait::async_trait;
 
 /// 数据库驱动统一接口。
 ///

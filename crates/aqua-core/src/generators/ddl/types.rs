@@ -3,9 +3,10 @@
 use crate::schema::DataType;
 
 /// 数据库方言分类。
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum Dialect {
     /// 内置 native 驱动(类型映射硬编码)。
+    #[default]
     Mysql,
     Postgresql,
 
@@ -15,12 +16,6 @@ pub enum Dialect {
     Jdbc {
         name: String,
     },
-}
-
-impl Default for Dialect {
-    fn default() -> Self {
-        Self::Mysql
-    }
 }
 
 impl Dialect {

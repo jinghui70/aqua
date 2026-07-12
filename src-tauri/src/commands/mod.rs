@@ -1,3 +1,4 @@
-//! CLI 命令处理模块。
+//! Tauri commands 模块。
 
 pub mod generate;
+pub mod project;

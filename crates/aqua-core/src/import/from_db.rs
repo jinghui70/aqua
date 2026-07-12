@@ -1,8 +1,8 @@
 //! 从数据库导入 schema 核心逻辑。
 
-use crate::driver::{Driver, DriverError, ColumnMeta, IndexMeta};
-use crate::schema::{Project, Table, Field, Index};
+use crate::driver::{ColumnMeta, Driver, DriverError, IndexMeta};
 use crate::generators::java::naming::snake_to_camel;
+use crate::schema::{Field, Index, Project, Table};
 
 /// 从数据库导入 schema,生成 Project。
 ///
@@ -30,10 +30,12 @@ pub async fn import_from_db(
 
     // 3. 构造 Project
     Ok(Project {
+        version: "1.0.0".to_string(),
         base_package: base_package.unwrap_or_else(|| "com.example".to_string()),
         tables,
         enums: vec![],
         biz_types: vec![],
+        groups: vec![],
     })
 }
 
@@ -50,10 +52,14 @@ async fn import_table(driver: &dyn Driver, table_name: &str) -> Result<Table, Dr
     // 3. 构造 Table
     Ok(Table {
         code: table_name.to_uppercase(),
-        name: table_name.to_string(),  // 暂无注释,用表名
-        group: "default".to_string(),   // 默认分组
+        name: table_name.to_string(), // 暂无注释,用表名
+        group: "default".to_string(), // 默认分组
         fields,
-        indexes: if indexes.is_empty() { None } else { Some(indexes) },
+        indexes: if indexes.is_empty() {
+            None
+        } else {
+            Some(indexes)
+        },
         comment: None,
     })
 }
@@ -70,9 +76,9 @@ fn column_to_field(col: ColumnMeta) -> Field {
         scale: col.scale,
         not_null: Some(!col.nullable),
         is_key: Some(col.is_key),
-        auto_generate: None,  // 导入时无法推断,需人工配置
+        auto_generate: None, // 导入时无法推断,需人工配置
         default_value: col.default_value,
-        enum_ref: None,      // 枚举识别待后续优化
+        enum_ref: None, // 枚举识别待后续优化
         biz_type: None,
         biz_type_data: None,
         comment: None,

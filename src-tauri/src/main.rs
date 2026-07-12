@@ -1,9 +1,6 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod cli;
-mod commands;
-
 use clap::Parser;
 use std::env;
 
@@ -12,10 +9,18 @@ fn main() {
 
     if args.len() > 1 {
         // CLI 模式
-        let cli = cli::Cli::parse();
+        let cli = aqua::cli::Cli::parse();
         match cli.command {
-            cli::Commands::Generate { type_, input, dialect, table, output } => {
-                if let Err(e) = commands::generate::handle_generate(type_, input, dialect, table, output) {
+            aqua::cli::Commands::Generate {
+                type_,
+                input,
+                dialect,
+                table,
+                output,
+            } => {
+                if let Err(e) =
+                    aqua::commands::generate::handle_generate(type_, input, dialect, table, output)
+                {
                     eprintln!("Error: {}", e);
                     std::process::exit(1);
                 }
@@ -23,8 +28,6 @@ fn main() {
         }
     } else {
         // GUI 模式
-        tauri::Builder::default()
-            .run(tauri::generate_context!())
-            .expect("error while running tauri application");
+        aqua::run();
     }
 }

@@ -5,17 +5,19 @@
 //!
 //! commands 是前端(Tauri invoke)与 aqua-core 之间的薄桥。
 
-/// 示例 command: 验证前后端链路通。后续替换为真实能力(project open/save, generate, import...)。
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("aqua v2 (Rust+Tauri) 你好, {}", name)
-}
+pub mod cli;
+pub mod commands;
 
+use commands::project;
+
+/// 启动 GUI 模式,注册 Tauri commands。
 pub fn run() {
-    // TODO(CLI): 解析 std::env::args(),若有 `generate` 子命令则走 CLI 模式(调 aqua_core::generators),
-    //            输出 stdout 后 exit,不启动 webview。见 docs/architecture.md §6。
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![
+            project::project_open,
+            project::project_save,
+            project::project_validate,
+        ])
         .run(tauri::generate_context!())
         .expect("aqua 启动失败");
 }

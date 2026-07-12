@@ -4,13 +4,13 @@
 //! - 内置 native 驱动: MySQL(mysql_async), PostgreSQL(tokio-postgres)
 //! - JDBC 驱动: Oracle/信创数据库(spawn connector.jar)
 
-pub mod types;
 pub mod error;
-mod trait_def;
 mod factory;
 mod mysql;
+mod trait_def;
+pub mod types;
 
-pub use types::{DbConfig, ColumnMeta, IndexMeta};
 pub use error::DriverError;
-pub use trait_def::Driver;
 pub use factory::create_driver;
+pub use trait_def::Driver;
+pub use types::{ColumnMeta, DbConfig, IndexMeta};

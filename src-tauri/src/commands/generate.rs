@@ -1,10 +1,10 @@
 //! generate 命令实现。
 
-use std::error::Error;
-use std::fs;
-use aqua_core::generators::ddl::{generate_ddl, Dialect, DdlOptions};
+use aqua_core::generators::ddl::{generate_ddl, DdlOptions, Dialect};
 use aqua_core::generators::java::{generate_java_entity, JavaOptions};
 use aqua_core::schema::parse_project;
+use std::error::Error;
+use std::fs;
 
 pub fn handle_generate(
     type_: String,
@@ -25,10 +25,13 @@ pub fn handle_generate(
             let dialect = Dialect::parse(&dialect_str)
                 .ok_or_else(|| format!("Invalid dialect: {}", dialect_str))?;
 
-            generate_ddl(&project, &DdlOptions {
-                dialect,
-                ..Default::default()
-            })
+            generate_ddl(
+                &project,
+                &DdlOptions {
+                    dialect,
+                    ..Default::default()
+                },
+            )
         }
         "java" => {
             let table_name = table.ok_or("--table required for java")?;
