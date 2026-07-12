@@ -110,3 +110,36 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: 完成 generators-java 实现
+
+**Date**: 2026-07-12
+**Task**: 完成 generators-java 实现
+**Branch**: `main`
+
+### Summary
+
+会话 4 完成 generators-java (Java 实体生成器)。实现类型映射(9 逻辑类型 → Java)、命名转换(snake_case → camelCase/PascalCase)、实体类生成(package/import/注解/@Table/@Id/@Column)、Lombok 支持。4 个测试全绿。验证 clippy/fmt 通过。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b4fabfb` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
