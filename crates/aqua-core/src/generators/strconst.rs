@@ -48,12 +48,7 @@ pub fn generate_strconst(project: &Project, options: &StrConstOptions) -> String
     let tables: Vec<_> = project
         .tables
         .iter()
-        .filter(|t| {
-            options
-                .group
-                .as_ref()
-                .map_or(true, |g| &t.group == g)
-        })
+        .filter(|t| options.group.as_ref().map_or(true, |g| &t.group == g))
         .collect();
 
     // 表名常量
@@ -99,7 +94,7 @@ pub fn generate_strconst(project: &Project, options: &StrConstOptions) -> String
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schema::{Field, Table, DataType};
+    use crate::schema::{DataType, Field, Table};
 
     fn make_project() -> Project {
         Project {
@@ -210,7 +205,9 @@ mod tests {
         assert!(result.contains("public static final String SYS_USER = \"SYS_USER\";"));
         assert!(result.contains("public static final String SYS_ROLE = \"SYS_ROLE\";"));
         // 字段名(ID 跨表去重,只出现一次)
-        let id_count = result.matches("public static final String ID = \"ID\";").count();
+        let id_count = result
+            .matches("public static final String ID = \"ID\";")
+            .count();
         assert_eq!(id_count, 1, "ID 应去重只出现一次");
         assert!(result.contains("public static final String USER_NAME = \"USER_NAME\";"));
         assert!(result.contains("public static final String ROLE_NAME = \"ROLE_NAME\";"));
