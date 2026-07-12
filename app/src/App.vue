@@ -190,16 +190,16 @@ function handleDeleteTable() {
 </script>
 
 <template>
-  <div class="app-container">
+  <div class="h-screen flex flex-col">
     <!-- 顶部工具栏 -->
-    <el-header class="toolbar">
-      <div class="toolbar-left">
-        <h1 class="title">aqua v2</h1>
-        <span v-if="project.currentPath.value" class="path">
+    <el-header class="flex justify-between items-center border-b border-gray-200 px-5">
+      <div class="flex items-baseline gap-3">
+        <h1 class="text-lg m-0">aqua v2</h1>
+        <span v-if="project.currentPath.value" class="text-gray-500 text-xs">
           {{ project.currentPath.value }}
         </span>
       </div>
-      <div class="toolbar-right">
+      <div class="flex items-center gap-2">
         <el-button @click="handleNew">新建</el-button>
         <el-button @click="handleOpen">打开</el-button>
         <el-button type="primary" @click="handleSave">保存</el-button>
@@ -213,11 +213,7 @@ function handleDeleteTable() {
           />
         </el-select>
         <el-button type="success" @click="handleGenerate('ddl')">生成 DDL</el-button>
-        <el-select
-          v-model="javaTable"
-          placeholder="选择表"
-          style="width: 180px"
-        >
+        <el-select v-model="javaTable" placeholder="选择表" style="width: 180px">
           <el-option
             v-for="t in project.currentProject.value?.tables ?? []"
             :key="t.code"
@@ -234,17 +230,20 @@ function handleDeleteTable() {
     </el-header>
 
     <!-- 主体:左侧表树 + 右侧字段面板 -->
-    <el-main class="main-body">
+    <el-main class="flex-1 overflow-hidden !p-0">
       <el-container style="height: 100%">
         <!-- 左侧表树 -->
-        <el-aside width="260px" class="table-aside">
-          <div class="aside-header">
+        <el-aside width="260px" class="border-r border-gray-200 flex flex-col">
+          <div
+            class="flex justify-between items-center p-3 border-b border-gray-200 font-bold"
+          >
             <span>表列表</span>
             <el-button size="small" type="primary" link @click="handleAddTable">
               + 新增表
             </el-button>
           </div>
           <el-menu
+            class="flex-1 overflow-y-auto"
             :default-active="project.selectedTableCode.value"
             @select="project.selectTable"
           >
@@ -254,7 +253,7 @@ function handleDeleteTable() {
               :index="t.code"
             >
               <span>{{ t.code }}</span>
-              <span class="table-name">{{ t.name }}</span>
+              <span class="text-gray-500 text-xs ml-2">{{ t.name }}</span>
             </el-menu-item>
           </el-menu>
           <el-empty
@@ -264,9 +263,9 @@ function handleDeleteTable() {
         </el-aside>
 
         <!-- 右侧字段面板 -->
-        <el-main class="field-panel">
+        <el-main class="p-5 overflow-y-auto">
           <template v-if="project.currentTable.value">
-            <div class="panel-header">
+            <div class="flex items-baseline gap-3 mb-4">
               <el-input
                 v-model="project.currentTable.value.code"
                 style="width: 200px"
@@ -372,7 +371,7 @@ function handleDeleteTable() {
       :title="genType === 'ddl' ? 'DDL 预览' : 'Java 实体预览'"
       width="70%"
     >
-      <div style="margin-bottom: 12px">
+      <div class="mb-3">
         <el-button size="small" @click="copyOutput">复制</el-button>
       </div>
       <el-input v-model="genOutput" type="textarea" :rows="20" readonly />
@@ -418,81 +417,3 @@ function handleDeleteTable() {
     </el-dialog>
   </div>
 </template>
-
-<style scoped>
-.app-container {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #e4e7ed;
-  padding: 0 20px;
-}
-.toolbar-left {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-}
-.title {
-  font-size: 18px;
-  margin: 0;
-}
-.path {
-  color: #909399;
-  font-size: 13px;
-}
-.toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.main-body {
-  flex: 1;
-  padding: 0;
-  overflow: hidden;
-}
-.table-aside {
-  border-right: 1px solid #e4e7ed;
-  display: flex;
-  flex-direction: column;
-}
-.aside-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  border-bottom: 1px solid #e4e7ed;
-  font-weight: bold;
-}
-.aside-header + .el-menu {
-  flex: 1;
-  overflow-y: auto;
-}
-.table-name {
-  color: #909399;
-  font-size: 12px;
-  margin-left: 8px;
-}
-.field-panel {
-  padding: 20px;
-  overflow-y: auto;
-}
-.panel-header {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-.panel-header h2 {
-  margin: 0;
-}
-.table-meta {
-  color: #909399;
-  font-size: 13px;
-  flex: 1;
-}
-</style>

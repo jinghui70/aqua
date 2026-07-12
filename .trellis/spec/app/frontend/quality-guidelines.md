@@ -6,7 +6,15 @@
 
 ## Overview
 
-aqua 前端遵循 Vue 3 组合式 API + TypeScript strict 模式 + element-plus 组件库规范。
+aqua 前端遵循 Vue 3 组合式 API + TypeScript strict 模式 + element-plus 组件库 + **unocss 原子类**。
+
+## 技术栈
+
+- Vue 3 (`<script setup lang="ts">`)
+- element-plus (组件库)
+- **unocss** (原子类样式,替代 scoped CSS)
+- Tauri invoke (前后端通信)
+- pnpm (包管理,禁用 npm)
 
 ---
 

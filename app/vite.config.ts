@@ -1,10 +1,11 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import UnoCSS from "unocss/vite";
 import { fileURLToPath, URL } from "node:url";
 
 // Tauri 期望前端 dev server 在 1420 端口
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(), UnoCSS()],
   clearScreen: false,
   server: {
     port: 1420,
