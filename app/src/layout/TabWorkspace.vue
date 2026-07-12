@@ -41,7 +41,7 @@ function onTabRemove(key: string) {
         :label="tab.title"
       />
     </el-tabs>
-    <div class="flex-1 min-h-0 overflow-auto">
+    <div class="flex-1 min-h-0 overflow-hidden">
       <router-view v-slot="{ Component, route }">
         <keep-alive>
           <component :is="Component" :key="route.fullPath" />
