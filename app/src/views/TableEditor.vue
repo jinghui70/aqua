@@ -5,6 +5,7 @@ import { computed, ref, watchEffect } from "vue";
 import { useProjectStore } from "@/stores/project";
 import FieldsTab from "./table-editor/FieldsTab.vue";
 import IndexTab from "./table-editor/IndexTab.vue";
+import DdlTab from "./table-editor/DdlTab.vue";
 import JavaTab from "./table-editor/JavaTab.vue";
 import JsonTab from "./table-editor/JsonTab.vue";
 
@@ -49,6 +50,9 @@ watchEffect(() => {
       </el-tab-pane>
       <el-tab-pane label="索引" name="index">
         <IndexTab :indexes="table.indexes ?? []" :fields="table.fields" />
+      </el-tab-pane>
+      <el-tab-pane label="DDL" name="ddl" lazy>
+        <DdlTab :table-code="table.code" />
       </el-tab-pane>
       <el-tab-pane label="Java" name="java" lazy>
         <JavaTab :table-code="table.code" />
