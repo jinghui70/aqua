@@ -39,6 +39,37 @@ baseFontSize: 4 使 1 个 unocss 单位 = 1px,数值即像素值,直观:
 
 ## Forbidden Patterns
 
+### ❌ 浏览器原生弹窗 window.prompt / confirm / alert
+
+Tauri 系统 webview(macOS WKWebView 等)**不支持** `window.prompt()` / `confirm()` / `alert()`,调用直接返回 null/false 且无弹窗,导致功能静默失效(如"新建表"点击无反应)。
+
+```ts
+// ❌ 在 Tauri webview 里静默失效
+const code = prompt("表名");
+if (!confirm("确认删除?")) return;
+```
+
+**✅ 用 element-plus ElMessageBox**:
+
+```ts
+import { ElMessageBox } from "element-plus";
+
+// 输入
+try {
+  const res = await ElMessageBox.prompt("表名", "新增表", {
+    confirmButtonText: "新增", cancelButtonText: "取消",
+  });
+  const code = res.value;
+} catch { return; /* 用户取消 */ }
+
+// 确认
+try {
+  await ElMessageBox.confirm("确认删除?", "删除表", { type: "warning" });
+} catch { return; /* 用户取消 */ }
+```
+
+注意 ElMessageBox 取消时 reject,需 try-catch 处理取消分支。
+
 ### ❌ 选项式 API
 
 ```vue

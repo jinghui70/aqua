@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { useProject } from "@/composables/useProject";
 import { useTauri } from "@/composables/useTauri";
 import { DataType } from "@/types/schema";
@@ -34,7 +34,17 @@ const dataTypes: DataType[] = [
 ];
 
 async function handleOpen() {
-  const path = prompt("请输入 schema.json 路径");
+  let path: string | null = null;
+  try {
+    const res = await ElMessageBox.prompt("schema.json 文件路径", "打开项目", {
+      confirmButtonText: "打开",
+      cancelButtonText: "取消",
+      inputPlaceholder: "/path/to/schema.json",
+    });
+    path = res.value;
+  } catch {
+    /* 用户取消 */
+  }
   if (!path) return;
   try {
     await project.openProject(path);
@@ -49,7 +59,19 @@ async function handleSave() {
     ElMessage.warning("请先打开或新建项目");
     return;
   }
-  const path = project.currentPath.value || prompt("请输入保存路径");
+  let path = project.currentPath.value;
+  if (!path) {
+    try {
+      const res = await ElMessageBox.prompt("保存路径", "保存项目", {
+        confirmButtonText: "保存",
+        cancelButtonText: "取消",
+        inputPlaceholder: "/path/to/schema.json",
+      });
+      path = res.value;
+    } catch {
+      return; /* 用户取消 */
+    }
+  }
   if (!path) return;
   try {
     await project.saveProject(path);
@@ -147,9 +169,19 @@ async function handleImport() {
   }
 }
 
-function handleAddTable() {
+async function handleAddTable() {
   if (!project.currentProject.value) return;
-  const code = prompt("表名(大写蛇形,如 SYS_USER)");
+  let code: string | null = null;
+  try {
+    const res = await ElMessageBox.prompt("表名(大写蛇形,如 SYS_USER)", "新增表", {
+      confirmButtonText: "新增",
+      cancelButtonText: "取消",
+      inputPlaceholder: "SYS_USER",
+    });
+    code = res.value;
+  } catch {
+    return; /* 用户取消 */
+  }
   if (!code) return;
   project.currentProject.value.tables.push({
     code: code.toUpperCase(),
@@ -176,12 +208,19 @@ function handleDeleteField(index: number) {
   project.currentTable.value.fields.splice(index, 1);
 }
 
-function handleDeleteTable() {
+async function handleDeleteTable() {
   if (!project.currentProject.value || !project.currentTable.value) return;
-  if (!confirm(`确认删除表 ${project.currentTable.value.code}?`)) return;
-  const idx = project.currentProject.value.tables.findIndex(
-    (t) => t.code === project.currentTable.value?.code
-  );
+  const code = project.currentTable.value.code;
+  try {
+    await ElMessageBox.confirm(`确认删除表 ${code}?`, "删除表", {
+      confirmButtonText: "删除",
+      cancelButtonText: "取消",
+      type: "warning",
+    });
+  } catch {
+    return; /* 用户取消 */
+  }
+  const idx = project.currentProject.value.tables.findIndex((t) => t.code === code);
   if (idx >= 0) {
     project.currentProject.value.tables.splice(idx, 1);
     project.selectTable("");
