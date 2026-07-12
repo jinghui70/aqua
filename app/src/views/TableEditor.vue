@@ -65,9 +65,16 @@ function ensureIndexes(v: any) {
 </template>
 
 <style scoped>
-/* flex 链需 min-height:0 才能让内部滚动而非撑高外层 */
+/* el-tabs 满高 + 内容区滚动控制。flex 链每层 min-height:0。 */
 .table-tabs {
+  flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.table-tabs :deep(.el-tabs__header) {
+  margin: 0;
+  flex-shrink: 0;
 }
 .table-tabs :deep(.el-tabs__content) {
   flex: 1;
@@ -76,5 +83,6 @@ function ensureIndexes(v: any) {
 }
 .table-tabs :deep(.el-tab-pane) {
   height: 100%;
+  overflow: hidden;
 }
 </style>
