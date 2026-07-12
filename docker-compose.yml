@@ -1,0 +1,31 @@
+services:
+  # MySQL 8.0 - aqua 集成测试(8.4 移除了 default-authentication-plugin 参数)
+  mysql:
+    image: mysql:8.0
+    container_name: aqua-mysql-test
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: aqua_test
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  # PostgreSQL 16 - aqua 集成测试
+  postgres:
+    image: postgres:16
+    container_name: aqua-postgres-test
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: aqua_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 30

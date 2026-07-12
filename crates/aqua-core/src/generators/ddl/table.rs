@@ -6,28 +6,31 @@ use crate::schema::{Field, Table};
 /// 生成 CREATE TABLE + COMMENT 语句。
 pub fn generate_table(table: &Table, dialect: &Dialect) -> String {
     let table_name = table.code.to_uppercase();
-    let mut lines = vec![format!("CREATE TABLE {} (", table_name)];
 
-    // 字段定义
-    for (i, field) in table.fields.iter().enumerate() {
-        let comma = if i < table.fields.len() - 1 { "," } else { "" };
-        lines.push(format!("  {}{}", field_definition(field, dialect), comma));
-    }
+    // 字段定义 + 主键,统一用 ",\n" 连接(避免末尾逗号或缺逗号)
+    let mut defs: Vec<String> = table
+        .fields
+        .iter()
+        .map(|f| format!("  {}", field_definition(f, dialect)))
+        .collect();
 
-    // PRIMARY KEY
     if let Some(pk) = primary_key_clause(table) {
-        lines.push(pk);
+        defs.push(pk);
     }
 
-    // 表结束
-    if inline_table_comment(dialect) {
+    let body = defs.join(",\n");
+
+    let mut output = if inline_table_comment(dialect) {
         // MySQL: CREATE TABLE (...) COMMENT 'xxx';
-        lines.push(format!(") COMMENT '{}';", escape_sql_string(&table.name)));
+        format!(
+            "CREATE TABLE {} (\n{}\n) COMMENT '{}';",
+            table_name,
+            body,
+            escape_sql_string(&table.name)
+        )
     } else {
-        lines.push(");".to_string());
-    }
-
-    let mut output = lines.join("\n");
+        format!("CREATE TABLE {} (\n{}\n);", table_name, body)
+    };
 
     // 独立表注释 (PG/Oracle/KingBase)
     if !inline_table_comment(dialect) {
