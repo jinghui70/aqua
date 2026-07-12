@@ -98,6 +98,55 @@ async function copyOutput() {
   ElMessage.success("已复制到剪贴板");
 }
 
+// === 导入向导 ===
+const importDialogVisible = ref(false);
+const importing = ref(false);
+const dbConfig = ref({
+  dialect: "mysql",
+  host: "localhost",
+  port: 3306,
+  user: "root",
+  password: "",
+  database: "",
+  schema: "",
+});
+const importBasePackage = ref("com.example");
+
+async function handleTestConnection() {
+  try {
+    const msg = await tauri.testConnection({
+      ...dbConfig.value,
+      schema: dbConfig.value.schema || undefined,
+    } as never);
+    ElMessage.success(msg);
+  } catch {
+    /* 错误已处理 */
+  }
+}
+
+async function handleImport() {
+  if (!dbConfig.value.database) {
+    ElMessage.warning("请填写数据库名");
+    return;
+  }
+  importing.value = true;
+  try {
+    const imported = await tauri.importFromDb(
+      { ...dbConfig.value, schema: dbConfig.value.schema || undefined } as never,
+      importBasePackage.value
+    );
+    project.currentProject.value = imported;
+    project.currentPath.value = "";
+    project.selectTable(imported.tables[0]?.code ?? "");
+    importDialogVisible.value = false;
+    ElMessage.success(`导入成功: ${imported.tables.length} 个表`);
+  } catch {
+    /* 错误已处理 */
+  } finally {
+    importing.value = false;
+  }
+}
+
 function handleAddTable() {
   if (!project.currentProject.value) return;
   const code = prompt("表名(大写蛇形,如 SYS_USER)");
@@ -177,6 +226,10 @@ function handleDeleteTable() {
           />
         </el-select>
         <el-button type="warning" @click="handleGenerate('java')">生成 Java</el-button>
+        <el-divider direction="vertical" />
+        <el-button type="info" @click="importDialogVisible = true">
+          从数据库导入
+        </el-button>
       </div>
     </el-header>
 
@@ -323,6 +376,45 @@ function handleDeleteTable() {
         <el-button size="small" @click="copyOutput">复制</el-button>
       </div>
       <el-input v-model="genOutput" type="textarea" :rows="20" readonly />
+    </el-dialog>
+
+    <!-- 导入向导对话框 -->
+    <el-dialog v-model="importDialogVisible" title="从数据库导入" width="500px">
+      <el-form :model="dbConfig" label-width="90px">
+        <el-form-item label="数据库类型">
+          <el-select v-model="dbConfig.dialect" style="width: 100%">
+            <el-option label="MySQL" value="mysql" />
+            <el-option label="PostgreSQL" value="postgresql" />
+            <el-option label="Oracle" value="oracle" />
+            <el-option label="H2" value="h2" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="主机">
+          <el-input v-model="dbConfig.host" placeholder="localhost" />
+        </el-form-item>
+        <el-form-item label="端口">
+          <el-input-number v-model="dbConfig.port" :min="1" :max="65535" />
+        </el-form-item>
+        <el-form-item label="用户名">
+          <el-input v-model="dbConfig.user" />
+        </el-form-item>
+        <el-form-item label="密码">
+          <el-input v-model="dbConfig.password" type="password" show-password />
+        </el-form-item>
+        <el-form-item label="数据库">
+          <el-input v-model="dbConfig.database" placeholder="数据库名/schema" />
+        </el-form-item>
+        <el-form-item label="基础包名">
+          <el-input v-model="importBasePackage" placeholder="com.example" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="handleTestConnection">测试连接</el-button>
+        <el-button type="primary" :loading="importing" @click="handleImport">
+          导入
+        </el-button>
+        <el-button @click="importDialogVisible = false">取消</el-button>
+      </template>
     </el-dialog>
   </div>
 </template>
