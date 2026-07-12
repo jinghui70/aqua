@@ -8,6 +8,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { useRouter } from "vue-router";
 import { useProjectStore } from "@/stores/project";
 import { useUiStore } from "@/stores/ui";
+import { pickOpenFile, pickSaveFile } from "@/composables/useFileDialog";
 
 export function useMenuActions() {
   const router = useRouter();
@@ -80,17 +81,7 @@ export function useMenuActions() {
   }
 
   async function doOpen() {
-    let path: string | null = null;
-    try {
-      const res = await ElMessageBox.prompt("schema.json 文件路径", "打开项目", {
-        confirmButtonText: "打开",
-        cancelButtonText: "取消",
-        inputPlaceholder: "/path/to/schema.json",
-      });
-      path = res.value;
-    } catch {
-      return;
-    }
+    const path = await pickOpenFile();
     if (!path) return;
     try {
       await store.openProject(path);
@@ -108,18 +99,10 @@ export function useMenuActions() {
     }
     let path = saveAs ? "" : store.currentPath;
     if (!path) {
-      try {
-        const res = await ElMessageBox.prompt("保存路径", "保存项目", {
-          confirmButtonText: "保存",
-          cancelButtonText: "取消",
-          inputPlaceholder: "/path/to/schema.json",
-        });
-        path = res.value;
-      } catch {
-        return;
-      }
+      const picked = await pickSaveFile();
+      if (!picked) return;
+      path = picked;
     }
-    if (!path) return;
     try {
       await store.saveProject(path);
       ElMessage.success(`已保存到 ${path}`);

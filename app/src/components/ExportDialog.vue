@@ -1,11 +1,12 @@
 <script setup lang="ts">
 // 导出弹窗:DDL / diff / StrConst 三合一,预览+复制+下载。
 import { computed, ref, watch } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
 import { useUiStore } from "@/stores/ui";
 import { useProjectStore } from "@/stores/project";
 import { useTauri } from "@/composables/useTauri";
 import { downloadText } from "@/composables/useDownload";
+import { pickOpenFile } from "@/composables/useFileDialog";
 import type { Project } from "@/types/schema";
 
 const ui = useUiStore();
@@ -82,16 +83,8 @@ async function doPreview() {
 }
 
 async function pickOldProject() {
-  try {
-    const { value } = await ElMessageBox.prompt("旧版 schema.json 路径", "选择对比文件", {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      inputPlaceholder: "/path/to/old-schema.json",
-    });
-    oldProjectPath.value = value;
-  } catch {
-    /* 取消 */
-  }
+  const path = await pickOpenFile();
+  if (path) oldProjectPath.value = path;
 }
 
 async function copy() {

@@ -16,6 +16,7 @@ tokio.workspace = true
 anyhow.workspace = true
 aqua-core = { path = "../crates/aqua-core" }
 clap = { version = "4.5", features = ["derive"] }
+tauri-plugin-dialog = "2"
 
 [features]
 # 默认自定义协议

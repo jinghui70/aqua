@@ -2,10 +2,11 @@
 // 欢迎页:操作卡片 + 最近项目列表。
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
 import { useProjectStore } from "@/stores/project";
 import { useUiStore } from "@/stores/ui";
 import { useRecentProjects, type RecentProject } from "@/composables/useRecentProjects";
+import { pickOpenFile } from "@/composables/useFileDialog";
 
 const router = useRouter();
 const store = useProjectStore();
@@ -24,16 +25,8 @@ function handleNew() {
 }
 
 async function handleOpen() {
-  try {
-    const { value } = await ElMessageBox.prompt("schema.json 文件路径", "打开项目", {
-      confirmButtonText: "打开",
-      cancelButtonText: "取消",
-      inputPlaceholder: "/path/to/schema.json",
-    });
-    if (value) await openPath(value);
-  } catch {
-    /* 取消 */
-  }
+  const path = await pickOpenFile();
+  if (path) await openPath(path);
 }
 
 async function openPath(path: string) {

@@ -59,6 +59,7 @@ fn build_menu<R: tauri::Runtime>(
 /// 启动 GUI 模式,注册原生菜单 + Tauri commands。
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .menu(|handle| build_menu(handle))
         .on_menu_event(|app, event| {
             // 菜单项 id 发到前端,由 useMenuActions 分发
