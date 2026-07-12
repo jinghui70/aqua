@@ -3,8 +3,8 @@
 //! 纯逻辑,无 I/O。输入已校验的 Project,输出代码/DDL 文本。
 
 pub mod ddl;
+pub mod java;
 
 // 后续其他 generators:
-// pub mod java;
 // pub mod frontend_json;
 // pub mod strconst;

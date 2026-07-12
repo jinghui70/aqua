@@ -1,0 +1,114 @@
+//! Java 实体生成器集成测试。
+
+use aqua_core::generators::java::{generate_java_entity, JavaOptions};
+use aqua_core::schema::parse_project;
+use std::fs;
+
+/// 加载 fixture。
+fn load_fixture(name: &str) -> aqua_core::schema::Project {
+    let path = format!("{}/tests/fixtures/{}", env!("CARGO_MANIFEST_DIR"), name);
+    let json_str = fs::read_to_string(&path).expect("读取 fixture 失败");
+    let value: serde_json::Value = serde_json::from_str(&json_str).expect("JSON 解析失败");
+    parse_project(value).expect("Project 校验失败")
+}
+
+#[test]
+fn test_generate_java_entity_with_lombok() {
+    let project = load_fixture("valid-full.json");
+    let java_code =
+        generate_java_entity(&project, "SYS_USER", &JavaOptions::default()).expect("生成失败");
+
+    println!("\n=== Generated Java (Lombok) ===\n{}\n", java_code);
+
+    // 验证 package
+    assert!(java_code.contains("package"), "应包含 package 声明");
+
+    // 验证 import
+    assert!(java_code.contains("import io.github.rainbow.dbaccess.annotation.Table"));
+    assert!(java_code.contains("import lombok.Data"));
+    assert!(
+        java_code.contains("import java.time.LocalDateTime"),
+        "应导入 LocalDateTime"
+    );
+    assert!(
+        java_code.contains("import java.math.BigDecimal"),
+        "应导入 BigDecimal"
+    );
+
+    // 验证注解
+    assert!(java_code.contains("@Table(name = \"SYS_USER\")"));
+    assert!(java_code.contains("@Data"));
+    assert!(java_code.contains("@Id"), "主键字段应有 @Id");
+
+    // 验证类定义
+    assert!(
+        java_code.contains("public class SysUser"),
+        "类名应为 SysUser"
+    );
+
+    // 验证字段
+    assert!(java_code.contains("private Long id"), "应有 Long id 字段");
+    assert!(
+        java_code.contains("private String userName"),
+        "应有 String userName 字段"
+    );
+    assert!(
+        java_code.contains("private BigDecimal amount"),
+        "应有 BigDecimal amount 字段"
+    );
+    assert!(
+        java_code.contains("private LocalDateTime createTime"),
+        "应有 LocalDateTime createTime 字段"
+    );
+
+    // Lombok 模式不应有 getter/setter
+    assert!(
+        !java_code.contains("public Long getId()"),
+        "Lombok 模式不应生成 getter"
+    );
+}
+
+#[test]
+fn test_generate_java_entity_without_lombok() {
+    let project = load_fixture("valid-full.json");
+    let options = JavaOptions {
+        use_lombok: false,
+        ..Default::default()
+    };
+
+    let java_code = generate_java_entity(&project, "SYS_USER", &options).expect("生成失败");
+
+    // 不应有 @Data
+    assert!(!java_code.contains("@Data"));
+    assert!(!java_code.contains("import lombok.Data"));
+
+    // 应有 getter/setter
+    assert!(java_code.contains("public Long getId()"));
+    assert!(java_code.contains("public void setId(Long id)"));
+    assert!(java_code.contains("public String getUserName()"));
+    assert!(java_code.contains("public void setUserName(String userName)"));
+}
+
+#[test]
+fn test_custom_package_and_class_name() {
+    let project = load_fixture("valid-full.json");
+    let options = JavaOptions {
+        use_lombok: true,
+        package: Some("com.example.entity".to_string()),
+        class_name: Some("User".to_string()),
+    };
+
+    let java_code = generate_java_entity(&project, "SYS_USER", &options).expect("生成失败");
+
+    assert!(java_code.contains("package com.example.entity;"));
+    assert!(java_code.contains("public class User {"));
+}
+
+#[test]
+fn test_table_not_found() {
+    let project = load_fixture("valid-full.json");
+    let result = generate_java_entity(&project, "NONEXISTENT_TABLE", &JavaOptions::default());
+
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("Table not found"));
+}
