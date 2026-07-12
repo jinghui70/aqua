@@ -101,6 +101,23 @@ function handleAddField() {
     length: 64,
   });
 }
+
+function handleDeleteField(index: number) {
+  if (!project.currentTable.value) return;
+  project.currentTable.value.fields.splice(index, 1);
+}
+
+function handleDeleteTable() {
+  if (!project.currentProject.value || !project.currentTable.value) return;
+  if (!confirm(`确认删除表 ${project.currentTable.value.code}?`)) return;
+  const idx = project.currentProject.value.tables.findIndex(
+    (t) => t.code === project.currentTable.value?.code
+  );
+  if (idx >= 0) {
+    project.currentProject.value.tables.splice(idx, 1);
+    project.selectTable("");
+  }
+}
 </script>
 
 <template>
@@ -164,13 +181,26 @@ function handleAddField() {
         <el-main class="field-panel">
           <template v-if="project.currentTable.value">
             <div class="panel-header">
-              <h2>{{ project.currentTable.value.code }}</h2>
-              <span class="table-meta">
-                {{ project.currentTable.value.name }} · 分组:
-                {{ project.currentTable.value.group }}
-              </span>
+              <el-input
+                v-model="project.currentTable.value.code"
+                style="width: 200px"
+                placeholder="表名"
+              />
+              <el-input
+                v-model="project.currentTable.value.name"
+                style="width: 140px"
+                placeholder="中文名"
+              />
+              <el-input
+                v-model="project.currentTable.value.group"
+                style="width: 120px"
+                placeholder="分组"
+              />
               <el-button size="small" type="primary" @click="handleAddField">
                 + 新增字段
+              </el-button>
+              <el-button size="small" type="danger" @click="handleDeleteTable">
+                删除表
               </el-button>
             </div>
             <el-table
@@ -178,28 +208,71 @@ function handleAddField() {
               border
               style="width: 100%"
             >
-              <el-table-column prop="code" label="字段名" width="160" />
-              <el-table-column prop="name" label="中文名" width="120" />
-              <el-table-column label="类型" width="160">
+              <el-table-column prop="code" label="字段名" width="160">
                 <template #default="{ row }">
-                  <span>{{ row.dataType }}</span>
-                  <span v-if="row.length">({{ row.length }})</span>
-                  <span v-if="row.precision"
-                    >({{ row.precision }}, {{ row.scale ?? 0 }})</span
-                  >
+                  <el-input v-model="row.code" size="small" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="name" label="中文名" width="120">
+                <template #default="{ row }">
+                  <el-input v-model="row.name" size="small" />
+                </template>
+              </el-table-column>
+              <el-table-column label="类型" width="180">
+                <template #default="{ row }">
+                  <el-select v-model="row.dataType" size="small" style="width: 110px">
+                    <el-option
+                      v-for="dt in dataTypes"
+                      :key="dt"
+                      :label="dt"
+                      :value="dt"
+                    />
+                  </el-select>
+                  <el-input-number
+                    v-if="row.dataType === 'VARCHAR'"
+                    v-model="row.length"
+                    size="small"
+                    :min="1"
+                    style="width: 60px"
+                  />
+                  <span v-if="row.dataType === 'DECIMAL'">
+                    <el-input-number
+                      v-model="row.precision"
+                      size="small"
+                      :min="1"
+                      style="width: 55px"
+                    />,
+                    <el-input-number
+                      v-model="row.scale"
+                      size="small"
+                      :min="0"
+                      style="width: 55px"
+                    />
+                  </span>
                 </template>
               </el-table-column>
               <el-table-column label="主键" width="60">
                 <template #default="{ row }">
-                  <el-tag v-if="row.isKey" type="danger" size="small">PK</el-tag>
+                  <el-checkbox v-model="row.isKey" />
                 </template>
               </el-table-column>
               <el-table-column label="非空" width="60">
                 <template #default="{ row }">
-                  <el-tag v-if="row.notNull" size="small">NN</el-tag>
+                  <el-checkbox v-model="row.notNull" />
                 </template>
               </el-table-column>
-              <el-table-column prop="comment" label="备注" />
+              <el-table-column label="操作" width="80">
+                <template #default="{ $index }">
+                  <el-button
+                    size="small"
+                    type="danger"
+                    link
+                    @click="handleDeleteField($index)"
+                  >
+                    删除
+                  </el-button>
+                </template>
+              </el-table-column>
             </el-table>
           </template>
           <el-empty v-else description="请选择左侧的表" />
