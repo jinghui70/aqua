@@ -7,6 +7,7 @@
 pub mod error;
 mod factory;
 mod mysql;
+mod postgres;
 mod trait_def;
 pub mod types;
 

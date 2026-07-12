@@ -134,7 +134,7 @@ mod tests {
     use super::*;
 
     fn make_project() -> Project {
-        use crate::schema::GroupDefine;
+        use crate::schema::{Field, GroupDefine};
         Project {
             version: "1.0.0".to_string(),
             base_package: "com.example".to_string(),
