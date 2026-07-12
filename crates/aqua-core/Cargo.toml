@@ -16,6 +16,7 @@ tokio.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
 chrono.workspace = true
+async-trait = "0.1"
 
 # native DB drivers (MySQL/PG, 免 Java; 仅这两个库用 Rust 直连)
 mysql_async = { version = "0.34", default-features = false, features = ["minimal-rust"] }
