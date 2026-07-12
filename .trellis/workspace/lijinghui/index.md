@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 15
+- **Total Sessions**: 16
 - **Last Active**: 2026-07-12
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~521 | Active |
+| `journal-1.md` | ~554 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 16 | 2026-07-12 | 前端全量重做完成 (frontend-rework 9 child) | HEAD | `main` |
 | 15 | 2026-07-12 | connector.jar 实现 (H2, v2 架构重构) | HEAD | `main` |
 | 14 | 2026-07-12 | MySQL/PG 集成测试通过,发现并修复 DDL bug | `ba192f2` | `main` |
 | 13 | 2026-07-12 | 🎉 全部 21 个任务完成,aqua v2 功能闭环 | `a5e9212`, `276d29f`, `532df66` | `main` |

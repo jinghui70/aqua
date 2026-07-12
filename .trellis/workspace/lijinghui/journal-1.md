@@ -519,3 +519,36 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 16: 前端全量重做完成 (frontend-rework 9 child)
+
+**Date**: 2026-07-12
+**Task**: 前端全量重做完成 (frontend-rework 9 child)
+**Branch**: `main`
+
+### Summary
+
+前端按 design.md §6 全量重做完成。parent frontend-rework + 9 child 全部归档: fe-arch(路由/Pinia/原生菜单/布局) fe-group-tree(分组树CRUD) fe-table-editor(4-Tab编辑) fe-biztype fe-enum(+全局枚举Java生成) fe-datasource(弹窗) fe-import-wizard(4步) fe-export(DDL/diff/StrConst) fe-dataset(框架)。菜单用 Tauri 原生窗口菜单(macOS 修复应用菜单重叠)。后端补 command: java配置/frontend_json/enum/strconst/alter/list_tables。全程 ElMessageBox 无 window 弹窗。cargo build + pnpm build 通过。待后续: 数据源持久化(AES)/数据集数据行读写/内联枚举。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `HEAD` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
