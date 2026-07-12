@@ -1,103 +1,108 @@
 package com.aqua.connector;
 
-import com.aqua.connector.command.ImportCommand;
-import com.aqua.connector.command.QueryCommand;
-import com.aqua.connector.command.TestCommand;
-import com.aqua.connector.jdbc.ConnectionFactory;
-import com.aqua.connector.protocol.Request;
-import com.aqua.connector.protocol.Response;
-import com.aqua.connector.registry.RegistryLoader;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.sql.Connection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+import com.aqua.connector.meta.ColumnMeta;
+import com.aqua.connector.meta.IndexMeta;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
- * Entry point for the db-connector subprocess.
+ * connector.jar 入口:读 stdin JSON,分发 action,写 stdout JSON。
  *
- * <p>Reads a single JSON request from stdin, dispatches to the appropriate
- * command handler, writes the JSON response to stdout, and exits.
+ * 协议(对齐 Rust driver/jdbc.rs):
+ * 请求: {action, dialect, host, port, user, password, database, schema, table}
+ * action: testConnection / listTables / getColumns / listIndexes
+ * 响应: {status:"ok"} / {tables:[...]} / {columns:[...]} / {indexes:[...]} / {error:"..."}
  */
 public class Main {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public static void main(String[] args) {
-        int exitCode = 0;
         try {
-            // 1. Load registry + external drivers
-            RegistryLoader registryLoader = new RegistryLoader();
-            registryLoader.load();
+            // 1. 读 stdin
+            String stdin = readStdin();
+            DbConfig config = MAPPER.readValue(stdin, DbConfig.class);
+            String action = MAPPER.readTree(stdin).get("action").asText();
 
-            ConnectionFactory connectionFactory = new ConnectionFactory(registryLoader);
-
-            // 2. Read full stdin into a string
-            String stdinContent = readStdin();
-
-            // 3. Parse request
-            Request request;
-            try {
-                request = MAPPER.readValue(stdinContent, Request.class);
-            } catch (Exception e) {
-                Response resp = Response.fail("INVALID_REQUEST",
-                        "Cannot parse request JSON: " + e.getMessage());
-                System.out.println(MAPPER.writeValueAsString(resp));
+            // 2. 获取 Dialect
+            Dialect dialect = DialectRegistry.get(config.dialect);
+            if (dialect == null) {
+                writeError("不支持的方言: " + config.dialect);
                 System.exit(1);
                 return;
             }
 
-            // 4. Dispatch command
-            Response response = dispatch(request, connectionFactory);
-
-            // 5. Write response to stdout
+            // 3. 分发 action
+            ObjectNode response;
+            try (Connection conn = dialect.connect(config)) {
+                response = dispatch(action, dialect, conn, config);
+            }
             System.out.println(MAPPER.writeValueAsString(response));
-
         } catch (Exception e) {
-            Response resp = Response.fail("INTERNAL_ERROR", e.getMessage());
             try {
-                System.out.println(MAPPER.writeValueAsString(resp));
+                writeError(e.getMessage() == null ? e.toString() : e.getMessage());
             } catch (Exception ignored) {}
-            exitCode = 1;
+            System.exit(1);
         }
-        System.exit(exitCode);
     }
 
-    private static Response dispatch(Request request, ConnectionFactory connectionFactory) {
-        String cmd = request.getCommand();
-        if (cmd == null) {
-            return Response.fail("INVALID_REQUEST", "Missing 'command' field");
-        }
-
-        switch (cmd.toLowerCase()) {
-            case "import":
-                return new ImportCommand(connectionFactory)
-                        .execute(request.getDataSource(), request.getParams());
-
-            case "query":
-                return new QueryCommand(connectionFactory)
-                        .execute(request.getDataSource(), request.getParams());
-
-            case "test":
-                return new TestCommand(connectionFactory)
-                        .execute(request.getDataSource());
-
+    private static ObjectNode dispatch(String action, Dialect dialect, Connection conn, DbConfig config)
+            throws Exception {
+        switch (action) {
+            case "testConnection": {
+                ObjectNode resp = MAPPER.createObjectNode();
+                resp.put("status", "ok");
+                return resp;
+            }
+            case "listTables": {
+                List<String> tables = dialect.listTables(conn, config.schema);
+                ObjectNode resp = MAPPER.createObjectNode();
+                ArrayNode arr = resp.putArray("tables");
+                tables.forEach(arr::add);
+                return resp;
+            }
+            case "getColumns": {
+                List<ColumnMeta> columns = dialect.getColumns(conn, config.table);
+                ObjectNode resp = MAPPER.createObjectNode();
+                ArrayNode arr = resp.putArray("columns");
+                for (ColumnMeta c : columns) {
+                    arr.addPOJO(c);
+                }
+                return resp;
+            }
+            case "listIndexes": {
+                List<IndexMeta> indexes = dialect.getIndexes(conn, config.table);
+                ObjectNode resp = MAPPER.createObjectNode();
+                ArrayNode arr = resp.putArray("indexes");
+                for (IndexMeta i : indexes) {
+                    arr.addPOJO(i);
+                }
+                return resp;
+            }
             default:
-                return Response.fail("UNKNOWN_COMMAND",
-                        "Unrecognised command: " + cmd + " (expected import/query/test)");
+                throw new IllegalArgumentException("未知 action: " + action);
         }
+    }
+
+    private static void writeError(String msg) throws Exception {
+        ObjectNode resp = MAPPER.createObjectNode();
+        resp.put("error", msg);
+        System.out.println(MAPPER.writeValueAsString(resp));
     }
 
     private static String readStdin() throws Exception {
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        InputStream in = System.in;
-        byte[] tmp = new byte[4096];
-        int n;
-        while ((n = in.read(tmp)) != -1) {
-            buffer.write(tmp, 0, n);
-            // Stop when we read enough (handle pipe not closing)
-            if (n < tmp.length) break;
+        StringBuilder sb = new StringBuilder();
+        int ch;
+        while ((ch = System.in.read()) != -1) {
+            sb.append((char) ch);
+            if (System.in.available() == 0) break;
         }
-        return buffer.toString(StandardCharsets.UTF_8);
+        return sb.toString();
     }
 }
