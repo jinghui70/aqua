@@ -70,6 +70,7 @@ fn column_to_field(col: ColumnMeta) -> Field {
         scale: col.scale,
         not_null: Some(!col.nullable),
         is_key: Some(col.is_key),
+        auto_generate: None,  // 导入时无法推断,需人工配置
         default_value: col.default_value,
         enum_ref: None,      // 枚举识别待后续优化
         biz_type: None,
