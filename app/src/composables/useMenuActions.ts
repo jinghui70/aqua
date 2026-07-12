@@ -1,0 +1,129 @@
+// 监听原生菜单事件,分发到路由跳转 / 弹窗 / store action。
+//
+// 菜单在 Rust 侧(src-tauri/src/lib.rs)构建,点击后 emit "menu" 事件,
+// payload 为菜单项 id(如 "file.new" / "config.biztype")。
+
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { ElMessage, ElMessageBox } from "element-plus";
+import { useRouter } from "vue-router";
+import { useProjectStore } from "@/stores/project";
+
+export function useMenuActions() {
+  const router = useRouter();
+  const store = useProjectStore();
+  let unlisten: UnlistenFn | null = null;
+
+  /** 打开配置类路由标签(单例)。 */
+  function openConfigTab(key: string, title: string, path: string) {
+    store.openTab({ key, title, path });
+    router.push(path);
+  }
+
+  async function handle(id: string) {
+    switch (id) {
+      // 文件
+      case "file.new":
+        store.newProject();
+        router.push("/welcome");
+        ElMessage.success("已新建项目");
+        break;
+      case "file.open":
+        await doOpen();
+        break;
+      case "file.save":
+        await doSave();
+        break;
+      case "file.saveAs":
+        await doSave(true);
+        break;
+      // 配置(路由标签)
+      case "config.biztype":
+        openConfigTab("biztype", "业务类型", "/biztype");
+        break;
+      case "config.enum":
+        openConfigTab("enum", "枚举", "/enum");
+        break;
+      case "config.dataset":
+        openConfigTab("dataset", "数据集", "/dataset");
+        break;
+      // 配置(弹窗)- 占位,各 child 实现
+      case "config.datasource":
+        ElMessage.info("数据源配置 — fe-datasource 任务实现");
+        break;
+      // 导出(弹窗)- 占位
+      case "export.ddl":
+      case "export.diff":
+      case "export.strconst":
+        ElMessage.info(`导出 ${id.split(".")[1]} — fe-export 任务实现`);
+        break;
+      case "help.about":
+        ElMessageBox.alert("aqua v2 — JSON-SSOT 数据库结构管理工具", "关于", {
+          confirmButtonText: "确定",
+        });
+        break;
+      default:
+        break;
+    }
+  }
+
+  async function doOpen() {
+    let path: string | null = null;
+    try {
+      const res = await ElMessageBox.prompt("schema.json 文件路径", "打开项目", {
+        confirmButtonText: "打开",
+        cancelButtonText: "取消",
+        inputPlaceholder: "/path/to/schema.json",
+      });
+      path = res.value;
+    } catch {
+      return;
+    }
+    if (!path) return;
+    try {
+      await store.openProject(path);
+      router.push("/welcome");
+      ElMessage.success(`已打开 ${path}`);
+    } catch {
+      /* useTauri 已提示 */
+    }
+  }
+
+  async function doSave(saveAs = false) {
+    if (!store.currentProject) {
+      ElMessage.warning("请先新建或打开项目");
+      return;
+    }
+    let path = saveAs ? "" : store.currentPath;
+    if (!path) {
+      try {
+        const res = await ElMessageBox.prompt("保存路径", "保存项目", {
+          confirmButtonText: "保存",
+          cancelButtonText: "取消",
+          inputPlaceholder: "/path/to/schema.json",
+        });
+        path = res.value;
+      } catch {
+        return;
+      }
+    }
+    if (!path) return;
+    try {
+      await store.saveProject(path);
+      ElMessage.success(`已保存到 ${path}`);
+    } catch (e) {
+      ElMessage.error(`保存失败: ${e}`);
+    }
+  }
+
+  /** 挂载监听。在 setup 里调用,返回卸载函数。 */
+  async function mount() {
+    unlisten = await listen<string>("menu", (e) => handle(e.payload));
+  }
+
+  function unmount() {
+    unlisten?.();
+    unlisten = null;
+  }
+
+  return { mount, unmount, handle };
+}
