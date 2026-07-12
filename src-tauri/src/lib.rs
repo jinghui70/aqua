@@ -21,8 +21,6 @@ fn build_menu<R: tauri::Runtime>(
         .text("file.open", "打开项目")
         .text("file.save", "保存")
         .text("file.saveAs", "另存为")
-        .separator()
-        .quit()
         .build()?;
     let config = SubmenuBuilder::new(app, "配置")
         .text("config.biztype", "业务类型管理")
@@ -38,9 +36,22 @@ fn build_menu<R: tauri::Runtime>(
     let help = SubmenuBuilder::new(app, "帮助")
         .text("help.about", "关于")
         .build()?;
-    MenuBuilder::new(app)
-        .items(&[&file, &config, &export, &help])
-        .build()
+
+    let builder = MenuBuilder::new(app);
+
+    // macOS: 第一个 submenu 是应用菜单(显示 app 名),需含 about/quit,
+    // 否则业务菜单首项会被当成应用菜单与 app 名重叠。
+    #[cfg(target_os = "macos")]
+    let builder = {
+        let app_menu = SubmenuBuilder::new(app, "aqua")
+            .about(None)
+            .separator()
+            .quit()
+            .build()?;
+        builder.item(&app_menu)
+    };
+
+    builder.items(&[&file, &config, &export, &help]).build()
 }
 
 /// 启动 GUI 模式,注册原生菜单 + Tauri commands。
