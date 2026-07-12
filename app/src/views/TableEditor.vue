@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 表编辑器:表头 + 4 Tab(fields/index/java/json)。
 // 通过 route param code 定位 store 里的表,直接编辑(Pinia 响应式)。
-import { computed, ref } from "vue";
+import { computed, ref, watchEffect } from "vue";
 import { useProjectStore } from "@/stores/project";
 import FieldsTab from "./table-editor/FieldsTab.vue";
 import IndexTab from "./table-editor/IndexTab.vue";
@@ -19,9 +19,10 @@ const table = computed(() =>
 
 const groups = computed(() => store.currentProject?.groups ?? []);
 
-function ensureIndexes(v: any) {
-  if (table.value) table.value.indexes = v;
-}
+// 保证 indexes 是 table 上的真实数组(否则 IndexTab 拿到临时数组,增删丢失)
+watchEffect(() => {
+  if (table.value && !table.value.indexes) table.value.indexes = [];
+});
 </script>
 
 <template>
@@ -47,11 +48,7 @@ function ensureIndexes(v: any) {
         <FieldsTab :fields="table.fields" />
       </el-tab-pane>
       <el-tab-pane label="索引" name="index">
-        <IndexTab
-          :indexes="table.indexes ?? []"
-          :fields="table.fields"
-          @update:indexes="ensureIndexes"
-        />
+        <IndexTab :indexes="table.indexes ?? []" :fields="table.fields" />
       </el-tab-pane>
       <el-tab-pane label="Java" name="java" lazy>
         <JavaTab :table-code="table.code" />

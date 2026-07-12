@@ -1,20 +1,12 @@
 <script setup lang="ts">
 // index Tab: 索引表格,name/fields(多选表内字段)/unique。
+// indexes 由父组件保证为 table 上的真实数组引用,直接操作(Pinia 响应式)。
 import type { Index, Field } from "@/types/schema";
 
 const props = defineProps<{ indexes: Index[]; fields: Field[] }>();
-const emit = defineEmits<{ "update:indexes": [Index[]] }>();
-
-function ensureArray(): Index[] {
-  if (!props.indexes) {
-    emit("update:indexes", []);
-    return [];
-  }
-  return props.indexes;
-}
 
 function addIndex() {
-  ensureArray().push({ name: "", fields: [], unique: false });
+  props.indexes.push({ name: "", fields: [], unique: false });
 }
 
 function removeIndex(idx: number) {
