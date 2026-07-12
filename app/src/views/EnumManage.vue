@@ -1,8 +1,171 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+// 枚举管理(§6.6):全局枚举列表 + 编辑。
+import { computed, ref } from "vue";
+import { ElMessage, ElMessageBox } from "element-plus";
+import { useProjectStore } from "@/stores/project";
+import type { EnumDefine } from "@/types/schema";
+
+const store = useProjectStore();
+
+// §3.5 预置 13 色
+const COLORS = [
+  "success", "error", "warning", "info", "primary", "danger",
+  "red", "orange", "yellow", "green", "blue", "purple", "grey",
+];
+
+const enums = computed(() => store.currentProject?.enums ?? []);
+const selectedCode = ref("");
+const current = computed(() =>
+  enums.value.find((e) => e.code === selectedCode.value)
+);
+
+function select(code: string) {
+  selectedCode.value = code;
+}
+
+async function addEnum() {
+  if (!store.currentProject) {
+    ElMessage.warning("请先打开项目");
+    return;
+  }
+  try {
+    const { value } = await ElMessageBox.prompt("枚举 code", "新建枚举", {
+      confirmButtonText: "创建",
+      cancelButtonText: "取消",
+      inputPlaceholder: "EnumGender",
+    });
+    if (!value) return;
+    const code = value.trim();
+    if (enums.value.some((e) => e.code === code)) {
+      ElMessage.error(`${code} 已存在`);
+      return;
+    }
+    const def: EnumDefine = {
+      code,
+      name: code,
+      package: "enum",
+      hasCode: false,
+      values: [],
+    };
+    store.currentProject.enums.push(def);
+    selectedCode.value = code;
+    ElMessage.success("已创建");
+  } catch {
+    /* 取消 */
+  }
+}
+
+async function removeEnum(code: string) {
+  try {
+    await ElMessageBox.confirm(`确认删除枚举 ${code}?`, "删除", {
+      type: "warning",
+      confirmButtonText: "删除",
+      cancelButtonText: "取消",
+    });
+    const arr = store.currentProject!.enums;
+    const idx = arr.findIndex((e) => e.code === code);
+    if (idx >= 0) arr.splice(idx, 1);
+    if (selectedCode.value === code) selectedCode.value = "";
+    ElMessage.success("已删除");
+  } catch {
+    /* 取消 */
+  }
+}
+
+function addValue() {
+  current.value?.values.push({ id: "", name: "" });
+}
+function removeValue(idx: number) {
+  current.value?.values.splice(idx, 1);
+}
+</script>
 
 <template>
-  <div class="p-16">
-    <div class="text-16 font-bold mb-12">枚举管理</div>
-    <el-alert type="info" :closable="false">占位 — fe-enum 任务实现</el-alert>
+  <div v-if="store.currentProject" class="h-full flex">
+    <!-- 左列表 -->
+    <div class="w-220 border-r border-gray-200 flex flex-col flex-shrink-0">
+      <div
+        class="flex items-center justify-between px-12 h-40 border-b border-gray-200 font-bold text-14"
+      >
+        <span>枚举</span>
+        <el-button size="small" type="primary" link @click="addEnum">+ 新建</el-button>
+      </div>
+      <div class="flex-1 overflow-y-auto">
+        <div
+          v-for="e in enums"
+          :key="e.code"
+          class="flex items-center justify-between px-12 py-8 cursor-pointer text-13 hover:bg-gray-100"
+          :class="{ 'bg-blue-50': e.code === selectedCode }"
+          @click="select(e.code)"
+        >
+          <span>{{ e.name }} ({{ e.code }})</span>
+          <el-button size="small" link type="danger" @click.stop="removeEnum(e.code)">删</el-button>
+        </div>
+        <el-empty v-if="!enums.length" description="暂无" :image-size="50" />
+      </div>
+    </div>
+
+    <!-- 右编辑 -->
+    <div class="flex-1 overflow-y-auto p-16">
+      <template v-if="current">
+        <el-form label-width="100px" class="max-w-3xl">
+          <el-form-item label="code">
+            <el-input :model-value="current.code" disabled />
+          </el-form-item>
+          <el-form-item label="名称">
+            <el-input v-model="current.name" />
+          </el-form-item>
+          <el-form-item label="package">
+            <el-input v-model="current.package" />
+          </el-form-item>
+          <el-form-item label="hasCode">
+            <el-switch v-model="current.hasCode" />
+            <span class="ml-8 text-12 text-gray-400">
+              开启后每个值必须有 code(数据库存 code)
+            </span>
+          </el-form-item>
+        </el-form>
+
+        <div class="mt-16 mb-8 font-bold text-14 flex items-center gap-12">
+          枚举值
+          <el-button size="small" type="primary" link @click="addValue">+ 添加</el-button>
+        </div>
+        <el-table :data="current.values" border size="small">
+          <el-table-column label="id" width="150">
+            <template #default="{ row }">
+              <el-input v-model="row.id" size="small" placeholder="MALE" />
+            </template>
+          </el-table-column>
+          <el-table-column label="名称" width="120">
+            <template #default="{ row }">
+              <el-input v-model="row.name" size="small" placeholder="男" />
+            </template>
+          </el-table-column>
+          <el-table-column label="code" width="120">
+            <template #default="{ row }">
+              <el-input
+                v-model="row.code"
+                size="small"
+                :placeholder="current.hasCode ? '必填' : '可选'"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column label="颜色" width="140">
+            <template #default="{ row }">
+              <el-select v-model="row.color" size="small" clearable placeholder="-">
+                <el-option v-for="c in COLORS" :key="c" :label="c" :value="c" />
+              </el-select>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="70" align="center">
+            <template #default="{ $index }">
+              <el-button size="small" link type="danger" @click="removeValue($index)">删</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </template>
+      <el-empty v-else description="选择或新建枚举" />
+    </div>
   </div>
+  <el-empty v-else description="未打开项目" class="h-full" />
 </template>
