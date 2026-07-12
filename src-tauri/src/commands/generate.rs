@@ -1,11 +1,12 @@
-//! generate 命令实现。
+//! generate 命令实现(CLI + Tauri commands)。
 
 use aqua_core::generators::ddl::{generate_ddl, DdlOptions, Dialect};
 use aqua_core::generators::java::{generate_java_entity, JavaOptions};
-use aqua_core::schema::parse_project;
+use aqua_core::schema::{parse_project, Project};
 use std::error::Error;
 use std::fs;
 
+/// CLI generate 命令处理。
 pub fn handle_generate(
     type_: String,
     input: String,
@@ -50,4 +51,24 @@ pub fn handle_generate(
     }
 
     Ok(())
+}
+
+/// Tauri command: 生成 DDL。
+#[tauri::command]
+pub async fn generate_ddl_command(project: Project, dialect: String) -> Result<String, String> {
+    let dialect = Dialect::parse(&dialect).ok_or_else(|| format!("不支持的方言: {}", dialect))?;
+
+    Ok(generate_ddl(
+        &project,
+        &DdlOptions {
+            dialect,
+            ..Default::default()
+        },
+    ))
+}
+
+/// Tauri command: 生成 Java 实体类。
+#[tauri::command]
+pub async fn generate_java_command(project: Project, table: String) -> Result<String, String> {
+    generate_java_entity(&project, &table, &JavaOptions::default())
 }

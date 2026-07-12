@@ -3,7 +3,7 @@
   "name": "tauri-commands-generate",
   "title": "Tauri commands: 生成器调用",
   "description": "",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
