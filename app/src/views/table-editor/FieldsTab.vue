@@ -1,11 +1,30 @@
 <script setup lang="ts">
 // fields Tab: 字段表格行内编辑 + 增删 + 排序。
+import { computed } from "vue";
 import { ElMessage } from "element-plus";
 import { DataType, type Field } from "@/types/schema";
+import { useProjectStore } from "@/stores/project";
 
 const props = defineProps<{ fields: Field[] }>();
 
+const store = useProjectStore();
 const dataTypes = Object.values(DataType);
+
+// bizType 下拉选项(来自项目定义的业务类型)
+const bizTypeOptions = computed(() => store.currentProject?.bizTypes ?? []);
+
+// autoGenerate 启用开关:开时初始化对象,关时清空
+function toggleAutoGen(field: Field, enabled: boolean) {
+  if (enabled) {
+    field.autoGenerate = {
+      enabled: true,
+      strategy: "default",
+      timing: "INSERT",
+    };
+  } else {
+    field.autoGenerate = undefined;
+  }
+}
 
 function addField() {
   props.fields.push({
@@ -116,9 +135,22 @@ function copyField(idx: number) {
           </div>
         </template>
       </el-table-column>
-      <el-table-column label="业务类型" width="110">
+      <el-table-column label="业务类型" width="130">
         <template #default="{ row }">
-          <el-input v-model="row.bizType" size="small" placeholder="-" />
+          <el-select
+            v-model="row.bizType"
+            size="small"
+            clearable
+            placeholder="-"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="b in bizTypeOptions"
+              :key="b.bizType"
+              :label="b.name"
+              :value="b.bizType"
+            />
+          </el-select>
         </template>
       </el-table-column>
       <el-table-column label="主键" width="50" align="center">
@@ -129,6 +161,36 @@ function copyField(idx: number) {
       <el-table-column label="非空" width="50" align="center">
         <template #default="{ row }">
           <el-checkbox v-model="row.notNull" />
+        </template>
+      </el-table-column>
+      <el-table-column label="自动生成" width="260">
+        <template #default="{ row }">
+          <div class="flex items-center gap-4">
+            <el-switch
+              :model-value="!!row.autoGenerate"
+              size="small"
+              @change="(v: string | number | boolean) => toggleAutoGen(row, !!v)"
+            />
+            <template v-if="row.autoGenerate">
+              <el-select
+                v-model="row.autoGenerate.strategy"
+                size="small"
+                style="width: 90px"
+                placeholder="策略"
+              >
+                <el-option label="雪花id" value="default" />
+                <el-option label="当前时间" value="now" />
+              </el-select>
+              <el-select
+                v-model="row.autoGenerate.timing"
+                size="small"
+                style="width: 100px"
+              >
+                <el-option label="INSERT" value="INSERT" />
+                <el-option label="INSERT_UPDATE" value="INSERT_UPDATE" />
+              </el-select>
+            </template>
+          </div>
         </template>
       </el-table-column>
       <el-table-column label="备注" min-width="120">
