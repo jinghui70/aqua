@@ -86,6 +86,56 @@ export const useProjectStore = defineStore("project", () => {
     });
   }
 
+  // ===== 分组 CRUD =====
+
+  function addGroup(code: string, name: string): string | null {
+    if (!currentProject.value) return "无项目";
+    if (currentProject.value.groups.some((g) => g.code === code)) {
+      return `分组 ${code} 已存在`;
+    }
+    currentProject.value.groups.push({ code, name });
+    return null;
+  }
+
+  function renameGroup(code: string, name: string) {
+    const g = currentProject.value?.groups.find((g) => g.code === code);
+    if (g) g.name = name;
+  }
+
+  /** 删除分组(仅当无表引用)。返回错误信息或 null。 */
+  function deleteGroup(code: string): string | null {
+    if (!currentProject.value) return "无项目";
+    const used = currentProject.value.tables.some((t) => t.group === code);
+    if (used) return "分组下还有表,无法删除";
+    const idx = currentProject.value.groups.findIndex((g) => g.code === code);
+    if (idx >= 0) currentProject.value.groups.splice(idx, 1);
+    return null;
+  }
+
+  // ===== 表 CRUD =====
+
+  function addTable(code: string, name: string, group: string): string | null {
+    if (!currentProject.value) return "无项目";
+    if (currentProject.value.tables.some((t) => t.code === code)) {
+      return `表 ${code} 已存在`;
+    }
+    currentProject.value.tables.push({ code, name, group, fields: [] });
+    return null;
+  }
+
+  function renameTable(code: string, name: string) {
+    const t = currentProject.value?.tables.find((t) => t.code === code);
+    if (t) t.name = name;
+  }
+
+  function deleteTable(code: string) {
+    if (!currentProject.value) return;
+    const idx = currentProject.value.tables.findIndex((t) => t.code === code);
+    if (idx >= 0) currentProject.value.tables.splice(idx, 1);
+    // 关闭对应标签
+    closeTab(`table:${code}`);
+  }
+
   return {
     currentProject,
     currentPath,
@@ -97,5 +147,11 @@ export const useProjectStore = defineStore("project", () => {
     openTab,
     closeTab,
     openTable,
+    addGroup,
+    renameGroup,
+    deleteGroup,
+    addTable,
+    renameTable,
+    deleteTable,
   };
 });
