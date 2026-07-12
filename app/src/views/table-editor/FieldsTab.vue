@@ -60,6 +60,8 @@ function moveDown(idx: number) {
 
 // code 蛇形 -> prop 驼峰(输入 code 时自动填 prop)
 function onCodeChange(field: Field) {
+  // code 统一大写
+  field.code = field.code.toUpperCase();
   const parts = field.code.split("_").filter(Boolean);
   if (parts.length) {
     field.prop =
@@ -93,7 +95,12 @@ function copyField(idx: number) {
       <el-table-column label="#" width="44" type="index" />
       <el-table-column label="code" width="150">
         <template #default="{ row }">
-          <el-input v-model="row.code" size="small" @change="onCodeChange(row)" />
+          <el-input
+            v-model="row.code"
+            size="small"
+            @input="row.code = row.code.toUpperCase()"
+            @change="onCodeChange(row)"
+          />
         </template>
       </el-table-column>
       <el-table-column label="prop" width="120">
@@ -201,6 +208,11 @@ function copyField(idx: number) {
               </el-select>
             </template>
           </div>
+        </template>
+      </el-table-column>
+      <el-table-column label="默认值" width="110">
+        <template #default="{ row }">
+          <el-input v-model="row.defaultValue" size="small" placeholder="-" />
         </template>
       </el-table-column>
       <el-table-column label="备注" min-width="120">
