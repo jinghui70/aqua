@@ -25,7 +25,7 @@ function ensureIndexes(v: any) {
 </script>
 
 <template>
-  <div v-if="table" class="h-full flex flex-col p-12">
+  <div v-if="table" class="h-full flex flex-col p-12 overflow-hidden">
     <!-- 表头 -->
     <div class="flex items-center gap-12 mb-12 flex-wrap flex-shrink-0">
       <span class="font-bold text-16">{{ table.code }}</span>
@@ -65,8 +65,16 @@ function ensureIndexes(v: any) {
 </template>
 
 <style scoped>
+/* flex 链需 min-height:0 才能让内部滚动而非撑高外层 */
+.table-tabs {
+  min-height: 0;
+}
 .table-tabs :deep(.el-tabs__content) {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+}
+.table-tabs :deep(.el-tab-pane) {
+  height: 100%;
 }
 </style>
