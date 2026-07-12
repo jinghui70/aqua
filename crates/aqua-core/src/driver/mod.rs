@@ -8,6 +8,7 @@ pub mod types;
 pub mod error;
 mod trait_def;
 mod factory;
+mod mysql;
 
 pub use types::{DbConfig, ColumnMeta, IndexMeta};
 pub use error::DriverError;

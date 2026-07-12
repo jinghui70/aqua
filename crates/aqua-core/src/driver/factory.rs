@@ -1,6 +1,7 @@
 //! Driver 工厂函数。
 
 use super::{DbConfig, Driver, DriverError};
+use super::mysql::MysqlDriver;
 
 /// 创建数据库驱动实例(工厂模式)。
 ///
@@ -11,9 +12,9 @@ use super::{DbConfig, Driver, DriverError};
 /// - `Box<dyn Driver>`: trait object,具体类型由 dialect 决定
 ///
 /// # 支持的方言
-/// - "mysql": MySQL native 驱动(后续任务实现)
-/// - "postgresql" | "postgres" | "pg": PostgreSQL native 驱动(后续任务实现)
-/// - 其他: JDBC 驱动,spawn connector.jar(后续任务实现)
+/// - "mysql": MySQL native 驱动
+/// - "postgresql" | "postgres" | "pg": PostgreSQL native 驱动(待实现)
+/// - 其他: JDBC 驱动,spawn connector.jar(待实现)
 ///
 /// # 示例
 ///
@@ -32,13 +33,18 @@ use super::{DbConfig, Driver, DriverError};
 /// driver.test_connection().await?;
 /// let tables = driver.list_tables("test").await?;
 /// ```
-pub fn create_driver(_config: DbConfig) -> Result<Box<dyn Driver>, DriverError> {
-    // 当前占位实现,后续任务补充:
-    // - 07-12-driver-mysql: MySQL native 驱动
-    // - 07-12-driver-postgres: PostgreSQL native 驱动
-    // - 07-12-driver-jdbc: JDBC 驱动(spawn connector.jar)
-
-    Err(DriverError::UnsupportedDialect(
-        "Driver 尚未实现,后续任务补充".to_string(),
-    ))
+pub fn create_driver(config: DbConfig) -> Result<Box<dyn Driver>, DriverError> {
+    match config.dialect.as_str() {
+        "mysql" => Ok(Box::new(MysqlDriver::new(&config)?)),
+        "postgresql" | "postgres" | "pg" => {
+            Err(DriverError::UnsupportedDialect(
+                "PostgreSQL 驱动待实现(07-12-driver-postgres)".to_string(),
+            ))
+        }
+        _ => {
+            Err(DriverError::UnsupportedDialect(
+                format!("JDBC 驱动待实现(07-12-driver-jdbc): {}", config.dialect),
+            ))
+        }
+    }
 }
