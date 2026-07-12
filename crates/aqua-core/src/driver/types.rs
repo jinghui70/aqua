@@ -1,9 +1,10 @@
 //! 数据库配置与元数据类型。
 
 use crate::schema::DataType;
+use serde::{Deserialize, Serialize};
 
 /// 数据库连接配置。
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DbConfig {
     /// 数据库方言: "mysql" | "postgresql" | "oracle" | "dm" | ...
     pub dialect: String,

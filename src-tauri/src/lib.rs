@@ -8,7 +8,7 @@
 pub mod cli;
 pub mod commands;
 
-use commands::{generate, project};
+use commands::{generate, import, project};
 
 /// 启动 GUI 模式,注册 Tauri commands。
 pub fn run() {
@@ -19,6 +19,8 @@ pub fn run() {
             project::project_validate,
             generate::generate_ddl_command,
             generate::generate_java_command,
+            import::test_connection_command,
+            import::import_from_db_command,
         ])
         .run(tauri::generate_context!())
         .expect("aqua 启动失败");
