@@ -8,9 +8,11 @@ import { DataType } from "@/types/schema";
 const project = useProject();
 const tauri = useTauri();
 
-const ddlDialogVisible = ref(false);
-const ddlOutput = ref("");
+const genDialogVisible = ref(false);
+const genOutput = ref("");
+const genType = ref<"ddl" | "java">("ddl");
 const ddlDialect = ref("mysql");
+const javaTable = ref("");
 
 const dialects = [
   { label: "MySQL", value: "mysql" },
@@ -62,20 +64,38 @@ function handleNew() {
   ElMessage.success("已新建项目");
 }
 
-async function handleGenerateDdl() {
+async function handleGenerate(type: "ddl" | "java") {
   if (!project.currentProject.value) {
     ElMessage.warning("请先打开项目");
     return;
   }
+  genType.value = type;
   try {
-    ddlOutput.value = await tauri.generateDdl(
-      project.currentProject.value,
-      ddlDialect.value
-    );
-    ddlDialogVisible.value = true;
+    if (type === "ddl") {
+      genOutput.value = await tauri.generateDdl(
+        project.currentProject.value,
+        ddlDialect.value
+      );
+    } else {
+      const table = javaTable.value || project.selectedTableCode.value;
+      if (!table) {
+        ElMessage.warning("请先选择表");
+        return;
+      }
+      genOutput.value = await tauri.generateJava(
+        project.currentProject.value,
+        table
+      );
+    }
+    genDialogVisible.value = true;
   } catch {
     /* 错误已处理 */
   }
+}
+
+async function copyOutput() {
+  await navigator.clipboard.writeText(genOutput.value);
+  ElMessage.success("已复制到剪贴板");
 }
 
 function handleAddTable() {
@@ -143,7 +163,20 @@ function handleDeleteTable() {
             :value="d.value"
           />
         </el-select>
-        <el-button type="success" @click="handleGenerateDdl">生成 DDL</el-button>
+        <el-button type="success" @click="handleGenerate('ddl')">生成 DDL</el-button>
+        <el-select
+          v-model="javaTable"
+          placeholder="选择表"
+          style="width: 180px"
+        >
+          <el-option
+            v-for="t in project.currentProject.value?.tables ?? []"
+            :key="t.code"
+            :label="t.code"
+            :value="t.code"
+          />
+        </el-select>
+        <el-button type="warning" @click="handleGenerate('java')">生成 Java</el-button>
       </div>
     </el-header>
 
@@ -280,14 +313,16 @@ function handleDeleteTable() {
       </el-container>
     </el-main>
 
-    <!-- DDL 预览对话框 -->
-    <el-dialog v-model="ddlDialogVisible" title="DDL 预览" width="70%">
-      <el-input
-        v-model="ddlOutput"
-        type="textarea"
-        :rows="20"
-        readonly
-      />
+    <!-- 生成结果预览对话框 -->
+    <el-dialog
+      v-model="genDialogVisible"
+      :title="genType === 'ddl' ? 'DDL 预览' : 'Java 实体预览'"
+      width="70%"
+    >
+      <div style="margin-bottom: 12px">
+        <el-button size="small" @click="copyOutput">复制</el-button>
+      </div>
+      <el-input v-model="genOutput" type="textarea" :rows="20" readonly />
     </el-dialog>
   </div>
 </template>
