@@ -21,7 +21,7 @@ impl Default for StrConstOptions {
     fn default() -> Self {
         Self {
             package_suffix: "const".to_string(),
-            class_name: "StrConst".to_string(),
+            class_name: "DatabaseConstants".to_string(),
             group: None,
         }
     }
@@ -205,7 +205,7 @@ mod tests {
         let result = generate_strconst(&project, &StrConstOptions::default());
 
         assert!(result.contains("package com.example.const;"));
-        assert!(result.contains("public class StrConst {"));
+        assert!(result.contains("public class DatabaseConstants {"));
         // 表名
         assert!(result.contains("public static final String SYS_USER = \"SYS_USER\";"));
         assert!(result.contains("public static final String SYS_ROLE = \"SYS_ROLE\";"));
