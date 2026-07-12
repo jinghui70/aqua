@@ -9,17 +9,9 @@ use crate::generators::ddl::{generate_index, generate_table};
 use crate::schema::{Field, Index, Project, Table};
 
 /// ALTER 生成选项。
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct AlterOptions {
     pub dialect: Dialect,
-}
-
-impl Default for AlterOptions {
-    fn default() -> Self {
-        Self {
-            dialect: Dialect::default(),
-        }
-    }
 }
 
 /// 从 diff 结果生成 ALTER DDL。
