@@ -87,6 +87,15 @@ const inlineEnum = computed(() =>
     ? (draft.value.enum as InlineEnum)
     : null
 );
+
+// 引用全局枚举的可写绑定(v-model 不能绑类型断言表达式)
+const refEnumCode = computed<string>({
+  get: () => (typeof draft.value?.enum === "string" ? draft.value.enum : ""),
+  set: (v) => {
+    if (draft.value) draft.value.enum = v;
+  },
+});
+
 function addInlineValue() {
   inlineEnum.value?.values.push({ id: "", name: "" });
 }
@@ -234,7 +243,7 @@ function save() {
         </el-form-item>
         <!-- 引用全局 -->
         <el-form-item v-if="enumMode === 'ref'" label="选择枚举">
-          <el-select v-model="(draft.enum as string)" placeholder="选全局枚举" style="width: 220px">
+          <el-select v-model="refEnumCode" placeholder="选全局枚举" style="width: 220px">
             <el-option v-for="e in globalEnums" :key="e.code" :label="`${e.name} (${e.code})`" :value="e.code" />
           </el-select>
         </el-form-item>
