@@ -25,6 +25,7 @@ deadpool-postgres = "0.14"
 
 # dataset SQLite 载体
 rusqlite = { version = "0.32", features = ["bundled", "backup"] }
+base64 = "0.22"
 
 # data source 密码加密 (design.md AES-256-GCM)
 aes-gcm = "0.10"

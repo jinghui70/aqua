@@ -3,9 +3,11 @@
 //! 规则见 `docs/design.md` §4.5。
 //! .aqua 文件 = SQLite,内含 _aqua_meta(schema.json) + 数据表。
 
-use crate::schema::{DataType, Project, Table};
+use crate::schema::{DataType, Field, Project, Table};
+use base64::prelude::*;
 use rusqlite::{Connection, Result as SqlResult};
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use thiserror::Error;
 
 /// dataset 错误类型。
@@ -15,8 +17,14 @@ pub enum DatasetError {
     Sqlite(#[from] rusqlite::Error),
     #[error("JSON 错误: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("IO 错误: {0}")]
+    Io(#[from] std::io::Error),
     #[error("表不存在: {0}")]
     TableNotFound(String),
+    #[error("数据集与项目表结构不一致: {0}")]
+    SchemaMismatch(String),
+    #[error("BLOB base64 解码失败: {0}")]
+    Base64(String),
 }
 
 /// SQLite 数据集容器。
@@ -95,6 +103,178 @@ impl Dataset {
     /// 获取连接引用(高级操作)。
     pub fn connection(&self) -> &Connection {
         &self.conn
+    }
+
+    /// 读取某表全部行为 JSON 对象数组(按字段类型转换)。
+    pub fn read_table_rows(&self, table: &Table) -> Result<Vec<Map<String, Value>>, DatasetError> {
+        let cols: Vec<String> = table.fields.iter().map(|f| f.code.to_uppercase()).collect();
+        if cols.is_empty() {
+            return Ok(vec![]);
+        }
+        let sql = format!(
+            "SELECT {} FROM {}",
+            cols.join(", "),
+            table.code.to_uppercase()
+        );
+        let mut stmt = self.conn.prepare(&sql)?;
+        let rows = stmt.query_map([], |row| {
+            let mut map = Map::new();
+            for (i, f) in table.fields.iter().enumerate() {
+                map.insert(f.code.to_uppercase(), row_to_json(f, row, i)?);
+            }
+            Ok(map)
+        })?;
+        rows.collect::<SqlResult<Vec<_>>>().map_err(Into::into)
+    }
+
+    /// 向某表插入多行(参数化,按字段类型绑定)。
+    pub fn insert_rows(
+        &self,
+        table: &Table,
+        rows: &[Map<String, Value>],
+    ) -> Result<(), DatasetError> {
+        if rows.is_empty() || table.fields.is_empty() {
+            return Ok(());
+        }
+        let cols: Vec<String> = table.fields.iter().map(|f| f.code.to_uppercase()).collect();
+        let placeholders: Vec<String> = (1..=cols.len()).map(|i| format!("?{}", i)).collect();
+        let sql = format!(
+            "INSERT INTO {} ({}) VALUES ({})",
+            table.code.to_uppercase(),
+            cols.join(", "),
+            placeholders.join(", ")
+        );
+        let mut stmt = self.conn.prepare(&sql)?;
+        for row in rows {
+            let params: Vec<Box<dyn rusqlite::ToSql>> = table
+                .fields
+                .iter()
+                .map(|f| json_to_sql(f, row.get(&f.code.to_uppercase())))
+                .collect::<Result<_, _>>()?;
+            let refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|b| b.as_ref()).collect();
+            stmt.execute(refs.as_slice())?;
+        }
+        Ok(())
+    }
+}
+
+/// rusqlite 行值 → JSON(§4.5:整数用 number,其余 TEXT 用 string,BLOB base64,空 null)。
+fn row_to_json(field: &Field, row: &rusqlite::Row, idx: usize) -> SqlResult<Value> {
+    Ok(match field.data_type {
+        DataType::Tinyint | DataType::Int | DataType::Long => {
+            let v: Option<i64> = row.get(idx)?;
+            v.map(|n| Value::Number(n.into())).unwrap_or(Value::Null)
+        }
+        DataType::Blob => {
+            let v: Option<Vec<u8>> = row.get(idx)?;
+            v.map(|b| Value::String(BASE64_STANDARD.encode(b)))
+                .unwrap_or(Value::Null)
+        }
+        // VARCHAR/CLOB/DECIMAL/DATE/DATETIME 均存 TEXT
+        _ => {
+            let v: Option<String> = row.get(idx)?;
+            v.map(Value::String).unwrap_or(Value::Null)
+        }
+    })
+}
+
+/// JSON 值 → rusqlite 参数(按字段类型绑定)。
+fn json_to_sql(
+    field: &Field,
+    v: Option<&Value>,
+) -> Result<Box<dyn rusqlite::ToSql>, DatasetError> {
+    let v = v.unwrap_or(&Value::Null);
+    Ok(match (field.data_type, v) {
+        (_, Value::Null) => Box::new(rusqlite::types::Null),
+        (DataType::Tinyint | DataType::Int | DataType::Long, Value::Number(n)) => {
+            Box::new(n.as_i64().unwrap_or(0))
+        }
+        (DataType::Blob, Value::String(s)) => Box::new(
+            BASE64_STANDARD
+                .decode(s)
+                .map_err(|e| DatasetError::Base64(e.to_string()))?,
+        ),
+        (_, Value::String(s)) => Box::new(s.clone()),
+        // 容错:类型与值不完全匹配时按字符串存
+        (_, other) => Box::new(other.to_string()),
+    })
+}
+
+/// 校验数据集条目与项目表结构一致(表存在、行 key 是合法字段 code)。
+pub fn validate_against(project: &Project, entries: &[DatasetEntry]) -> Result<(), DatasetError> {
+    for entry in entries {
+        let table = project
+            .tables
+            .iter()
+            .find(|t| t.code == entry.table)
+            .ok_or_else(|| DatasetError::TableNotFound(entry.table.clone()))?;
+        let valid: std::collections::HashSet<String> =
+            table.fields.iter().map(|f| f.code.to_uppercase()).collect();
+        for row in &entry.data {
+            if let Some(obj) = row.as_object() {
+                for k in obj.keys() {
+                    if !valid.contains(&k.to_uppercase()) {
+                        return Err(DatasetError::SchemaMismatch(format!(
+                            "表 {} 无字段 {}",
+                            entry.table, k
+                        )));
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// 加载数据集文件(按扩展名分派 JSON / SQLite),校验后返回条目。
+pub fn load_dataset(path: &str, project: &Project) -> Result<Vec<DatasetEntry>, DatasetError> {
+    if path.ends_with(".json") {
+        let content = std::fs::read_to_string(path)?;
+        let entries: Vec<DatasetEntry> = serde_json::from_str(&content)?;
+        validate_against(project, &entries)?;
+        Ok(entries)
+    } else {
+        let ds = Dataset::load(path)?;
+        let mut entries = Vec::new();
+        for table in &project.tables {
+            let rows = ds.read_table_rows(table)?;
+            entries.push(DatasetEntry {
+                table: table.code.clone(),
+                data: rows.into_iter().map(Value::Object).collect(),
+            });
+        }
+        Ok(entries)
+    }
+}
+
+/// 保存数据集文件(按扩展名分派)。SQLite 全量重建,不追加。
+pub fn save_dataset(
+    path: &str,
+    project: &Project,
+    entries: &[DatasetEntry],
+) -> Result<(), DatasetError> {
+    validate_against(project, entries)?;
+    if path.ends_with(".json") {
+        std::fs::write(path, serde_json::to_string_pretty(entries)?)?;
+        Ok(())
+    } else {
+        let ds = Dataset::new(project)?; // 内存建表
+        for entry in entries {
+            let table = project
+                .tables
+                .iter()
+                .find(|t| t.code == entry.table)
+                .ok_or_else(|| DatasetError::TableNotFound(entry.table.clone()))?;
+            let rows: Vec<Map<String, Value>> = entry
+                .data
+                .iter()
+                .filter_map(|v| v.as_object().cloned())
+                .collect();
+            ds.insert_rows(table, &rows)?;
+        }
+        let _ = std::fs::remove_file(path); // 避免 backup 叠加旧数据
+        ds.save(path)?;
+        Ok(())
     }
 }
 
@@ -278,5 +458,87 @@ mod tests {
         assert_eq!(count, 1, "加载后数据应保留");
 
         let _ = std::fs::remove_file(tmp);
+    }
+
+    fn sample_entries() -> Vec<DatasetEntry> {
+        let mut row = Map::new();
+        row.insert("ID".into(), Value::Number(1.into()));
+        row.insert("USER_NAME".into(), Value::String("admin".into()));
+        row.insert("AMOUNT".into(), Value::String("99.50".into()));
+        let mut row2 = Map::new();
+        row2.insert("ID".into(), Value::Number(2.into()));
+        row2.insert("USER_NAME".into(), Value::Null); // null 保留
+        row2.insert("AMOUNT".into(), Value::String("1234567890.12".into()));
+        vec![DatasetEntry {
+            table: "SYS_USER".into(),
+            data: vec![Value::Object(row), Value::Object(row2)],
+        }]
+    }
+
+    #[test]
+    fn test_json_dataset_roundtrip() {
+        let project = make_project();
+        let entries = sample_entries();
+        let tmp = "/tmp/aqua_test_dataset_rt.json";
+        let _ = std::fs::remove_file(tmp);
+
+        save_dataset(tmp, &project, &entries).expect("保存 JSON 失败");
+        let loaded = load_dataset(tmp, &project).expect("加载 JSON 失败");
+
+        assert_eq!(loaded.len(), 1);
+        assert_eq!(loaded[0].data.len(), 2);
+        // DECIMAL 保精度(字符串)
+        assert_eq!(loaded[0].data[1]["AMOUNT"], Value::String("1234567890.12".into()));
+        // null 保留
+        assert_eq!(loaded[0].data[1]["USER_NAME"], Value::Null);
+        // INT 为数字
+        assert_eq!(loaded[0].data[0]["ID"], Value::Number(1.into()));
+        let _ = std::fs::remove_file(tmp);
+    }
+
+    #[test]
+    fn test_sqlite_dataset_roundtrip() {
+        let project = make_project();
+        let entries = sample_entries();
+        let tmp = "/tmp/aqua_test_dataset_rt.db";
+        let _ = std::fs::remove_file(tmp);
+
+        save_dataset(tmp, &project, &entries).expect("保存 SQLite 失败");
+        let loaded = load_dataset(tmp, &project).expect("加载 SQLite 失败");
+
+        let user = loaded.iter().find(|e| e.table == "SYS_USER").expect("缺表");
+        assert_eq!(user.data.len(), 2);
+        // DECIMAL 精度不丢(TEXT 存储)
+        assert_eq!(user.data[1]["AMOUNT"], Value::String("1234567890.12".into()));
+        // null 往返
+        assert_eq!(user.data[1]["USER_NAME"], Value::Null);
+        // INT 仍为数字
+        assert_eq!(user.data[0]["ID"], Value::Number(1.into()));
+        let _ = std::fs::remove_file(tmp);
+    }
+
+    #[test]
+    fn test_validate_schema_mismatch() {
+        let project = make_project();
+        // 未知表
+        let bad_table = vec![DatasetEntry {
+            table: "NOT_EXIST".into(),
+            data: vec![],
+        }];
+        assert!(matches!(
+            validate_against(&project, &bad_table),
+            Err(DatasetError::TableNotFound(_))
+        ));
+        // 未知字段
+        let mut row = Map::new();
+        row.insert("BAD_FIELD".into(), Value::Null);
+        let bad_field = vec![DatasetEntry {
+            table: "SYS_USER".into(),
+            data: vec![Value::Object(row)],
+        }];
+        assert!(matches!(
+            validate_against(&project, &bad_field),
+            Err(DatasetError::SchemaMismatch(_))
+        ));
     }
 }

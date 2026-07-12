@@ -24,3 +24,23 @@ export async function pickSaveFile(
   });
   return result ?? null;
 }
+
+const DATASET_FILTER = [{ name: "数据集", extensions: ["json", "db"] }];
+
+/** 打开数据集文件(.json / .db)。 */
+export async function pickDatasetOpen(): Promise<string | null> {
+  const result = await open({
+    multiple: false,
+    directory: false,
+    filters: DATASET_FILTER,
+  });
+  return typeof result === "string" ? result : null;
+}
+
+/** 保存数据集文件(.json / .db)。 */
+export async function pickDatasetSave(
+  defaultName = "dataset.json"
+): Promise<string | null> {
+  const result = await save({ defaultPath: defaultName, filters: DATASET_FILTER });
+  return result ?? null;
+}

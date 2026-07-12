@@ -172,6 +172,7 @@ dependencies = [
  "aes-gcm",
  "anyhow",
  "async-trait",
+ "base64 0.22.1",
  "chrono",
  "deadpool-postgres",
  "mysql_async",

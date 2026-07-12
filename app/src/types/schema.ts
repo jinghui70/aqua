@@ -115,3 +115,9 @@ export interface DbConfig {
   database: string;
   schema?: string;
 }
+
+/** 数据集条目:一张表的全部数据行(key 用字段 code)。 */
+export interface DatasetEntry {
+  table: string;
+  data: Array<Record<string, unknown>>;
+}

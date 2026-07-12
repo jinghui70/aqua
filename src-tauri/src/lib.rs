@@ -8,7 +8,7 @@
 pub mod cli;
 pub mod commands;
 
-use commands::{generate, import, project};
+use commands::{dataset, generate, import, project};
 use tauri::menu::{MenuBuilder, SubmenuBuilder};
 use tauri::Emitter;
 
@@ -83,6 +83,8 @@ pub fn run() {
             import::test_connection_command,
             import::import_from_db_command,
             import::list_tables_command,
+            dataset::dataset_load,
+            dataset::dataset_save,
         ])
         .run(tauri::generate_context!())
         .expect("aqua 启动失败");

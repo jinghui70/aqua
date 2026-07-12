@@ -2,7 +2,7 @@
 
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { ElMessage } from "element-plus";
-import type { Project, DbConfig, ValidationError } from "@/types/schema";
+import type { Project, DbConfig, ValidationError, DatasetEntry } from "@/types/schema";
 
 /** 调用 Tauri command,失败时弹错误提示。 */
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
@@ -22,6 +22,12 @@ export function useTauri() {
       invoke<void>("project_save", { path, project }),
     projectValidate: (project: Project) =>
       invoke<string>("project_validate", { project }),
+
+    // 数据集
+    datasetLoad: (path: string, project: Project) =>
+      invoke<DatasetEntry[]>("dataset_load", { path, project }),
+    datasetSave: (path: string, project: Project, entries: DatasetEntry[]) =>
+      invoke<void>("dataset_save", { path, project, entries }),
 
     // 生成器
     generateDdl: (
