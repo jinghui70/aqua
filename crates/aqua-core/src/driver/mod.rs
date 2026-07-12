@@ -6,6 +6,7 @@
 
 pub mod error;
 mod factory;
+mod jdbc;
 mod mysql;
 mod postgres;
 mod trait_def;

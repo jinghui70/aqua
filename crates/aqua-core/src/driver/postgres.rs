@@ -68,10 +68,7 @@ impl Driver for PostgresDriver {
             .await
             .map_err(|e| DriverError::QueryFailed(e.to_string()))?;
 
-        Ok(rows
-            .iter()
-            .map(|r| r.get::<_, String>(0))
-            .collect())
+        Ok(rows.iter().map(|r| r.get::<_, String>(0)).collect())
     }
 
     async fn get_columns(&self, table: &str) -> Result<Vec<ColumnMeta>, DriverError> {
@@ -162,10 +159,7 @@ fn parse_index_fields(def: &str) -> Vec<String> {
     if let Some(start) = def.rfind('(') {
         if let Some(end) = def[start..].find(')') {
             let inner = &def[start + 1..start + end];
-            return inner
-                .split(',')
-                .map(|s| s.trim().to_string())
-                .collect();
+            return inner.split(',').map(|s| s.trim().to_string()).collect();
         }
     }
     vec![]
@@ -181,7 +175,9 @@ fn map_pg_type(pg_type: &str) -> DataType {
         "bigint" | "int8" | "bigserial" => DataType::Long,
         "numeric" | "decimal" => DataType::Decimal,
         "date" => DataType::Date,
-        "timestamp" | "timestamp without time zone" | "timestamptz"
+        "timestamp"
+        | "timestamp without time zone"
+        | "timestamptz"
         | "timestamp with time zone" => DataType::Datetime,
         "bytea" => DataType::Blob,
         _ => DataType::Varchar, // 默认

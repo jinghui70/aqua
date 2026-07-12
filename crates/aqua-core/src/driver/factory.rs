@@ -1,5 +1,6 @@
 //! Driver 工厂函数。
 
+use super::jdbc::JdbcDriver;
 use super::mysql::MysqlDriver;
 use super::postgres::PostgresDriver;
 use super::{DbConfig, Driver, DriverError};
@@ -38,9 +39,7 @@ pub fn create_driver(config: DbConfig) -> Result<Box<dyn Driver>, DriverError> {
     match config.dialect.as_str() {
         "mysql" => Ok(Box::new(MysqlDriver::new(&config)?)),
         "postgresql" | "postgres" | "pg" => Ok(Box::new(PostgresDriver::new(&config)?)),
-        _ => Err(DriverError::UnsupportedDialect(format!(
-            "JDBC 驱动待实现(07-12-driver-jdbc): {}",
-            config.dialect
-        ))),
+        // 其他方言(Oracle/DM/KingBase/GBase/H2 等)走 JDBC connector.jar
+        _ => Ok(Box::new(JdbcDriver::new(&config, "connector.jar"))),
     }
 }
