@@ -23,14 +23,6 @@ const visible = computed({
 
 // 本地编辑副本(确认时写回)
 const draft = ref<Field | null>(null);
-watch(
-  () => props.field,
-  (f) => {
-    draft.value = f ? JSON.parse(JSON.stringify(f)) : null;
-    syncEnumMode();
-  },
-  { immediate: true }
-);
 
 // ===== bizType =====
 const bizTypes = computed(() => store.currentProject?.bizTypes ?? []);
@@ -73,6 +65,16 @@ function syncEnumMode() {
   else if (typeof e === "string") enumMode.value = "ref";
   else enumMode.value = "inline";
 }
+
+// props.field 变化时重建 draft(声明在 enumMode 之后,避免 immediate watch 提前访问)
+watch(
+  () => props.field,
+  (f) => {
+    draft.value = f ? JSON.parse(JSON.stringify(f)) : null;
+    syncEnumMode();
+  },
+  { immediate: true }
+);
 
 function onEnumModeChange(mode: EnumMode) {
   if (!draft.value) return;
