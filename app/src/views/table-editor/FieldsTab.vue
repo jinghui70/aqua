@@ -26,6 +26,12 @@ function toggleAutoGen(field: Field, enabled: boolean) {
   }
 }
 
+// 主键必然非空:选中主键时自动勾非空
+function onKeyChange(field: Field, isKey: boolean) {
+  field.isKey = isKey;
+  if (isKey) field.notNull = true;
+}
+
 function addField() {
   props.fields.push({
     prop: "newField",
@@ -155,12 +161,15 @@ function copyField(idx: number) {
       </el-table-column>
       <el-table-column label="主键" width="50" align="center">
         <template #default="{ row }">
-          <el-checkbox v-model="row.isKey" />
+          <el-checkbox
+            :model-value="row.isKey"
+            @change="(v: boolean) => onKeyChange(row, v)"
+          />
         </template>
       </el-table-column>
       <el-table-column label="非空" width="50" align="center">
         <template #default="{ row }">
-          <el-checkbox v-model="row.notNull" />
+          <el-checkbox v-model="row.notNull" :disabled="row.isKey" />
         </template>
       </el-table-column>
       <el-table-column label="自动生成" width="260">
