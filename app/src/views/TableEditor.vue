@@ -72,7 +72,7 @@ function ensureIndexes(v: any) {
 .table-tabs :deep(.el-tabs__content) {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
 }
 .table-tabs :deep(.el-tab-pane) {
   height: 100%;

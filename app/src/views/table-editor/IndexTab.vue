@@ -25,7 +25,7 @@ const fieldCodes = () => props.fields.map((f) => f.code);
 </script>
 
 <template>
-  <div>
+  <div class="h-full overflow-auto">
     <div class="mb-12">
       <el-button size="small" type="primary" @click="addIndex">
         + 新增索引

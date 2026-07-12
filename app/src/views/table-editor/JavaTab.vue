@@ -50,7 +50,7 @@ function download() {
 </script>
 
 <template>
-  <div class="flex flex-col gap-12">
+  <div class="h-full overflow-auto flex flex-col gap-12">
     <div class="flex items-center gap-16 flex-wrap">
       <span class="text-13">
         包名

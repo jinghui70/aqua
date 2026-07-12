@@ -82,13 +82,14 @@ function copyField(idx: number) {
 </script>
 
 <template>
-  <div>
-    <div class="mb-12 flex gap-8">
+  <div class="h-full flex flex-col">
+    <div class="mb-12 flex gap-8 flex-shrink-0">
       <el-button size="small" type="primary" @click="addField">
         + 新增字段
       </el-button>
     </div>
-    <el-table :data="fields" border size="small" style="width: 100%">
+    <div class="flex-1 min-h-0">
+      <el-table :data="fields" border size="small" height="100%" style="width: 100%">
       <el-table-column label="#" width="44" type="index" />
       <el-table-column label="code" width="150">
         <template #default="{ row }">
@@ -218,5 +219,6 @@ function copyField(idx: number) {
         </template>
       </el-table-column>
     </el-table>
+    </div>
   </div>
 </template>
