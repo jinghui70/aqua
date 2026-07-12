@@ -22,9 +22,6 @@ function onTabRemove(key: string) {
   const nextPath = store.closeTab(key);
   if (nextPath) router.push(nextPath);
 }
-
-// keep-alive 缓存的组件名列表(路由 component 需 name 匹配)
-const cachedViews = computed(() => store.openedTabs.map((t) => t.key));
 </script>
 
 <template>
@@ -45,9 +42,9 @@ const cachedViews = computed(() => store.openedTabs.map((t) => t.key));
       />
     </el-tabs>
     <div class="flex-1 overflow-auto">
-      <router-view v-slot="{ Component }">
-        <keep-alive :include="cachedViews">
-          <component :is="Component" />
+      <router-view v-slot="{ Component, route }">
+        <keep-alive>
+          <component :is="Component" :key="route.fullPath" />
         </keep-alive>
       </router-view>
     </div>

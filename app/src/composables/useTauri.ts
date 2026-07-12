@@ -26,8 +26,20 @@ export function useTauri() {
     // 生成器
     generateDdl: (project: Project, dialect: string) =>
       invoke<string>("generate_ddl_command", { project, dialect }),
-    generateJava: (project: Project, table: string) =>
-      invoke<string>("generate_java_command", { project, table }),
+    generateJava: (
+      project: Project,
+      table: string,
+      opts?: { useLombok?: boolean; package?: string; className?: string }
+    ) =>
+      invoke<string>("generate_java_command", {
+        project,
+        table,
+        useLombok: opts?.useLombok,
+        package: opts?.package,
+        className: opts?.className,
+      }),
+    generateFrontendJson: (project: Project, table: string) =>
+      invoke<string>("generate_frontend_json_command", { project, table }),
 
     // 导入
     testConnection: (config: DbConfig) =>

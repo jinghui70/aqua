@@ -67,8 +67,32 @@ pub async fn generate_ddl_command(project: Project, dialect: String) -> Result<S
     ))
 }
 
-/// Tauri command: 生成 Java 实体类。
+/// Tauri command: 生成 Java 实体类(支持配置: 包名/类名/Lombok)。
 #[tauri::command]
-pub async fn generate_java_command(project: Project, table: String) -> Result<String, String> {
-    generate_java_entity(&project, &table, &JavaOptions::default())
+pub async fn generate_java_command(
+    project: Project,
+    table: String,
+    use_lombok: Option<bool>,
+    package: Option<String>,
+    class_name: Option<String>,
+) -> Result<String, String> {
+    let options = JavaOptions {
+        use_lombok: use_lombok.unwrap_or(true),
+        package,
+        class_name,
+    };
+    generate_java_entity(&project, &table, &options)
+}
+
+/// Tauri command: 生成前端 JSON(json-ui 兼容,单表)。
+#[tauri::command]
+pub async fn generate_frontend_json_command(
+    project: Project,
+    table: String,
+) -> Result<String, String> {
+    use aqua_core::generators::frontend_json::{generate_frontend_json, FrontendJsonOptions};
+    Ok(generate_frontend_json(
+        &project,
+        &FrontendJsonOptions { table: Some(table) },
+    ))
 }

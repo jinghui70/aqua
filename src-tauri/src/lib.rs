@@ -68,6 +68,7 @@ pub fn run() {
             project::project_validate,
             generate::generate_ddl_command,
             generate::generate_java_command,
+            generate::generate_frontend_json_command,
             import::test_connection_command,
             import::import_from_db_command,
         ])
