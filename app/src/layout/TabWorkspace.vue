@@ -25,13 +25,13 @@ function onTabRemove(key: string) {
 </script>
 
 <template>
-  <div class="h-full flex flex-col">
+  <div class="h-full flex flex-col overflow-hidden">
     <el-tabs
       v-if="store.openedTabs.length"
       v-model="activeKey"
       type="card"
       closable
-      class="workspace-tabs"
+      class="workspace-tabs flex-shrink-0"
       @tab-remove="onTabRemove"
     >
       <el-tab-pane
@@ -41,7 +41,7 @@ function onTabRemove(key: string) {
         :label="tab.title"
       />
     </el-tabs>
-    <div class="flex-1 overflow-auto">
+    <div class="flex-1 min-h-0 overflow-auto">
       <router-view v-slot="{ Component, route }">
         <keep-alive>
           <component :is="Component" :key="route.fullPath" />
