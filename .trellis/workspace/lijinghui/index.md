@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 13
+- **Total Sessions**: 14
 - **Last Active**: 2026-07-12
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~455 | Active |
+| `journal-1.md` | ~488 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 14 | 2026-07-12 | MySQL/PG 集成测试通过,发现并修复 DDL bug | `ba192f2` | `main` |
 | 13 | 2026-07-12 | 🎉 全部 21 个任务完成,aqua v2 功能闭环 | `a5e9212`, `276d29f`, `532df66` | `main` |
 | 12 | 2026-07-12 | 完成 generators 补全 + diff/ALTER 链路 | `4a450f7`, `6bca583`, `9f11a40`, `7a53cac` | `main` |
 | 11 | 2026-07-12 | P1 全部完成,aqua 基础可用 | `9f95529`, `3711df3`, `ec81807` | `main` |

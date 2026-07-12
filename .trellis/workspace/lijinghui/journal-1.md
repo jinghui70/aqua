@@ -453,3 +453,36 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 14: MySQL/PG 集成测试通过,发现并修复 DDL bug
+
+**Date**: 2026-07-12
+**Task**: MySQL/PG 集成测试通过,发现并修复 DDL bug
+**Branch**: `main`
+
+### Summary
+
+会话 14 完成数据库集成测试。Docker compose 启 MySQL8.0+PG16,4 个 #[ignore] 集成测试全过(连接+全链路往返)。集成测试发现 DDL 生成器真实 bug:最后字段后缺逗号导致 PRIMARY KEY 语法错误,已修复(改用 Vec join)。证明 MySQL/PG native 驱动真实可用,import 全链路正确。单元测试 47 + 集成 4 全通过。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ba192f2` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
