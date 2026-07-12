@@ -123,6 +123,21 @@ function removeInlineValue(idx: number) {
   inlineEnum.value?.values.splice(idx, 1);
 }
 
+// code 统一大写 + 蛇形转驼峰联动 prop(与列表一致)
+function onCodeInput() {
+  if (!draft.value) return;
+  draft.value.code = draft.value.code.toUpperCase();
+  const parts = draft.value.code.split("_").filter(Boolean);
+  if (parts.length) {
+    draft.value.prop =
+      parts[0].toLowerCase() +
+      parts
+        .slice(1)
+        .map((p) => p[0].toUpperCase() + p.slice(1).toLowerCase())
+        .join("");
+  }
+}
+
 // ===== 保存 =====
 function save() {
   if (!draft.value || !props.field) return;
@@ -147,7 +162,7 @@ function save() {
         <el-form-item label="code">
           <el-input
             v-model="draft.code"
-            @input="draft.code = draft.code.toUpperCase()"
+            @input="onCodeInput"
           />
         </el-form-item>
         <el-form-item label="prop">

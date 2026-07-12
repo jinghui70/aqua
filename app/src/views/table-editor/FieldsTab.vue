@@ -1,7 +1,8 @@
 <script setup lang="ts">
-// fields Tab: 字段表格行内编辑 + 增删 + 排序 + 详情弹窗。
-import { computed, ref } from "vue";
+// fields Tab: 字段表格行内编辑 + 增删 + 拖拽排序 + 详情弹窗。
+import { computed, onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
+import Sortable from "sortablejs";
 import { DataType, type Field } from "@/types/schema";
 import { useProjectStore } from "@/stores/project";
 import FieldDetailDialog from "./FieldDetailDialog.vue";
@@ -9,6 +10,37 @@ import FieldDetailDialog from "./FieldDetailDialog.vue";
 const props = defineProps<{ fields: Field[] }>();
 
 const store = useProjectStore();
+
+// 稳定 row-key: 给每个 field 对象分配递增 id(不污染 schema),
+// 让 el-table 用 key diff,拖拽 splice 后 Vue 按 key 重排节点,与 Sortable 目标一致。
+const keyMap = new WeakMap<Field, number>();
+let keySeq = 0;
+function rowKey(f: Field): number {
+  let k = keyMap.get(f);
+  if (k === undefined) {
+    k = ++keySeq;
+    keyMap.set(f, k);
+  }
+  return k;
+}
+
+// 拖拽排序: Sortable 挂在 el-table tbody,只允许手柄列触发
+const tableRef = ref();
+onMounted(() => {
+  const tbody = tableRef.value?.$el?.querySelector(
+    ".el-table__body-wrapper tbody"
+  );
+  if (!tbody) return;
+  Sortable.create(tbody, {
+    handle: ".drag-handle",
+    animation: 150,
+    onEnd({ oldIndex, newIndex }) {
+      if (oldIndex == null || newIndex == null || oldIndex === newIndex) return;
+      const [moved] = props.fields.splice(oldIndex, 1);
+      props.fields.splice(newIndex, 0, moved);
+    },
+  });
+});
 
 // 详情弹窗
 const detailVisible = ref(false);
@@ -19,20 +51,19 @@ function openDetail(field: Field) {
 }
 const dataTypes = Object.values(DataType);
 
-// bizType 下拉选项(来自项目定义的业务类型)
+// bizType 只读展示: 映射到名称
 const bizTypeOptions = computed(() => store.currentProject?.bizTypes ?? []);
+function bizTypeLabel(field: Field): string {
+  if (!field.bizType) return "-";
+  if (field.bizType === "Enum") return "Enum";
+  return bizTypeOptions.value.find((b) => b.bizType === field.bizType)?.name ?? field.bizType;
+}
 
-// autoGenerate 启用开关:开时初始化对象,关时清空
-function toggleAutoGen(field: Field, enabled: boolean) {
-  if (enabled) {
-    field.autoGenerate = {
-      enabled: true,
-      strategy: "default",
-      timing: "INSERT",
-    };
-  } else {
-    field.autoGenerate = undefined;
-  }
+// autoGenerate 只读展示: 策略名
+function autoGenLabel(field: Field): string {
+  const ag = field.autoGenerate;
+  if (!ag) return "-";
+  return ag.strategy === "now" ? "当前时间" : "雪花id";
 }
 
 // 主键必然非空:选中主键时自动勾非空
@@ -53,18 +84,6 @@ function addField() {
 
 function removeField(idx: number) {
   props.fields.splice(idx, 1);
-}
-
-function moveUp(idx: number) {
-  if (idx === 0) return;
-  const [f] = props.fields.splice(idx, 1);
-  props.fields.splice(idx - 1, 0, f);
-}
-
-function moveDown(idx: number) {
-  if (idx >= props.fields.length - 1) return;
-  const [f] = props.fields.splice(idx, 1);
-  props.fields.splice(idx + 1, 0, f);
 }
 
 // code 蛇形 -> prop 驼峰(输入 code 时自动填 prop)
@@ -100,7 +119,12 @@ function copyField(idx: number) {
       </el-button>
     </div>
     <div class="flex-1 min-h-0">
-      <el-table :data="fields" border size="small" height="100%" style="width: 100%">
+      <el-table ref="tableRef" :data="fields" :row-key="rowKey" border size="small" height="100%" class="select-none" style="width: 100%">
+      <el-table-column label="" width="36" align="center">
+        <template #default>
+          <span class="drag-handle cursor-move text-gray-400 select-none">⣿</span>
+        </template>
+      </el-table-column>
       <el-table-column label="#" width="44" type="index" />
       <el-table-column label="code" width="150">
         <template #default="{ row }">
@@ -158,22 +182,9 @@ function copyField(idx: number) {
           </div>
         </template>
       </el-table-column>
-      <el-table-column label="业务类型" width="130">
+      <el-table-column label="业务类型" width="110">
         <template #default="{ row }">
-          <el-select
-            v-model="row.bizType"
-            size="small"
-            clearable
-            placeholder="-"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="b in bizTypeOptions"
-              :key="b.bizType"
-              :label="b.name"
-              :value="b.bizType"
-            />
-          </el-select>
+          <span class="text-13">{{ bizTypeLabel(row) }}</span>
         </template>
       </el-table-column>
       <el-table-column label="主键" width="50" align="center">
@@ -189,34 +200,9 @@ function copyField(idx: number) {
           <el-checkbox v-model="row.notNull" :disabled="row.isKey" />
         </template>
       </el-table-column>
-      <el-table-column label="自动生成" width="260">
+      <el-table-column label="自动生成" width="140">
         <template #default="{ row }">
-          <div class="flex items-center gap-4">
-            <el-switch
-              :model-value="!!row.autoGenerate"
-              size="small"
-              @change="(v: string | number | boolean) => toggleAutoGen(row, !!v)"
-            />
-            <template v-if="row.autoGenerate">
-              <el-select
-                v-model="row.autoGenerate.strategy"
-                size="small"
-                style="width: 90px"
-                placeholder="策略"
-              >
-                <el-option label="雪花id" value="default" />
-                <el-option label="当前时间" value="now" />
-              </el-select>
-              <el-select
-                v-model="row.autoGenerate.timing"
-                size="small"
-                style="width: 100px"
-              >
-                <el-option label="INSERT" value="INSERT" />
-                <el-option label="INSERT_UPDATE" value="INSERT_UPDATE" />
-              </el-select>
-            </template>
-          </div>
+          <span class="text-13">{{ autoGenLabel(row) }}</span>
         </template>
       </el-table-column>
       <el-table-column label="默认值" width="110">
@@ -229,11 +215,9 @@ function copyField(idx: number) {
           <el-input v-model="row.comment" size="small" placeholder="-" />
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="180" align="center">
+      <el-table-column label="操作" width="120" align="center">
         <template #default="{ row, $index }">
           <el-button size="small" link type="primary" @click="openDetail(row)">详情</el-button>
-          <el-button size="small" link @click="moveUp($index)">↑</el-button>
-          <el-button size="small" link @click="moveDown($index)">↓</el-button>
           <el-button size="small" link @click="copyField($index)">复制</el-button>
           <el-button size="small" link type="danger" @click="removeField($index)">
             删
