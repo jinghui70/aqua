@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // fields Tab: 字段表格行内编辑 + 增删 + 拖拽排序 + 详情弹窗。
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
 import Sortable from "sortablejs";
 import { DataType, type Field } from "@/types/schema";
@@ -34,10 +34,17 @@ onMounted(() => {
   Sortable.create(tbody, {
     handle: ".drag-handle",
     animation: 150,
+    // 用 JS 模拟拖拽,绕开 HTML5 原生 DnD 与 el-table 自绘 DOM 的竞态
+    // (原生 DnD 的 mouseup 清理与 Vue 重渲染打架 → 视图不更新 + 需二次点击)
+    forceFallback: true,
+    fallbackOnBody: true,
     onEnd({ oldIndex, newIndex }) {
       if (oldIndex == null || newIndex == null || oldIndex === newIndex) return;
-      const [moved] = props.fields.splice(oldIndex, 1);
-      props.fields.splice(newIndex, 0, moved);
+      // 延到下一 tick 改数据,让 Sortable 先完成本次拖拽的清理
+      nextTick(() => {
+        const [moved] = props.fields.splice(oldIndex, 1);
+        props.fields.splice(newIndex, 0, moved);
+      });
     },
   });
 });
