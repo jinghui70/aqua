@@ -33,6 +33,9 @@ export function useMenuActions() {
       case "file.open":
         await doOpen();
         break;
+      case "file.recent":
+        ui.openRecent();
+        break;
       case "file.save":
         await doSave();
         break;
@@ -69,6 +72,19 @@ export function useMenuActions() {
         break;
       case "export.strconst":
         ui.openExport("strconst");
+        break;
+      case "help.guide":
+        ElMessageBox.alert(
+          [
+            "1. 新建/打开项目,或从数据库导入结构",
+            "2. 左侧分组树维护表分组,双击表进入编辑",
+            "3. 字段页拖拽排序、详情弹窗编辑业务类型/枚举/自动生成",
+            "4. 配置菜单维护业务类型、枚举、数据集、数据源",
+            "5. 导出菜单生成 DDL / diff / StrConst,Java 页生成实体类",
+          ].join("<br/>"),
+          "用户指南",
+          { confirmButtonText: "确定", dangerouslyUseHTMLString: true }
+        );
         break;
       case "help.about":
         ElMessageBox.alert("aqua v2 — JSON-SSOT 数据库结构管理工具", "关于", {

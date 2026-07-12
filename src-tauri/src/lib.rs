@@ -16,14 +16,18 @@ use tauri::Emitter;
 fn build_menu<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
 ) -> tauri::Result<tauri::menu::Menu<R>> {
-    let file = SubmenuBuilder::new(app, "文件")
+    let file_builder = SubmenuBuilder::new(app, "文件")
         .text("file.new", "新建项目")
         .text("file.open", "打开项目")
+        .text("file.recent", "最近项目")
         .text("file.save", "保存")
         .text("file.saveAs", "另存为")
         .separator()
-        .text("file.import", "从数据库导入")
-        .build()?;
+        .text("file.import", "从数据库导入");
+    // 非 macOS: 文件菜单末尾加退出(macOS 的退出在应用菜单)
+    #[cfg(not(target_os = "macos"))]
+    let file_builder = file_builder.separator().quit();
+    let file = file_builder.build()?;
     let config = SubmenuBuilder::new(app, "配置")
         .text("config.biztype", "业务类型管理")
         .text("config.enum", "枚举管理")
@@ -36,6 +40,7 @@ fn build_menu<R: tauri::Runtime>(
         .text("export.strconst", "StrConst")
         .build()?;
     let help = SubmenuBuilder::new(app, "帮助")
+        .text("help.guide", "用户指南")
         .text("help.about", "关于")
         .build()?;
 

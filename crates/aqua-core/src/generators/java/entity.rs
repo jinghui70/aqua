@@ -37,6 +37,9 @@ pub fn generate_entity_class(
     }
 
     // 类注解
+    if options.include_comment {
+        output.push(javadoc(&table.name, &table.comment, ""));
+    }
     output.push(format!("@Table(name = \"{}\")", table.code));
     if options.use_lombok {
         output.push("@Data".to_string());
@@ -61,6 +64,14 @@ pub fn generate_entity_class(
     output.push("}".to_string());
 
     Ok(output.join("\n"))
+}
+
+/// 生成 Javadoc 单行注释: `/** 中文名 - 备注 */`,indent 为前置缩进。
+fn javadoc(name: &str, comment: &Option<String>, indent: &str) -> String {
+    match comment {
+        Some(c) if !c.is_empty() => format!("{}/** {} - {} */", indent, name, c),
+        _ => format!("{}/** {} */", indent, name),
+    }
 }
 
 /// 默认 package: {basePackage}.{group}.entity
@@ -99,8 +110,13 @@ fn collect_imports(table: &Table, options: &JavaOptions) -> Vec<String> {
 }
 
 /// 生成字段定义。
-fn generate_field(field: &Field, _options: &JavaOptions) -> Vec<String> {
+fn generate_field(field: &Field, options: &JavaOptions) -> Vec<String> {
     let mut lines = Vec::new();
+
+    // Javadoc 注释(中文名 + 备注)
+    if options.include_comment {
+        lines.push(javadoc(&field.name, &field.comment, "    "));
+    }
 
     // 字段注解
     if field.is_key.unwrap_or(false) {

@@ -26,6 +26,12 @@ export const useUiStore = defineStore("ui", () => {
     importVisible.value = true;
   }
 
+  // 最近项目弹窗
+  const recentVisible = ref(false);
+  function openRecent() {
+    recentVisible.value = true;
+  }
+
   return {
     exportVisible,
     exportKind,
@@ -34,5 +40,7 @@ export const useUiStore = defineStore("ui", () => {
     openDataSource,
     importVisible,
     openImport,
+    recentVisible,
+    openRecent,
   };
 });

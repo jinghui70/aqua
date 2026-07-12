@@ -11,6 +11,7 @@ import StatusBar from "./StatusBar.vue";
 import ExportDialog from "@/components/ExportDialog.vue";
 import DataSourceDialog from "@/components/DataSourceDialog.vue";
 import ImportWizard from "@/components/ImportWizard.vue";
+import RecentProjectsDialog from "@/components/RecentProjectsDialog.vue";
 
 const store = useProjectStore();
 </script>
@@ -37,5 +38,6 @@ const store = useProjectStore();
     <ExportDialog />
     <DataSourceDialog />
     <ImportWizard />
+    <RecentProjectsDialog />
   </div>
 </template>

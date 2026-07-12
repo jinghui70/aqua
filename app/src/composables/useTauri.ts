@@ -38,12 +38,13 @@ export function useTauri() {
     generateJava: (
       project: Project,
       table: string,
-      opts?: { useLombok?: boolean; package?: string; className?: string }
+      opts?: { useLombok?: boolean; includeComment?: boolean; package?: string; className?: string }
     ) =>
       invoke<string>("generate_java_command", {
         project,
         table,
         useLombok: opts?.useLombok,
+        includeComment: opts?.includeComment,
         package: opts?.package,
         className: opts?.className,
       }),

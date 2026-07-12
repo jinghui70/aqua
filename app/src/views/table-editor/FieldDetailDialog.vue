@@ -146,6 +146,14 @@ function save() {
     ElMessage.error("enum 只支持 VARCHAR 类型");
     return;
   }
+  // 内联 enum: hasCode=true 时每个枚举值 code 必填
+  const e = draft.value.enum;
+  if (e && typeof e === "object" && e.hasCode) {
+    if (e.values.some((v) => !v.code || !v.code.trim())) {
+      ElMessage.error("hasCode 为 true 时,每个枚举值的 code 必填");
+      return;
+    }
+  }
   // 写回原字段(保持引用,Object.assign)
   Object.keys(props.field).forEach((k) => delete (props.field as any)[k]);
   Object.assign(props.field, draft.value);

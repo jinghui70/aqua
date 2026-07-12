@@ -12,6 +12,7 @@ const tauri = useTauri();
 const store = useProjectStore();
 
 const useLombok = ref(true);
+const includeComment = ref(true);
 const packageName = ref("");
 const className = ref("");
 const preview = ref("");
@@ -24,6 +25,7 @@ async function refresh() {
       props.tableCode,
       {
         useLombok: useLombok.value,
+        includeComment: includeComment.value,
         package: packageName.value || undefined,
         className: className.value || undefined,
       }
@@ -34,7 +36,7 @@ async function refresh() {
 }
 
 // 配置变化实时刷新
-watch([useLombok, packageName, className, () => props.tableCode], refresh, {
+watch([useLombok, includeComment, packageName, className, () => props.tableCode], refresh, {
   immediate: true,
 });
 
@@ -71,6 +73,7 @@ function download() {
         />
       </span>
       <el-checkbox v-model="useLombok">Lombok @Data</el-checkbox>
+      <el-checkbox v-model="includeComment">注释</el-checkbox>
       <div class="flex-1" />
       <el-button size="small" @click="copy">复制</el-button>
       <el-button size="small" type="primary" @click="download">下载</el-button>

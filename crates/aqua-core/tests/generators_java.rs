@@ -96,6 +96,7 @@ fn test_custom_package_and_class_name() {
         use_lombok: true,
         package: Some("com.example.entity".to_string()),
         class_name: Some("User".to_string()),
+        ..Default::default()
     };
 
     let java_code = generate_java_entity(&project, "SYS_USER", &options).expect("生成失败");
