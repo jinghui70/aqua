@@ -76,7 +76,7 @@ export const useProjectStore = defineStore("project", () => {
     if (activeTab.value === key) {
       const next = openedTabs.value[idx] ?? openedTabs.value[idx - 1];
       activeTab.value = next?.key ?? "";
-      return next?.path ?? "/welcome";
+      return next?.path ?? "/";
     }
     return "";
   }

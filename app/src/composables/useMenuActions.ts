@@ -27,7 +27,7 @@ export function useMenuActions() {
       // 文件
       case "file.new":
         store.newProject();
-        router.push("/welcome");
+        router.push("/");
         ElMessage.success("已新建项目");
         break;
       case "file.open":
@@ -85,7 +85,7 @@ export function useMenuActions() {
     if (!path) return;
     try {
       await store.openProject(path);
-      router.push("/welcome");
+      router.push("/");
       ElMessage.success(`已打开 ${path}`);
     } catch {
       /* useTauri 已提示 */

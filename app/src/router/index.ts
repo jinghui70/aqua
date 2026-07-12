@@ -1,11 +1,11 @@
 import { createRouter, createWebHistory } from "vue-router";
 
 const routes = [
-  { path: "/", redirect: "/welcome" },
   {
-    path: "/welcome",
-    name: "welcome",
-    component: () => import("@/views/Welcome.vue"),
+    // 工作区首页(有项目但未开任何标签时的空状态)
+    path: "/",
+    name: "home",
+    component: () => import("@/views/WorkspaceHome.vue"),
   },
   {
     path: "/table/:code",
