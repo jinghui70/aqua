@@ -486,3 +486,36 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 15: connector.jar 实现 (H2, v2 架构重构)
+
+**Date**: 2026-07-12
+**Task**: connector.jar 实现 (H2, v2 架构重构)
+**Branch**: `main`
+
+### Summary
+
+会话 15 实现 connector.jar。发现 init 时 v1 骨架(返回原始物理类型)与 v2 架构(反解在 Java 侧)冲突,删除重写。Main+Dialect+H2Dialect+H2TypeMapping,协议对齐 Rust jdbc.rs(testConnection/listTables/getColumns/listIndexes)。3 个 Java 单元测试全绿,端到端 JSON 协议往返验证。connector.jar 4.7MB fat jar。JDBC 链路 Java 侧完成,待 Rust 通信测试。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `HEAD` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
