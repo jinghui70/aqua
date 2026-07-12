@@ -26,6 +26,8 @@ const draft = ref<Field | null>(null);
 
 // ===== bizType =====
 const bizTypes = computed(() => store.currentProject?.bizTypes ?? []);
+// Enum 是特殊内置 bizType(§3.5),选中显示枚举配置;其他 bizType 显示 bizTypeData 表单
+const isEnumBizType = computed(() => draft.value?.bizType === "Enum");
 const currentBizType = computed(() =>
   bizTypes.value.find((b) => b.bizType === draft.value?.bizType)
 );
@@ -64,6 +66,22 @@ function syncEnumMode() {
   if (!e) enumMode.value = "none";
   else if (typeof e === "string") enumMode.value = "ref";
   else enumMode.value = "inline";
+}
+
+// bizType 切换:选 Enum 默认引用模式;离开 Enum 清空 enum
+function onBizTypeChange(bizType: string | undefined) {
+  if (!draft.value) return;
+  draft.value.bizType = bizType;
+  if (bizType === "Enum") {
+    if (!draft.value.enum) {
+      draft.value.enum = "";
+      enumMode.value = "ref";
+    }
+    draft.value.bizTypeData = undefined;
+  } else {
+    draft.value.enum = undefined;
+    enumMode.value = "none";
+  }
 }
 
 // props.field 变化时重建 draft(声明在 enumMode 之后,避免 immediate watch 提前访问)
@@ -199,91 +217,94 @@ function save() {
         </template>
       </el-form>
 
-      <!-- 业务类型 -->
+      <!-- 业务类型(Enum 是特殊 bizType,§3.5)-->
       <el-divider content-position="left">业务类型</el-divider>
       <el-form label-width="90px" class="pr-12">
         <el-form-item label="bizType">
-          <el-select v-model="draft.bizType" clearable placeholder="-" style="width: 200px">
+          <el-select
+            :model-value="draft.bizType"
+            clearable
+            placeholder="-"
+            style="width: 200px"
+            @update:model-value="(v: string | undefined) => onBizTypeChange(v)"
+          >
+            <el-option label="Enum(枚举)" value="Enum" />
             <el-option v-for="b in bizTypes" :key="b.bizType" :label="b.name" :value="b.bizType" />
           </el-select>
         </el-form-item>
-        <!-- bizTypeData 动态表单 -->
-        <el-form-item
-          v-for="bf in bizTypeDataFields"
-          :key="bf.name"
-          :label="bf.name"
-        >
-          <el-input
-            v-if="bf.type === 'string'"
-            :model-value="getBizTypeDataValue(bf.name) as string"
-            :placeholder="bf.description"
-            @update:model-value="(v: string) => setBizTypeDataValue(bf.name, v)"
-          />
-          <el-input-number
-            v-else
-            :model-value="getBizTypeDataValue(bf.name) as number"
-            :controls="false"
-            @update:model-value="(v: number | undefined) => setBizTypeDataValue(bf.name, v)"
-          />
-        </el-form-item>
-      </el-form>
 
-      <!-- enum(仅 VARCHAR)-->
-      <el-divider content-position="left">枚举</el-divider>
-      <el-form label-width="90px" class="pr-12">
-        <el-form-item label="枚举类型">
-          <el-radio-group
-            v-model="enumMode"
-            :disabled="!isVarchar"
-            @change="(m: any) => onEnumModeChange(m)"
-          >
-            <el-radio value="none">无</el-radio>
-            <el-radio value="ref">引用全局</el-radio>
-            <el-radio value="inline">内联</el-radio>
-          </el-radio-group>
-          <span v-if="!isVarchar" class="text-12 text-gray-400 ml-8">仅 VARCHAR 支持</span>
-        </el-form-item>
-        <!-- 引用全局 -->
-        <el-form-item v-if="enumMode === 'ref'" label="选择枚举">
-          <el-select v-model="refEnumCode" placeholder="选全局枚举" style="width: 220px">
-            <el-option v-for="e in globalEnums" :key="e.code" :label="`${e.name} (${e.code})`" :value="e.code" />
-          </el-select>
-        </el-form-item>
-        <!-- 内联 -->
-        <template v-if="enumMode === 'inline' && inlineEnum">
-          <el-form-item label="枚举名">
-            <el-input v-model="inlineEnum.name" style="width: 200px" />
-            <el-checkbox v-model="inlineEnum.hasCode" class="ml-12">hasCode</el-checkbox>
+        <!-- bizType=Enum: 枚举特殊配置(引用/内联)-->
+        <template v-if="isEnumBizType">
+          <el-form-item label="枚举来源">
+            <el-radio-group v-model="enumMode" @change="(m: any) => onEnumModeChange(m)">
+              <el-radio value="ref">引用全局</el-radio>
+              <el-radio value="inline">内联</el-radio>
+            </el-radio-group>
           </el-form-item>
-          <el-form-item label="枚举值">
-            <div class="w-full">
-              <el-button size="small" @click="addInlineValue" class="mb-8">+ 添加值</el-button>
-              <el-table :data="inlineEnum.values" border size="small">
-                <el-table-column label="id" width="110">
-                  <template #default="{ row }"><el-input v-model="row.id" size="small" /></template>
-                </el-table-column>
-                <el-table-column label="名称" width="100">
-                  <template #default="{ row }"><el-input v-model="row.name" size="small" /></template>
-                </el-table-column>
-                <el-table-column label="code" width="100">
-                  <template #default="{ row }">
-                    <el-input v-model="row.code" size="small" :placeholder="inlineEnum.hasCode ? '必填' : '-'" />
-                  </template>
-                </el-table-column>
-                <el-table-column label="颜色" width="110">
-                  <template #default="{ row }">
-                    <el-select v-model="row.color" size="small" clearable placeholder="-">
-                      <el-option v-for="c in COLORS" :key="c" :label="c" :value="c" />
-                    </el-select>
-                  </template>
-                </el-table-column>
-                <el-table-column label="操作" width="50" align="center">
-                  <template #default="{ $index }">
-                    <el-button size="small" link type="danger" @click="removeInlineValue($index)">删</el-button>
-                  </template>
-                </el-table-column>
-              </el-table>
-            </div>
+          <!-- 引用全局 -->
+          <el-form-item v-if="enumMode === 'ref'" label="选择枚举">
+            <el-select v-model="refEnumCode" placeholder="选全局枚举" style="width: 220px">
+              <el-option v-for="e in globalEnums" :key="e.code" :label="`${e.name} (${e.code})`" :value="e.code" />
+            </el-select>
+          </el-form-item>
+          <!-- 内联 -->
+          <template v-if="enumMode === 'inline' && inlineEnum">
+            <el-form-item label="枚举名">
+              <el-input v-model="inlineEnum.name" style="width: 200px" />
+              <el-checkbox v-model="inlineEnum.hasCode" class="ml-12">hasCode</el-checkbox>
+            </el-form-item>
+            <el-form-item label="枚举值">
+              <div class="w-full">
+                <el-button size="small" @click="addInlineValue" class="mb-8">+ 添加值</el-button>
+                <el-table :data="inlineEnum.values" border size="small">
+                  <el-table-column label="id" width="110">
+                    <template #default="{ row }"><el-input v-model="row.id" size="small" /></template>
+                  </el-table-column>
+                  <el-table-column label="名称" width="100">
+                    <template #default="{ row }"><el-input v-model="row.name" size="small" /></template>
+                  </el-table-column>
+                  <el-table-column label="code" width="100">
+                    <template #default="{ row }">
+                      <el-input v-model="row.code" size="small" :placeholder="inlineEnum.hasCode ? '必填' : '-'" />
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="颜色" width="110">
+                    <template #default="{ row }">
+                      <el-select v-model="row.color" size="small" clearable placeholder="-">
+                        <el-option v-for="c in COLORS" :key="c" :label="c" :value="c" />
+                      </el-select>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="操作" width="50" align="center">
+                    <template #default="{ $index }">
+                      <el-button size="small" link type="danger" @click="removeInlineValue($index)">删</el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </div>
+            </el-form-item>
+          </template>
+        </template>
+
+        <!-- 其他 bizType: bizTypeData.fields 表单 -->
+        <template v-else>
+          <el-form-item
+            v-for="bf in bizTypeDataFields"
+            :key="bf.name"
+            :label="bf.name"
+          >
+            <el-input
+              v-if="bf.type === 'string'"
+              :model-value="getBizTypeDataValue(bf.name) as string"
+              :placeholder="bf.description"
+              @update:model-value="(v: string) => setBizTypeDataValue(bf.name, v)"
+            />
+            <el-input-number
+              v-else
+              :model-value="getBizTypeDataValue(bf.name) as number"
+              :controls="false"
+              @update:model-value="(v: number | undefined) => setBizTypeDataValue(bf.name, v)"
+            />
           </el-form-item>
         </template>
       </el-form>
