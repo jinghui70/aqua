@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 11
+- **Total Sessions**: 12
 - **Last Active**: 2026-07-12
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~384 | Active |
+| `journal-1.md` | ~420 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 12 | 2026-07-12 | 完成 generators 补全 + diff/ALTER 链路 | `4a450f7`, `6bca583`, `9f11a40`, `7a53cac` | `main` |
 | 11 | 2026-07-12 | P1 全部完成,aqua 基础可用 | `9f95529`, `3711df3`, `ec81807` | `main` |
 | 10 | 2026-07-12 | 完成所有 Tauri commands,P1 进 5/9 | `1218171`, `d24098f` | `main` |
 | 9 | 2026-07-12 | 完成 tauri-commands-project,P1 进 3/9 | `4357542` | `main` |

@@ -382,3 +382,39 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 12: 完成 generators 补全 + diff/ALTER 链路
+
+**Date**: 2026-07-12
+**Task**: 完成 generators 补全 + diff/ALTER 链路
+**Branch**: `main`
+
+### Summary
+
+会话 12 完成 4 个 P2 任务。StrConst 默认类名改 DatabaseConstants。generators-frontend-json: 9类型->4粗粒度。diff-engine: Project对比结构化差异(表/字段/索引)。alter-generator: 基于 diff 生成 ALTER DDL(4方言 MODIFY)。P2 进度 4/7。generators 全部完成,diff+ALTER 链路打通。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4a450f7` | (see git log) |
+| `6bca583` | (see git log) |
+| `9f11a40` | (see git log) |
+| `7a53cac` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
