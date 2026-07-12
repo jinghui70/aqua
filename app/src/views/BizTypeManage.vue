@@ -48,18 +48,49 @@ async function addBizType() {
   }
 }
 
+// 统计关联该 bizType 的字段(表code.字段code)
+function relatedFields(code: string): string[] {
+  const res: string[] = [];
+  for (const t of store.currentProject?.tables ?? []) {
+    for (const f of t.fields) {
+      if (f.bizType === code) res.push(`${t.code}.${f.code}`);
+    }
+  }
+  return res;
+}
+
 async function removeBizType(code: string) {
+  const related = relatedFields(code);
+  const msg = related.length
+    ? [
+        `业务类型 <b>${code}</b> 已被 <b>${related.length}</b> 个字段关联:`,
+        related.slice(0, 8).join("、") + (related.length > 8 ? " …" : ""),
+        "删除将同时清除这些字段的业务类型设置,请慎重。确认删除?",
+      ].join("<br/>")
+    : `确认删除业务类型 ${code}?`;
   try {
-    await ElMessageBox.confirm(`确认删除业务类型 ${code}?`, "删除", {
+    await ElMessageBox.confirm(msg, "删除业务类型", {
       type: "warning",
       confirmButtonText: "删除",
       cancelButtonText: "取消",
+      dangerouslyUseHTMLString: true,
     });
+    // 级联清除关联字段的 bizType / bizTypeData
+    for (const t of store.currentProject!.tables) {
+      for (const f of t.fields) {
+        if (f.bizType === code) {
+          f.bizType = undefined;
+          f.bizTypeData = undefined;
+        }
+      }
+    }
     const arr = store.currentProject!.bizTypes;
     const idx = arr.findIndex((b) => b.bizType === code);
     if (idx >= 0) arr.splice(idx, 1);
     if (selectedCode.value === code) selectedCode.value = "";
-    ElMessage.success("已删除");
+    ElMessage.success(
+      related.length ? `已删除,并清除 ${related.length} 个字段的关联` : "已删除"
+    );
   } catch {
     /* 取消 */
   }
