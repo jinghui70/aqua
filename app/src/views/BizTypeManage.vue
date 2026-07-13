@@ -4,6 +4,7 @@ import { computed, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useProjectStore } from "@/stores/project";
 import { useBuiltinStore } from "@/stores/builtin";
+import { collectRelatedTables, buildCascadePrompt } from "@/utils/cascade";
 import { DataType, type BizTypeDefine } from "@/types/schema";
 
 const store = useProjectStore();
@@ -59,27 +60,10 @@ async function addBizType() {
   }
 }
 
-// 统计关联该 bizType 的字段(表code.字段code)
-function relatedFields(code: string): string[] {
-  const res: string[] = [];
-  for (const t of store.currentProject?.tables ?? []) {
-    for (const f of t.fields) {
-      if (f.bizType === code) res.push(`${t.code}.${f.code}`);
-    }
-  }
-  return res;
-}
-
 async function removeBizType(code: string) {
   if (builtin.isBuiltin(code)) return; // 内置不可删(UI 已禁,防御)
-  const related = relatedFields(code);
-  const msg = related.length
-    ? [
-        `业务类型 <b>${code}</b> 已被 <b>${related.length}</b> 个字段关联:`,
-        related.slice(0, 8).join("、") + (related.length > 8 ? " …" : ""),
-        "删除将同时清除这些字段的业务类型设置,请慎重。确认删除?",
-      ].join("<br/>")
-    : `确认删除业务类型 ${code}?`;
+  const related = collectRelatedTables(store.currentProject, (f) => f.bizType === code);
+  const msg = buildCascadePrompt("业务类型", code, related);
   try {
     await ElMessageBox.confirm(msg, "删除业务类型", {
       type: "warning",
@@ -101,7 +85,7 @@ async function removeBizType(code: string) {
     if (idx >= 0) arr.splice(idx, 1);
     if (selectedCode.value === code) selectedCode.value = "";
     ElMessage.success(
-      related.length ? `已删除,并清除 ${related.length} 个字段的关联` : "已删除"
+      related.length ? `已删除,并清除 ${related.length} 张表的关联` : "已删除"
     );
   } catch {
     /* 取消 */

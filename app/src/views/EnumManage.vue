@@ -4,6 +4,7 @@ import { computed, ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useProjectStore } from "@/stores/project";
 import { useTauri } from "@/composables/useTauri";
+import { collectRelatedTables, buildCascadePrompt } from "@/utils/cascade";
 import type { EnumDefine } from "@/types/schema";
 
 const store = useProjectStore();
@@ -58,17 +59,35 @@ async function addEnum() {
 }
 
 async function removeEnum(code: string) {
+  // 引用该全局枚举的字段(field.enum 为 string 引用;内联枚举为对象,不受影响)
+  const related = collectRelatedTables(
+    store.currentProject,
+    (f) => typeof f.enum === "string" && f.enum === code
+  );
+  const msg = buildCascadePrompt("枚举", code, related);
   try {
-    await ElMessageBox.confirm(`确认删除枚举 ${code}?`, "删除", {
+    await ElMessageBox.confirm(msg, "删除枚举", {
       type: "warning",
       confirmButtonText: "删除",
       cancelButtonText: "取消",
+      dangerouslyUseHTMLString: true,
     });
+    // 级联清除:引用该 code 的字段清 enum;若 bizType=Enum 一并清 bizType(避免无 enum 的不一致)
+    for (const t of store.currentProject!.tables) {
+      for (const f of t.fields) {
+        if (typeof f.enum === "string" && f.enum === code) {
+          f.enum = undefined;
+          if (f.bizType === "Enum") f.bizType = undefined;
+        }
+      }
+    }
     const arr = store.currentProject!.enums;
     const idx = arr.findIndex((e) => e.code === code);
     if (idx >= 0) arr.splice(idx, 1);
     if (selectedCode.value === code) selectedCode.value = "";
-    ElMessage.success("已删除");
+    ElMessage.success(
+      related.length ? `已删除,并清除 ${related.length} 张表的关联` : "已删除"
+    );
   } catch {
     /* 取消 */
   }
