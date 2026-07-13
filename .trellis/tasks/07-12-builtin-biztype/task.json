@@ -3,7 +3,7 @@
   "name": "builtin-biztype",
   "title": "内置业务类型配置文件加载",
   "description": "产品打包内置业务类型配置文件,启动加载,标记 builtin 不可删改;定义内置清单",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": "aqua-core",
