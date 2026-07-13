@@ -1,5 +1,6 @@
 pub mod alter;
 pub mod dataset;
+pub mod datasource;
 pub mod diff;
 pub mod driver;
 pub mod generators;

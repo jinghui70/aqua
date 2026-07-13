@@ -8,7 +8,7 @@
 pub mod cli;
 pub mod commands;
 
-use commands::{dataset, generate, import, project};
+use commands::{datasource, dataset, generate, import, project};
 use tauri::menu::{MenuBuilder, SubmenuBuilder};
 use tauri::Emitter;
 
@@ -65,7 +65,7 @@ fn build_menu<R: tauri::Runtime>(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .menu(|handle| build_menu(handle))
+        .menu(build_menu)
         .on_menu_event(|app, event| {
             // 菜单项 id 发到前端,由 useMenuActions 分发
             let _ = app.emit("menu", event.id().0.clone());
@@ -85,6 +85,8 @@ pub fn run() {
             import::list_tables_command,
             dataset::dataset_load,
             dataset::dataset_save,
+            datasource::datasource_load,
+            datasource::datasource_save,
         ])
         .run(tauri::generate_context!())
         .expect("aqua 启动失败");

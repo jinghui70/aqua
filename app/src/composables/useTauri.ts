@@ -29,6 +29,12 @@ export function useTauri() {
     datasetSave: (path: string, project: Project, entries: DatasetEntry[]) =>
       invoke<void>("dataset_save", { path, project, entries }),
 
+    // 数据源持久化(.dbconfig.json,密码 AES 加密)
+    datasourceLoad: (projectDir: string) =>
+      invoke<Array<[string, DbConfig]>>("datasource_load", { projectDir }),
+    datasourceSave: (projectDir: string, sources: Array<[string, DbConfig]>) =>
+      invoke<void>("datasource_save", { projectDir, sources }),
+
     // 生成器
     generateDdl: (
       project: Project,

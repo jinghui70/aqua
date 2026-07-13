@@ -5,6 +5,13 @@ import { ref } from "vue";
 import type { Project, Table } from "@/types/schema";
 import { useTauri } from "@/composables/useTauri";
 import { useRecentProjects } from "@/composables/useRecentProjects";
+import { useDataSourceStore } from "@/stores/datasource";
+
+/** 取文件所在目录(兼容 / 与 \\)。无分隔符返回空串。 */
+function dirOf(path: string): string {
+  const idx = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+  return idx >= 0 ? path.slice(0, idx) : "";
+}
 
 /** 已打开的标签(表编辑 or 配置页)。 */
 export interface OpenedTab {
@@ -19,6 +26,7 @@ export interface OpenedTab {
 export const useProjectStore = defineStore("project", () => {
   const tauri = useTauri();
   const recent = useRecentProjects();
+  const datasource = useDataSourceStore();
 
   const currentProject = ref<Project | null>(null);
   const currentPath = ref<string>("");
@@ -38,6 +46,7 @@ export const useProjectStore = defineStore("project", () => {
     currentPath.value = "";
     openedTabs.value = [];
     activeTab.value = "";
+    void datasource.load("");
   }
 
   /** 打开项目文件。 */
@@ -47,6 +56,7 @@ export const useProjectStore = defineStore("project", () => {
     openedTabs.value = [];
     activeTab.value = "";
     recent.record(path);
+    await datasource.load(dirOf(path));
   }
 
   /** 保存项目。 */
@@ -55,8 +65,11 @@ export const useProjectStore = defineStore("project", () => {
     const target = path ?? currentPath.value;
     if (!target) throw new Error("未指定保存路径");
     await tauri.projectSave(target, currentProject.value);
+    const firstBind = dirOf(target) !== datasource.projectDir;
     currentPath.value = target;
     recent.record(target);
+    // 首次保存/另存到新目录:把内存态数据源落盘到该目录
+    if (firstBind) await datasource.bindDirAndPersist(dirOf(target));
   }
 
   /** 打开一个标签(不重复)。返回路由路径。 */
