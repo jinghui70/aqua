@@ -654,3 +654,37 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 20: 删除级联提示改表级 + 枚举级联保护
+
+**Date**: 2026-07-13
+**Task**: 删除级联提示改表级 + 枚举级联保护
+**Branch**: `main`
+
+### Summary
+
+抽 app/src/utils/cascade.ts 共享工具(collectRelatedTables 按表聚合 + buildCascadePrompt 统一提示格式)。BizTypeManage 删除提示由字段级改表级聚合(级联清 bizType+bizTypeData 不变)。EnumManage 新增级联:删除全局枚举统计引用该 code 的字段(field.enum===code,string 引用;内联对象不受影响),表级提示,确认后清 field.enum + 若 bizType=Enum 清 bizType(避免无 enum 不一致)。未被引用简单确认。纯前端,pnpm build 通过。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1bef488` | (see git log) |
+| `06cd457` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

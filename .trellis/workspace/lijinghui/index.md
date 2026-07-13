@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 19
+- **Total Sessions**: 20
 - **Last Active**: 2026-07-13
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~656 | Active |
+| `journal-1.md` | ~690 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 20 | 2026-07-13 | 删除级联提示改表级 + 枚举级联保护 | `1bef488`, `06cd457` | `main` |
 | 19 | 2026-07-13 | 内置业务类型加载(外置清单+只读+参数默认值) | `3e4ecbb`, `93bc5eb` | `main` |
 | 18 | 2026-07-13 | 数据源持久化(.dbconfig.json + AES-256-GCM) | `4bb904e`, `eaaf25d` | `main` |
 | 17 | 2026-07-13 | 数据集数据行读写 + 前端体验修复批次 | `4fdf902`, `1fcc4df` | `main` |
