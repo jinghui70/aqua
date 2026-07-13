@@ -3,7 +3,7 @@
   "name": "datasource-persist",
   "title": "数据源持久化",
   "description": "数据源配置持久化到 .dbconfig.json,密码 AES-256-GCM 加密,替换当前内存态 datasource store",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": "aqua",
