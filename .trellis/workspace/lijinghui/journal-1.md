@@ -620,3 +620,37 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 19: 内置业务类型加载(外置清单+只读+参数默认值)
+
+**Date**: 2026-07-13
+**Task**: 内置业务类型加载(外置清单+只读+参数默认值)
+**Branch**: `main`
+
+### Summary
+
+外置 builtin-biztypes.json 清单(Date 示例:format 参数 default YYYYMMDD/VARCHAR 8),tauri.conf.json 注册 resource;src-tauri builtin_biztypes_load command 读资源返回 Vec<BizTypeDefine>;前端 builtin store 启动加载,BizTypeManage 合并展示内置(只读禁删+tag)+自定义、新建重名含内置、参数表加 default 列,FieldDetailDialog 下拉合并+选 bizType 用 default 初始化 bizTypeData(顺带修切 bizType 不清旧值缺陷),FieldsTab label 合并。BizTypeDataField 扩展 default_value:Option<Value>(serde rename default,向后兼容,去 Eq 无依赖),4 测试覆盖。36 测试+clippy 0 warning+pnpm build 通过。待实测:Tauri dev 模式 BaseDirectory::Resource 解析路径。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3e4ecbb` | (see git log) |
+| `93bc5eb` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
