@@ -211,14 +211,12 @@ pub fn validate_against(project: &Project, entries: &[DatasetEntry]) -> Result<(
         let valid: std::collections::HashSet<String> =
             table.fields.iter().map(|f| f.code.to_uppercase()).collect();
         for row in &entry.data {
-            if let Some(obj) = row.as_object() {
-                for k in obj.keys() {
-                    if !valid.contains(&k.to_uppercase()) {
-                        return Err(DatasetError::SchemaMismatch(format!(
-                            "表 {} 无字段 {}",
-                            entry.table, k
-                        )));
-                    }
+            for k in row.keys() {
+                if !valid.contains(&k.to_uppercase()) {
+                    return Err(DatasetError::SchemaMismatch(format!(
+                        "表 {} 无字段 {}",
+                        entry.table, k
+                    )));
                 }
             }
         }
@@ -240,7 +238,7 @@ pub fn load_dataset(path: &str, project: &Project) -> Result<Vec<DatasetEntry>, 
             let rows = ds.read_table_rows(table)?;
             entries.push(DatasetEntry {
                 table: table.code.clone(),
-                data: rows.into_iter().map(Value::Object).collect(),
+                data: rows,
             });
         }
         Ok(entries)
@@ -265,12 +263,7 @@ pub fn save_dataset(
                 .iter()
                 .find(|t| t.code == entry.table)
                 .ok_or_else(|| DatasetError::TableNotFound(entry.table.clone()))?;
-            let rows: Vec<Map<String, Value>> = entry
-                .data
-                .iter()
-                .filter_map(|v| v.as_object().cloned())
-                .collect();
-            ds.insert_rows(table, &rows)?;
+            ds.insert_rows(table, &entry.data)?;
         }
         let _ = std::fs::remove_file(path); // 避免 backup 叠加旧数据
         ds.save(path)?;
@@ -302,11 +295,12 @@ fn create_table_sql(table: &Table) -> String {
     format!("CREATE TABLE {} (\n{}\n);", table_name, defs.join(",\n"))
 }
 
-/// 数据集 JSON 条目(§4.5 JSON 格式)。
+/// 数据集 JSON 条目(§4.5 JSON 格式)。行为对象(key=字段 code),
+/// 非对象行在反序列化阶段即报错,避免静默丢行。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DatasetEntry {
     pub table: String,
-    pub data: Vec<serde_json::Value>,
+    pub data: Vec<Map<String, Value>>,
 }
 
 #[cfg(test)]
@@ -471,7 +465,7 @@ mod tests {
         row2.insert("AMOUNT".into(), Value::String("1234567890.12".into()));
         vec![DatasetEntry {
             table: "SYS_USER".into(),
-            data: vec![Value::Object(row), Value::Object(row2)],
+            data: vec![row, row2],
         }]
     }
 
@@ -534,7 +528,7 @@ mod tests {
         row.insert("BAD_FIELD".into(), Value::Null);
         let bad_field = vec![DatasetEntry {
             table: "SYS_USER".into(),
-            data: vec![Value::Object(row)],
+            data: vec![row],
         }];
         assert!(matches!(
             validate_against(&project, &bad_field),
