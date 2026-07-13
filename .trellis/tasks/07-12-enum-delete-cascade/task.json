@@ -3,7 +3,7 @@
   "name": "enum-delete-cascade",
   "title": "删除枚举级联保护",
   "description": "删除全局枚举时统计并提醒关联字段,级联清除 field.enum 引用(仿 bizType 删除保护)",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": "app",
