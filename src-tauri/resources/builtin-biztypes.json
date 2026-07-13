@@ -1,0 +1,23 @@
+{
+  "bizTypes": [
+    {
+      "bizType": "Date",
+      "name": "日期",
+      "description": "格式化日期字符串",
+      "supportedDataTypes": [
+        { "dataType": "VARCHAR", "defaultLength": 8 }
+      ],
+      "bizTypeData": {
+        "fields": [
+          {
+            "name": "format",
+            "type": "string",
+            "default": "YYYYMMDD",
+            "required": true,
+            "description": "日期格式"
+          }
+        ]
+      }
+    }
+  ]
+}

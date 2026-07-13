@@ -1,5 +1,6 @@
 //! Tauri commands 模块。
 
+pub mod builtin;
 pub mod dataset;
 pub mod datasource;
 pub mod generate;

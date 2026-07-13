@@ -4,11 +4,13 @@ import { computed, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { DataType, type Field, type InlineEnum, type BizTypeDefine } from "@/types/schema";
 import { useProjectStore } from "@/stores/project";
+import { useBuiltinStore } from "@/stores/builtin";
 
 const props = defineProps<{ modelValue: boolean; field: Field | null }>();
 const emit = defineEmits<{ "update:modelValue": [boolean] }>();
 
 const store = useProjectStore();
+const builtin = useBuiltinStore();
 const dataTypes = Object.values(DataType);
 
 const COLORS = [
@@ -25,7 +27,10 @@ const visible = computed({
 const draft = ref<Field | null>(null);
 
 // ===== bizType =====
-const bizTypes = computed(() => store.currentProject?.bizTypes ?? []);
+const bizTypes = computed<BizTypeDefine[]>(() => [
+  ...builtin.bizTypes,
+  ...(store.currentProject?.bizTypes ?? []),
+]);
 // Enum 是特殊内置 bizType(§3.5),选中显示枚举配置;其他 bizType 显示 bizTypeData 表单
 const isEnumBizType = computed(() => draft.value?.bizType === "Enum");
 const currentBizType = computed(() =>
@@ -99,6 +104,16 @@ function applyDefaults(def: BizTypeDefine, dt: DataType) {
   if (s.defaultScale != null) draft.value.scale = s.defaultScale;
 }
 
+// 按 bizType 定义初始化 bizTypeData(单 field 存值,多 field 存对象;无 default 则不预填)
+function initBizTypeData(def: BizTypeDefine): unknown {
+  const fields = def.bizTypeData?.fields ?? [];
+  if (!fields.length) return undefined;
+  if (fields.length === 1) return fields[0].default;
+  const obj: Record<string, unknown> = {};
+  for (const f of fields) if (f.default !== undefined) obj[f.name] = f.default;
+  return obj;
+}
+
 // dataType 切换:若当前 bizType 不支持新类型则清空,支持则填默认值
 function onDataTypeChange(dt: DataType) {
   if (!draft.value) return;
@@ -137,6 +152,7 @@ function onBizTypeChange(bizType: string | undefined) {
         draft.value.dataType = dt;
       }
       applyDefaults(def, dt);
+      draft.value.bizTypeData = initBizTypeData(def) as Field["bizTypeData"];
     }
   } else {
     draft.value.enum = undefined;

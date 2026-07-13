@@ -2,7 +2,7 @@
 
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { ElMessage } from "element-plus";
-import type { Project, DbConfig, ValidationError, DatasetEntry } from "@/types/schema";
+import type { Project, DbConfig, ValidationError, DatasetEntry, BizTypeDefine } from "@/types/schema";
 
 /** 调用 Tauri command,失败时弹错误提示。 */
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
@@ -34,6 +34,9 @@ export function useTauri() {
       invoke<Array<[string, DbConfig]>>("datasource_load", { projectDir }),
     datasourceSave: (projectDir: string, sources: Array<[string, DbConfig]>) =>
       invoke<void>("datasource_save", { projectDir, sources }),
+
+    // 内置业务类型清单(打包资源文件)
+    builtinBiztypesLoad: () => invoke<BizTypeDefine[]>("builtin_biztypes_load"),
 
     // 生成器
     generateDdl: (

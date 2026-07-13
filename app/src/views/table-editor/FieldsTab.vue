@@ -5,11 +5,13 @@ import { ElMessage } from "element-plus";
 import Sortable from "sortablejs";
 import { DataType, type Field } from "@/types/schema";
 import { useProjectStore } from "@/stores/project";
+import { useBuiltinStore } from "@/stores/builtin";
 import FieldDetailDialog from "./FieldDetailDialog.vue";
 
 const props = defineProps<{ fields: Field[] }>();
 
 const store = useProjectStore();
+const builtin = useBuiltinStore();
 
 // 稳定 row-key: 给每个 field 对象分配递增 id(不污染 schema),
 // 让 el-table 用 key diff,拖拽 splice 后 Vue 按 key 重排节点,与 Sortable 目标一致。
@@ -58,8 +60,11 @@ function openDetail(field: Field) {
 }
 const dataTypes = Object.values(DataType);
 
-// bizType 只读展示: 映射到名称
-const bizTypeOptions = computed(() => store.currentProject?.bizTypes ?? []);
+// bizType 只读展示: 映射到名称(含内置)
+const bizTypeOptions = computed(() => [
+  ...builtin.bizTypes,
+  ...(store.currentProject?.bizTypes ?? []),
+]);
 function bizTypeLabel(field: Field): string {
   if (!field.bizType) return "-";
   if (field.bizType === "Enum") return "Enum";

@@ -81,7 +81,7 @@ export interface BizTypeDefine {
     defaultPrecision?: number;
     defaultScale?: number;
   }>;
-  bizTypeData?: { fields: Array<{ name: string; type: "string" | "number"; description?: string; required?: boolean }> };
+  bizTypeData?: { fields: Array<{ name: string; type: "string" | "number"; description?: string; required?: boolean; default?: string | number }> };
 }
 
 export interface EnumDefine {
