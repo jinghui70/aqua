@@ -311,6 +311,7 @@ mod tests {
         use crate::schema::{Field, GroupDefine};
         Project {
             version: "1.0.0".to_string(),
+            name: None,
             base_package: "com.example".to_string(),
             biz_types: vec![],
             enums: vec![],

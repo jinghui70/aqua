@@ -31,6 +31,7 @@ pub async fn import_from_db(
     // 3. 构造 Project
     Ok(Project {
         version: "1.0.0".to_string(),
+        name: None,
         base_package: base_package.unwrap_or_else(|| "com.example".to_string()),
         tables,
         enums: vec![],

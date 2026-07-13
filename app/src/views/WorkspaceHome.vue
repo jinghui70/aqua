@@ -8,7 +8,7 @@ const store = useProjectStore();
 <template>
   <div class="h-full flex flex-col items-center justify-center text-gray-400">
     <div class="text-16 mb-8">
-      {{ store.currentProject?.basePackage }}
+      {{ store.currentProject?.name ?? store.currentProject?.basePackage ?? "未命名项目" }}
     </div>
     <p class="text-14">从左侧分组树选择或新建表开始编辑</p>
     <p class="text-13 mt-4">

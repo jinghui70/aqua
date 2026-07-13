@@ -29,6 +29,8 @@ fn build_menu<R: tauri::Runtime>(
     let file_builder = file_builder.separator().quit();
     let file = file_builder.build()?;
     let config = SubmenuBuilder::new(app, "配置")
+        .text("config.project", "项目设置")
+        .separator()
         .text("config.biztype", "业务类型管理")
         .text("config.enum", "枚举管理")
         .text("config.dataset", "数据集管理")

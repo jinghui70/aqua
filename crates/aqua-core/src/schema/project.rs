@@ -16,6 +16,9 @@ pub struct GroupDefine {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Project {
     pub version: String,
+    /// 项目中文名(可选,旧 schema 兼容)。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
     #[serde(rename = "basePackage")]
     pub base_package: String,
     #[serde(rename = "bizTypes")]

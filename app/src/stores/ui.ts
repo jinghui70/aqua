@@ -32,6 +32,12 @@ export const useUiStore = defineStore("ui", () => {
     recentVisible.value = true;
   }
 
+  // 项目设置弹窗(中文名/basePackage)
+  const projectSettingsVisible = ref(false);
+  function openProjectSettings() {
+    projectSettingsVisible.value = true;
+  }
+
   return {
     exportVisible,
     exportKind,
@@ -42,5 +48,7 @@ export const useUiStore = defineStore("ui", () => {
     openImport,
     recentVisible,
     openRecent,
+    projectSettingsVisible,
+    openProjectSettings,
   };
 });

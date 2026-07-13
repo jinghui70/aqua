@@ -49,6 +49,14 @@ export function useMenuActions() {
         }
         ui.openImport();
         break;
+      // 配置(弹窗)
+      case "config.project":
+        if (!store.currentProject) {
+          ElMessage.warning("请先新建或打开项目");
+          break;
+        }
+        ui.openProjectSettings();
+        break;
       // 配置(路由标签)
       case "config.biztype":
         openConfigTab("biztype", "业务类型", "/biztype");

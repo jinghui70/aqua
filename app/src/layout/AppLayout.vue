@@ -12,6 +12,7 @@ import ExportDialog from "@/components/ExportDialog.vue";
 import DataSourceDialog from "@/components/DataSourceDialog.vue";
 import ImportWizard from "@/components/ImportWizard.vue";
 import RecentProjectsDialog from "@/components/RecentProjectsDialog.vue";
+import ProjectSettingsDialog from "@/components/ProjectSettingsDialog.vue";
 
 const store = useProjectStore();
 </script>
@@ -39,5 +40,6 @@ const store = useProjectStore();
     <DataSourceDialog />
     <ImportWizard />
     <RecentProjectsDialog />
+    <ProjectSettingsDialog />
   </div>
 </template>

@@ -94,6 +94,8 @@ export interface EnumDefine {
 
 export interface Project {
   version: string;
+  /** 项目中文名(可选,旧 schema 兼容) */
+  name?: string;
   basePackage: string;
   bizTypes: BizTypeDefine[];
   enums: EnumDefine[];
