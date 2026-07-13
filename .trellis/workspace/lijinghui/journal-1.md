@@ -688,3 +688,36 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 21: 项目中文名 + 项目设置对话框
+
+**Date**: 2026-07-13
+**Task**: 项目中文名 + 项目设置对话框
+**Branch**: `main`
+
+### Summary
+
+Project 加 name:Option<String>(serde default+skip,向后兼容旧 schema),Rust 4 处构造点补 name:None。菜单配置加项目设置项(separator 分隔),useMenuActions 分发,ui store 开关,新建 ProjectSettingsDialog(draft+保存写回,basePackage 空校验,中文名空置 undefined)。WorkspaceHome 显示 name??basePackage??未命名项目。basePackage 写回后影响 Java/StrConst 生成。分组不纳入(树上编辑)。36 测试+clippy 0 warning+pnpm build 通过。配置集成分步:本任务只补项目信息缺口,业务类型/枚举/数据集保持标签页后续评估。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `45efe7d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
