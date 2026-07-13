@@ -586,3 +586,37 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 18: 数据源持久化(.dbconfig.json + AES-256-GCM)
+
+**Date**: 2026-07-13
+**Task**: 数据源持久化(.dbconfig.json + AES-256-GCM)
+**Branch**: `main`
+
+### Summary
+
+数据源配置持久化到项目目录 .dbconfig.json,密码 AES-256-GCM 加密(密钥=用户数据目录 32 字节随机 key,600 权限)。aqua-core 新增 datasource 模块(加解密+文件读写+8 测试),src-tauri 暴露 datasource_load/save 无状态 command,key 路径由 app_data_dir 解析传入。前端 store 增删改后自动落盘、打开项目加载、首次保存/另存绑定目录;persist 用 Promise 链串行化避免并发覆盖。密钥策略偏离设计文档的机器特征派生(已确认)。后端 32 测试+clippy 0 warning+pnpm build 通过。GUI 未人工实测。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4bb904e` | (see git log) |
+| `eaaf25d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
