@@ -552,3 +552,37 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 17: 数据集数据行读写 + 前端体验修复批次
+
+**Date**: 2026-07-13
+**Task**: 数据集数据行读写 + 前端体验修复批次
+**Branch**: `main`
+
+### Summary
+
+实现数据集数据行读写(aqua-core load/save_dataset 双格式 JSON/SQLite,行↔JSON 按类型转换保精度,Tauri commands,DatasetManage 可编辑网格重写,4 新测试);check 收紧 DatasetEntry.data 类型消除静默数据丢失。另完成一批前端体验修复:字段只读列/code-prop联动/拖拽排序、Java注释开关、菜单补全、hasCode校验、类型↔bizType联动、删bizType级联、索引新增修复、DDL页签。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4fdf902` | (see git log) |
+| `1fcc4df` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

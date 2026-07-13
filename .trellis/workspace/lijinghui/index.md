@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 16
-- **Last Active**: 2026-07-12
+- **Total Sessions**: 17
+- **Last Active**: 2026-07-13
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~554 | Active |
+| `journal-1.md` | ~588 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 17 | 2026-07-13 | 数据集数据行读写 + 前端体验修复批次 | `4fdf902`, `1fcc4df` | `main` |
 | 16 | 2026-07-12 | 前端全量重做完成 (frontend-rework 9 child) | HEAD | `main` |
 | 15 | 2026-07-12 | connector.jar 实现 (H2, v2 架构重构) | HEAD | `main` |
 | 14 | 2026-07-12 | MySQL/PG 集成测试通过,发现并修复 DDL bug | `ba192f2` | `main` |
