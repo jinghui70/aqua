@@ -25,14 +25,16 @@ const store = useProjectStore();
 
     <!-- 有项目: 工作区布局(splitter 分割) -->
     <template v-else>
-      <el-splitter class="flex-1" style="height: 0">
-        <template #pane-1>
-          <GroupTreeAside />
-        </template>
-        <template #pane-2>
-          <TabWorkspace />
-        </template>
-      </el-splitter>
+      <div class="flex-1 min-h-0 flex flex-col">
+        <el-splitter class="flex-1">
+          <template #pane-1>
+            <GroupTreeAside />
+          </template>
+          <template #pane-2>
+            <TabWorkspace />
+          </template>
+        </el-splitter>
+      </div>
       <StatusBar />
     </template>
 
