@@ -106,6 +106,39 @@ function onNodeDrop(draggingNode: any, dropNode: any, dropType: string) {
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
+// ===== hover 操作栏(Teleport 到 body + fixed,不受树容器 overflow 裁剪) =====
+const hoverNode = ref<TreeNode | null>(null);
+const hoverBarStyle = ref<Record<string, string>>({});
+let leaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function onNodeEnter(data: TreeNode, ev: MouseEvent) {
+  if (leaveTimer) {
+    clearTimeout(leaveTimer);
+    leaveTimer = null;
+  }
+  const rect = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+  hoverNode.value = data;
+  // right 用视口宽度减节点右边缘,使按钮右边缘对齐节点右边缘
+  hoverBarStyle.value = {
+    top: `${rect.top}px`,
+    right: `${window.innerWidth - rect.right}px`,
+  };
+}
+function onNodeLeave() {
+  leaveTimer = setTimeout(() => {
+    hoverNode.value = null;
+  }, 120);
+}
+function onBarEnter() {
+  if (leaveTimer) {
+    clearTimeout(leaveTimer);
+    leaveTimer = null;
+  }
+}
+function onBarLeave() {
+  hoverNode.value = null;
+}
+
 // ===== 分组操作 =====
 // 新建分组对话框(code + 中文名)
 const addGroupVisible = ref(false);
@@ -133,7 +166,8 @@ function confirmAddGroup() {
   ElMessage.success("分组已创建");
 }
 
-async function renameGroup(groupCode: string) {
+async function renameGroup(groupCode?: string) {
+  if (!groupCode) return;
   const g = store.currentProject?.groups.find((x) => x.code === groupCode);
   if (!g) return;
   try {
@@ -148,7 +182,8 @@ async function renameGroup(groupCode: string) {
   }
 }
 
-async function deleteGroup(groupCode: string) {
+async function deleteGroup(groupCode?: string) {
+  if (!groupCode) return;
   try {
     await ElMessageBox.confirm(`确认删除分组 ${groupCode}?`, "删除分组", {
       type: "warning",
@@ -170,7 +205,8 @@ const addTableGroup = ref("");
 const addTableCode = ref("");
 const addTableName = ref("");
 
-function openAddTable(groupCode: string) {
+function openAddTable(groupCode?: string) {
+  if (!groupCode) return;
   addTableGroup.value = groupCode;
   addTableCode.value = "";
   addTableName.value = "";
@@ -291,7 +327,11 @@ function onDuplicate(tableCode?: string) {
         @node-drop="onNodeDrop"
       >
         <template #default="{ data }">
-          <div class="relative flex items-center w-full group">
+          <div
+            class="flex items-center w-full"
+            @mouseenter="onNodeEnter(data, $event)"
+            @mouseleave="onNodeLeave"
+          >
             <span
               class="flex items-center gap-4 min-w-0 flex-1"
               :class="data.type === 'table' ? 'text-13' : 'font-bold text-13'"
@@ -300,54 +340,6 @@ function onDuplicate(tableCode?: string) {
                 data.type === "group" ? "📁" : "📄"
               }}</span>
               <span class="truncate min-w-0">{{ data.label }}</span>
-            </span>
-            <!-- hover 操作:absolute 浮层,overflow:visible 保证不被裁 -->
-            <span
-              class="hidden group-hover:flex absolute right-0 top-0 h-full items-center gap-2 pl-12 pr-4 bg-white"
-            >
-              <template v-if="data.type === 'group'">
-                <el-button
-                  size="small"
-                  link
-                  type="primary"
-                  @click.stop="openAddTable(data.groupCode)"
-                  >+表</el-button
-                >
-                <el-button
-                  size="small"
-                  link
-                  @click.stop="renameGroup(data.groupCode)"
-                  >改</el-button
-                >
-                <el-button
-                  size="small"
-                  link
-                  type="danger"
-                  @click.stop="deleteGroup(data.groupCode)"
-                  >删</el-button
-                >
-              </template>
-              <template v-else>
-                <el-button
-                  size="small"
-                  link
-                  @click.stop="onDuplicate(data.tableCode)"
-                  >复制</el-button
-                >
-                <el-button
-                  size="small"
-                  link
-                  @click.stop="renameTable(data.tableCode)"
-                  >改</el-button
-                >
-                <el-button
-                  size="small"
-                  link
-                  type="danger"
-                  @click.stop="deleteTable(data.tableCode)"
-                  >删</el-button
-                >
-              </template>
             </span>
           </div>
         </template>
@@ -388,12 +380,51 @@ function onDuplicate(tableCode?: string) {
         <el-button type="primary" @click="confirmAddTable">创建</el-button>
       </template>
     </el-dialog>
+
+    <!-- hover 操作栏:Teleport 到 body + fixed,脱离树 DOM,树窄时也不被裁 -->
+    <Teleport to="body">
+      <div
+        v-if="hoverNode"
+        class="fixed flex items-center gap-2 bg-white border border-gray-200 rounded-4 shadow px-6 py-2 z-50"
+        :style="hoverBarStyle"
+        @mouseenter="onBarEnter"
+        @mouseleave="onBarLeave"
+      >
+        <template v-if="hoverNode?.type === 'group'">
+          <el-button
+            size="small"
+            link
+            type="primary"
+            @click="openAddTable(hoverNode?.groupCode)"
+            >+表</el-button
+          >
+          <el-button size="small" link @click="renameGroup(hoverNode?.groupCode)"
+            >改</el-button
+          >
+          <el-button
+            size="small"
+            link
+            type="danger"
+            @click="deleteGroup(hoverNode?.groupCode)"
+            >删</el-button
+          >
+        </template>
+        <template v-else>
+          <el-button size="small" link @click="onDuplicate(hoverNode?.tableCode)"
+            >复制</el-button
+          >
+          <el-button size="small" link @click="renameTable(hoverNode?.tableCode)"
+            >改</el-button
+          >
+          <el-button
+            size="small"
+            link
+            type="danger"
+            @click="deleteTable(hoverNode?.tableCode)"
+            >删</el-button
+          >
+        </template>
+      </div>
+    </Teleport>
   </div>
 </template>
-
-<style scoped>
-/* el-tree 节点默认 overflow:hidden 会裁掉 hover 操作按钮,放开让 absolute 浮层完整显示 */
-:deep(.el-tree-node__content) {
-  overflow: visible;
-}
-</style>
