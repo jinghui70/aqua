@@ -10,6 +10,7 @@ import TabWorkspace from "./TabWorkspace.vue";
 import StatusBar from "./StatusBar.vue";
 import ExportDialog from "@/components/ExportDialog.vue";
 import DataSourceDialog from "@/components/DataSourceDialog.vue";
+import DatabaseConfigDialog from "@/components/DatabaseConfigDialog.vue";
 import ImportWizard from "@/components/ImportWizard.vue";
 import RecentProjectsDialog from "@/components/RecentProjectsDialog.vue";
 import ProjectSettingsDialog from "@/components/ProjectSettingsDialog.vue";
@@ -39,6 +40,7 @@ const store = useProjectStore();
     <!-- 全局弹窗(两态都可用) -->
     <ExportDialog />
     <DataSourceDialog />
+    <DatabaseConfigDialog />
     <ImportWizard />
     <RecentProjectsDialog />
     <ProjectSettingsDialog />

@@ -20,6 +20,12 @@ export const useUiStore = defineStore("ui", () => {
     dataSourceVisible.value = true;
   }
 
+  // 数据库配置弹窗(驱动安装/显隐)
+  const databaseConfigVisible = ref(false);
+  function openDatabaseConfig() {
+    databaseConfigVisible.value = true;
+  }
+
   // 导入向导弹窗
   const importVisible = ref(false);
   function openImport() {
@@ -50,6 +56,8 @@ export const useUiStore = defineStore("ui", () => {
     openExport,
     dataSourceVisible,
     openDataSource,
+    databaseConfigVisible,
+    openDatabaseConfig,
     importVisible,
     openImport,
     recentVisible,

@@ -44,3 +44,15 @@ export async function pickDatasetSave(
   const result = await save({ defaultPath: defaultName, filters: DATASET_FILTER });
   return result ?? null;
 }
+
+const JAR_FILTER = [{ name: "JDBC 驱动", extensions: ["jar"] }];
+
+/** 打开 JDBC 驱动 jar 选择框。 */
+export async function pickDriverJar(): Promise<string | null> {
+  const result = await open({
+    multiple: false,
+    directory: false,
+    filters: JAR_FILTER,
+  });
+  return typeof result === "string" ? result : null;
+}

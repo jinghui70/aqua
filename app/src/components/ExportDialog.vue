@@ -8,12 +8,12 @@ import { useTauri } from "@/composables/useTauri";
 import { downloadText } from "@/composables/useDownload";
 import { pickOpenFile } from "@/composables/useFileDialog";
 import type { Project } from "@/types/schema";
+import { useDatabaseStore } from "@/stores/database";
 
 const ui = useUiStore();
 const store = useProjectStore();
 const tauri = useTauri();
-
-const dialects = ["mysql", "postgresql", "oracle", "h2"];
+const dbStore = useDatabaseStore();
 
 // 通用配置
 const dialect = ref("mysql");
@@ -121,7 +121,7 @@ watch(
         <span v-if="ui.exportKind !== 'strconst'" class="flex items-center gap-6 text-13">
           方言
           <el-select v-model="dialect" size="small" style="width: 130px">
-            <el-option v-for="d in dialects" :key="d" :label="d" :value="d" />
+            <el-option v-for="d in dbStore.generatable" :key="d.name" :label="d.label" :value="d.name" />
           </el-select>
         </span>
 

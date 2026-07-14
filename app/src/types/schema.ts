@@ -125,6 +125,22 @@ export interface DbConfig {
   schema?: string;
 }
 
+/** 数据库支持信息(清单 + hidden/installed 状态,供配置页与下拉)。 */
+export interface DatabaseInfo {
+  name: string;
+  label: string;
+  category: "native" | "jdbc";
+  defaultPort: number;
+  needsSchema: boolean;
+  generateAs: string | null;
+  driverClass: string | null;
+  reverseSupported: boolean;
+  builtinDriver: boolean;
+  hidden: boolean;
+  installed: boolean;
+  installedJar: string | null;
+}
+
 /** 数据集条目:一张表的全部数据行(key 用字段 code)。 */
 export interface DatasetEntry {
   table: string;

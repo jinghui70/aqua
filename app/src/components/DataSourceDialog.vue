@@ -4,13 +4,13 @@ import { reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { useUiStore } from "@/stores/ui";
 import { useDataSourceStore, type DataSource } from "@/stores/datasource";
+import { useDatabaseStore } from "@/stores/database";
 import { useTauri } from "@/composables/useTauri";
 
 const ui = useUiStore();
 const dsStore = useDataSourceStore();
 const tauri = useTauri();
-
-const dialects = ["mysql", "postgresql", "oracle", "h2"];
+const dbStore = useDatabaseStore();
 
 // 当前编辑的表单(新增或编辑)
 const editing = ref(false);
@@ -127,7 +127,7 @@ async function testConnection() {
           </el-form-item>
           <el-form-item label="类型">
             <el-select v-model="form.dialect" style="width: 100%">
-              <el-option v-for="d in dialects" :key="d" :label="d" :value="d" />
+              <el-option v-for="d in dbStore.reversible" :key="d.name" :label="d.label" :value="d.name" />
             </el-select>
           </el-form-item>
           <el-form-item label="主机">

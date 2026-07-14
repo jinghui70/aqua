@@ -4,14 +4,15 @@ import { ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { useTauri } from "@/composables/useTauri";
 import { useProjectStore } from "@/stores/project";
+import { useDatabaseStore } from "@/stores/database";
 import { downloadText } from "@/composables/useDownload";
 
 const props = defineProps<{ tableCode: string; active: boolean }>();
 
 const tauri = useTauri();
 const store = useProjectStore();
+const dbStore = useDatabaseStore();
 
-const dialects = ["mysql", "postgresql", "oracle", "h2"];
 const dialect = ref("mysql");
 const preview = ref("");
 
@@ -47,7 +48,7 @@ function download() {
       <span class="text-13">
         方言
         <el-select v-model="dialect" size="small" style="width: 130px">
-          <el-option v-for="d in dialects" :key="d" :label="d" :value="d" />
+          <el-option v-for="d in dbStore.generatable" :key="d.name" :label="d.label" :value="d.name" />
         </el-select>
       </span>
       <div class="flex-1" />

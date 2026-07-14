@@ -73,6 +73,9 @@ export function useMenuActions() {
       case "config.datasource":
         ui.openDataSource();
         break;
+      case "config.database":
+        ui.openDatabaseConfig();
+        break;
       // 导出(弹窗)
       case "export.ddl":
         ui.openExport("ddl");

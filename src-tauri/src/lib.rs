@@ -8,14 +8,12 @@
 pub mod cli;
 pub mod commands;
 
-use commands::{builtin, datasource, dataset, generate, import, project};
+use commands::{builtin, database, dataset, datasource, generate, import, project};
 use tauri::menu::{MenuBuilder, SubmenuBuilder};
 use tauri::Emitter;
 
 /// 构建原生窗口菜单(§6.1),菜单事件通过 "menu" event 发到前端。
-fn build_menu<R: tauri::Runtime>(
-    app: &tauri::AppHandle<R>,
-) -> tauri::Result<tauri::menu::Menu<R>> {
+fn build_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<tauri::menu::Menu<R>> {
     let file_builder = SubmenuBuilder::new(app, "文件")
         .text("file.new", "新建项目")
         .text("file.open", "打开项目")
@@ -36,6 +34,7 @@ fn build_menu<R: tauri::Runtime>(
         .text("config.enum", "枚举管理")
         .text("config.dataset", "数据集管理")
         .text("config.datasource", "数据源配置")
+        .text("config.database", "数据库配置")
         .build()?;
     let export = SubmenuBuilder::new(app, "导出")
         .text("export.ddl", "DDL")
@@ -90,6 +89,10 @@ pub fn run() {
             dataset::dataset_save,
             datasource::datasource_load,
             datasource::datasource_save,
+            database::list_databases,
+            database::install_driver,
+            database::uninstall_driver,
+            database::set_database_hidden,
             builtin::builtin_biztypes_load,
         ])
         .run(tauri::generate_context!())

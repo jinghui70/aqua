@@ -10,11 +10,13 @@ mod factory;
 mod jdbc;
 mod mysql;
 mod postgres;
+pub mod state;
 mod trait_def;
 pub mod types;
 
 pub use dialects::{find_dialect, list_dialects, DbCategory, DialectInfo};
 pub use error::DriverError;
 pub use factory::create_driver;
+pub use state::{DatabaseInfo, DatabaseState, InstalledDriver};
 pub use trait_def::Driver;
 pub use types::{ColumnMeta, DbConfig, IndexMeta};

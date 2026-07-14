@@ -2,7 +2,7 @@
 
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { ElMessage } from "element-plus";
-import type { Project, DbConfig, ValidationError, DatasetEntry, BizTypeDefine } from "@/types/schema";
+import type { Project, DbConfig, DatabaseInfo, ValidationError, DatasetEntry, BizTypeDefine } from "@/types/schema";
 
 /** 调用 Tauri command,失败时弹错误提示。 */
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
@@ -87,6 +87,15 @@ export function useTauri() {
       invoke<Project>("import_from_db_command", { config, basePackage }),
     listTables: (config: DbConfig) =>
       invoke<string[]>("list_tables_command", { config }),
+
+    // 数据库支持管理(drivers/databases.json)
+    listDatabases: () => invoke<DatabaseInfo[]>("list_databases"),
+    installDriver: (dialect: string, jarPath: string) =>
+      invoke<void>("install_driver", { dialect, jarPath }),
+    uninstallDriver: (dialect: string) =>
+      invoke<void>("uninstall_driver", { dialect }),
+    setDatabaseHidden: (dialect: string, hidden: boolean) =>
+      invoke<void>("set_database_hidden", { dialect, hidden }),
   };
 }
 
