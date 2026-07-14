@@ -40,7 +40,7 @@ fn test_parse_project_returns_parsed_project_for_valid_input() {
     let project =
         parse_project(load_fixture("valid-full.json")).expect("parseProject 应成功返回 Project");
     assert_eq!(project.version, "1.0.0");
-    assert_eq!(project.tables[0].indexes.as_ref().unwrap()[0].unique, true);
+    assert!(project.tables[0].indexes.as_ref().unwrap()[0].unique);
 }
 
 #[test]

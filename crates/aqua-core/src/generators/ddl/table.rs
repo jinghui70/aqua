@@ -32,8 +32,8 @@ pub fn generate_table(table: &Table, dialect: &Dialect) -> String {
         format!("CREATE TABLE {} (\n{}\n);", table_name, body)
     };
 
-    // 独立表注释 (PG/Oracle/KingBase)
-    if !inline_table_comment(dialect) {
+    // 独立表注释 (PG/Oracle/KingBase 等;SQL Server 不支持)
+    if !inline_table_comment(dialect) && supports_comment(dialect) {
         output.push_str(&format!(
             "\nCOMMENT ON TABLE {} IS '{}';",
             table_name,
@@ -41,8 +41,8 @@ pub fn generate_table(table: &Table, dialect: &Dialect) -> String {
         ));
     }
 
-    // 独立列注释 (PG/Oracle/KingBase)
-    if !inline_column_comment(dialect) {
+    // 独立列注释 (PG/Oracle/KingBase 等;SQL Server 不支持)
+    if !inline_column_comment(dialect) && supports_comment(dialect) {
         for field in &table.fields {
             output.push_str(&format!(
                 "\nCOMMENT ON COLUMN {}.{} IS '{}';",
@@ -109,11 +109,28 @@ fn inline_column_comment(dialect: &Dialect) -> bool {
     match dialect {
         Dialect::Mysql => true,
         Dialect::Postgresql => false,
-        Dialect::Jdbc { name } => matches!(name.as_str(), "h2" | "dm" | "gbase"),
+        // MySQL 兼容系 + DM/GBase/H2 支持内联列注释
+        Dialect::Jdbc { name } => {
+            matches!(name.as_str(), "h2" | "dm" | "gbase" | "oceanbase" | "tidb")
+        }
     }
 }
 
 /// 方言是否支持内联表注释(CREATE TABLE 后 COMMENT)。
 fn inline_table_comment(dialect: &Dialect) -> bool {
-    matches!(dialect, Dialect::Mysql)
+    match dialect {
+        Dialect::Mysql => true,
+        Dialect::Postgresql => false,
+        // MySQL 兼容系支持内联表注释
+        Dialect::Jdbc { name } => matches!(name.as_str(), "oceanbase" | "tidb"),
+    }
+}
+
+/// 方言是否支持注释(SQL Server 用 sp_addextendedproperty,c1 暂不生成)。
+fn supports_comment(dialect: &Dialect) -> bool {
+    if let Dialect::Jdbc { name } = dialect {
+        name != "sqlserver"
+    } else {
+        true
+    }
 }

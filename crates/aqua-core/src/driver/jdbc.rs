@@ -230,7 +230,7 @@ mod tests {
         assert_eq!(col.name, "USER_NAME");
         assert_eq!(col.data_type, DataType::Varchar);
         assert_eq!(col.length, Some(64));
-        assert_eq!(col.nullable, false);
+        assert!(!col.nullable);
         assert_eq!(col.comment, Some("用户名".to_string()));
     }
 
@@ -245,6 +245,6 @@ mod tests {
         let idx = parse_index_meta(&v).unwrap();
         assert_eq!(idx.name, "IDX_USER_NAME");
         assert_eq!(idx.fields, vec!["USER_NAME", "STATUS"]);
-        assert_eq!(idx.unique, true);
+        assert!(idx.unique);
     }
 }

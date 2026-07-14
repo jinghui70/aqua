@@ -152,6 +152,6 @@ mod tests {
                 },
             ]
         );
-        assert_eq!(index.unique, true);
+        assert!(index.unique);
     }
 }

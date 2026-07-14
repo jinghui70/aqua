@@ -24,8 +24,9 @@ impl Dialect {
         match s.to_lowercase().as_str() {
             "mysql" => Some(Self::Mysql),
             "postgresql" | "postgres" | "pg" => Some(Self::Postgresql),
-            // JDBC 方言
-            "oracle" | "dm" | "kingbase" | "gbase" | "h2" => Some(Self::Jdbc {
+            // JDBC 数据库
+            "oracle" | "dm" | "kingbase" | "gbase" | "h2" | "sqlserver" | "oceanbase" | "tidb"
+            | "gaussdb" => Some(Self::Jdbc {
                 name: s.to_lowercase(),
             }),
             _ => None,
@@ -75,12 +76,19 @@ pub fn map_type(
         Dialect::Mysql => map_mysql(data_type, length, precision, scale),
         Dialect::Postgresql => map_postgresql(data_type, length, precision, scale),
 
-        // === JDBC 方言: 示例实现 ===
+        // === JDBC 数据库: 核心层硬编码 + 兼容层复用 ===
         Dialect::Jdbc { name } => match name.as_str() {
             "oracle" => map_oracle(data_type, length, precision, scale),
             "h2" => map_h2(data_type, length, precision, scale),
-            // 其他 JDBC 方言(dm/kingbase/gbase 等)应从 connector.jar 动态获取
-            _ => format!("UNKNOWN_{:?}", data_type), // 占位,实际应报错或查配置
+            "dm" => map_dm(data_type, length, precision, scale),
+            // KingBase 兼容 PostgreSQL,复用其映射
+            "kingbase" => map_postgresql(data_type, length, precision, scale),
+            "gbase" => map_gbase(data_type, length, precision, scale),
+            "sqlserver" => map_sqlserver(data_type, length, precision, scale),
+            // 兼容层复用 MySQL/PostgreSQL
+            "oceanbase" | "tidb" => map_mysql(data_type, length, precision, scale),
+            "gaussdb" => map_postgresql(data_type, length, precision, scale),
+            _ => unreachable!("未覆盖的 JDBC 数据库: {}", name),
         },
     }
 }
@@ -189,7 +197,167 @@ fn map_h2(
     }
 }
 
+/// DM 达梦类型映射(硬编码)。
+fn map_dm(
+    data_type: DataType,
+    length: Option<u32>,
+    precision: Option<u32>,
+    scale: Option<u32>,
+) -> String {
+    match data_type {
+        DataType::Varchar => format!("VARCHAR({})", length.unwrap_or(255)),
+        DataType::Clob => "CLOB".to_string(),
+        DataType::Tinyint => "TINYINT".to_string(),
+        DataType::Int => "INT".to_string(),
+        DataType::Long => "BIGINT".to_string(),
+        DataType::Decimal => {
+            if let Some(p) = precision {
+                format!("DECIMAL({}, {})", p, scale.unwrap_or(0))
+            } else {
+                "DECIMAL".to_string()
+            }
+        }
+        DataType::Date => "DATE".to_string(),
+        DataType::Datetime => "DATETIME".to_string(),
+        DataType::Blob => "BLOB".to_string(),
+    }
+}
+
+/// GBase 南大通用类型映射(硬编码)。
+fn map_gbase(
+    data_type: DataType,
+    length: Option<u32>,
+    precision: Option<u32>,
+    scale: Option<u32>,
+) -> String {
+    match data_type {
+        DataType::Varchar => format!("VARCHAR({})", length.unwrap_or(255)),
+        DataType::Clob => "TEXT".to_string(),
+        DataType::Tinyint => "TINYINT".to_string(),
+        DataType::Int => "INT".to_string(),
+        DataType::Long => "BIGINT".to_string(),
+        DataType::Decimal => {
+            if let Some(p) = precision {
+                format!("DECIMAL({}, {})", p, scale.unwrap_or(0))
+            } else {
+                "DECIMAL".to_string()
+            }
+        }
+        DataType::Date => "DATE".to_string(),
+        DataType::Datetime => "DATETIME".to_string(),
+        DataType::Blob => "BLOB".to_string(),
+    }
+}
+
+/// SQL Server 类型映射(硬编码)。
+fn map_sqlserver(
+    data_type: DataType,
+    length: Option<u32>,
+    precision: Option<u32>,
+    scale: Option<u32>,
+) -> String {
+    match data_type {
+        DataType::Varchar => format!("VARCHAR({})", length.unwrap_or(255)),
+        DataType::Clob => "VARCHAR(MAX)".to_string(),
+        DataType::Tinyint => "TINYINT".to_string(),
+        DataType::Int => "INT".to_string(),
+        DataType::Long => "BIGINT".to_string(),
+        DataType::Decimal => {
+            if let Some(p) = precision {
+                format!("DECIMAL({}, {})", p, scale.unwrap_or(0))
+            } else {
+                "DECIMAL".to_string()
+            }
+        }
+        DataType::Date => "DATE".to_string(),
+        DataType::Datetime => "DATETIME2".to_string(),
+        DataType::Blob => "VARBINARY(MAX)".to_string(),
+    }
+}
+
 /// SQL 字符串字面量转义: 单引号 -> ''。
 pub fn escape_sql_string(s: &str) -> String {
     s.replace('\'', "''")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::driver::list_dialects;
+    use crate::schema::DataType;
+
+    #[test]
+    fn test_map_type_all_databases_covered() {
+        // 所有数据库的每种 DataType 都能映射,不 panic,不 UNKNOWN
+        let types = [
+            DataType::Varchar,
+            DataType::Clob,
+            DataType::Tinyint,
+            DataType::Int,
+            DataType::Long,
+            DataType::Decimal,
+            DataType::Date,
+            DataType::Datetime,
+            DataType::Blob,
+        ];
+        for db in list_dialects() {
+            let dialect =
+                Dialect::parse(db.name).unwrap_or_else(|| panic!("{} parse 失败", db.name));
+            for dt in types {
+                let s = map_type(dt, Some(64), Some(10), Some(2), &dialect);
+                assert!(!s.starts_with("UNKNOWN"), "{} {:?} -> {}", db.name, dt, s);
+            }
+        }
+    }
+
+    #[test]
+    fn test_map_mysql() {
+        assert_eq!(
+            map_type(DataType::Varchar, Some(64), None, None, &Dialect::Mysql),
+            "VARCHAR(64)"
+        );
+        assert_eq!(
+            map_type(DataType::Long, None, None, None, &Dialect::Mysql),
+            "BIGINT"
+        );
+        assert_eq!(
+            map_type(DataType::Decimal, None, Some(10), Some(2), &Dialect::Mysql),
+            "DECIMAL(10, 2)"
+        );
+    }
+
+    #[test]
+    fn test_map_sqlserver() {
+        let d = Dialect::Jdbc {
+            name: "sqlserver".to_string(),
+        };
+        assert_eq!(
+            map_type(DataType::Clob, None, None, None, &d),
+            "VARCHAR(MAX)"
+        );
+        assert_eq!(
+            map_type(DataType::Datetime, None, None, None, &d),
+            "DATETIME2"
+        );
+        assert_eq!(
+            map_type(DataType::Blob, None, None, None, &d),
+            "VARBINARY(MAX)"
+        );
+    }
+
+    #[test]
+    fn test_map_compatible_reuse() {
+        // oceanbase/tidb 复用 mysql,gaussdb 复用 postgresql
+        let ob = Dialect::Jdbc {
+            name: "oceanbase".to_string(),
+        };
+        let mysql = map_type(DataType::Long, None, None, None, &Dialect::Mysql);
+        assert_eq!(map_type(DataType::Long, None, None, None, &ob), mysql);
+
+        let gauss = Dialect::Jdbc {
+            name: "gaussdb".to_string(),
+        };
+        let pg = map_type(DataType::Blob, None, None, None, &Dialect::Postgresql);
+        assert_eq!(map_type(DataType::Blob, None, None, None, &gauss), pg);
+    }
 }
