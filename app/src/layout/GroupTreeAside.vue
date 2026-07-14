@@ -291,7 +291,7 @@ function onDuplicate(tableCode?: string) {
         @node-drop="onNodeDrop"
       >
         <template #default="{ data }">
-          <div class="flex items-center w-full group">
+          <div class="relative flex items-center w-full group">
             <span
               class="flex items-center gap-4 min-w-0 flex-1"
               :class="data.type === 'table' ? 'text-13' : 'font-bold text-13'"
@@ -301,8 +301,10 @@ function onDuplicate(tableCode?: string) {
               }}</span>
               <span class="truncate">{{ data.label }}</span>
             </span>
-            <!-- hover 操作:flex-shrink-0 保证按钮完整,label 让位截断 -->
-            <span class="hidden group-hover:flex flex-shrink-0 items-center gap-2 pl-8">
+            <!-- hover 操作:absolute 浮层,overflow:visible 保证不被裁 -->
+            <span
+              class="hidden group-hover:flex absolute right-0 top-0 h-full items-center gap-2 pl-12 pr-4 bg-white"
+            >
               <template v-if="data.type === 'group'">
                 <el-button
                   size="small"
@@ -388,3 +390,10 @@ function onDuplicate(tableCode?: string) {
     </el-dialog>
   </div>
 </template>
+
+<style scoped>
+/* el-tree 节点默认 overflow:hidden 会裁掉 hover 操作按钮,放开让 absolute 浮层完整显示 */
+:deep(.el-tree-node__content) {
+  overflow: visible;
+}
+</style>
