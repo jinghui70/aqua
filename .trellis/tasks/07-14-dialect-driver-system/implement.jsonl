@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/aqua-core/backend/index.md", "reason": "generators/ddl map_type 补全 + 方言清单遵循 core 规范"}
+{"file": ".trellis/spec/aqua/backend/index.md", "reason": "新增 dialect Tauri commands 遵循壳层规范"}
+{"file": ".trellis/spec/app/frontend/index.md", "reason": "驱动配置页 + 三处下拉遵循前端规范"}
+{"file": ".trellis/spec/guides/index.md", "reason": "跨包改动指南"}

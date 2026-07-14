@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/aqua-core/backend/index.md", "reason": "检查 core 代码质量与规范"}
+{"file": ".trellis/spec/aqua/backend/index.md", "reason": "检查 Tauri commands 规范"}
+{"file": ".trellis/spec/app/frontend/index.md", "reason": "检查前端规范"}
+{"file": ".trellis/spec/guides/index.md", "reason": "跨包一致性检查"}
