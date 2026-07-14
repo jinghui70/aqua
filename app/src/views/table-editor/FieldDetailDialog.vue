@@ -6,7 +6,7 @@ import { DataType, type Field, type InlineEnum, type BizTypeDefine } from "@/typ
 import { useProjectStore } from "@/stores/project";
 import { useBuiltinStore } from "@/stores/builtin";
 
-const props = defineProps<{ modelValue: boolean; field: Field | null }>();
+const props = defineProps<{ modelValue: boolean; field: Field | null; tableId: string }>();
 const emit = defineEmits<{ "update:modelValue": [boolean] }>();
 
 const store = useProjectStore();
@@ -199,10 +199,13 @@ function removeInlineValue(idx: number) {
   inlineEnum.value?.values.splice(idx, 1);
 }
 
-// code 统一大写 + 蛇形转驼峰联动 prop(与列表一致)
+// code 大写 + 仅留合法字符(大写蛇形,不以数字开头)+ 蛇形转驼峰联动 prop
 function onCodeInput() {
   if (!draft.value) return;
-  draft.value.code = draft.value.code.toUpperCase();
+  draft.value.code = draft.value.code
+    .toUpperCase()
+    .replace(/[^A-Z0-9_]/g, "")
+    .replace(/^[0-9]+/, "");
   const parts = draft.value.code.split("_").filter(Boolean);
   if (parts.length) {
     draft.value.prop =
@@ -230,63 +233,63 @@ function save() {
       return;
     }
   }
-  // 写回原字段(保持引用,Object.assign)
+  // 写回原字段(保持引用,Object.assign);code 改名级联索引
+  const oldCode = props.field.code;
   Object.keys(props.field).forEach((k) => delete (props.field as any)[k]);
   Object.assign(props.field, draft.value);
+  if (oldCode !== draft.value.code) {
+    store.renameFieldCode(props.tableId, oldCode, draft.value.code);
+  }
   visible.value = false;
   ElMessage.success("已保存");
 }
 </script>
 
 <template>
-  <el-dialog v-model="visible" title="字段编辑" width="600px" top="6vh">
+  <el-dialog v-model="visible" title="字段编辑" width="900px" top="6vh">
     <div v-if="draft" class="flex flex-col gap-4" style="max-height: 70vh; overflow-y: auto">
       <!-- 基本 -->
       <el-form label-width="90px" class="pr-12">
-        <el-form-item label="code">
-          <el-input
-            v-model="draft.code"
-            @input="onCodeInput"
-          />
-        </el-form-item>
-        <el-form-item label="prop">
-          <el-input v-model="draft.prop" />
-        </el-form-item>
-        <el-form-item label="名称">
-          <el-input v-model="draft.name" />
-        </el-form-item>
-        <el-form-item label="类型">
-          <el-select
-            :model-value="draft.dataType"
-            style="width: 160px"
-            @update:model-value="(v: DataType) => onDataTypeChange(v)"
-          >
-            <el-option v-for="dt in availableDataTypes" :key="dt" :label="dt" :value="dt" />
-          </el-select>
-          <el-input-number
-            v-if="draft.dataType === 'VARCHAR'"
-            v-model="draft.length"
-            :min="1"
-            :controls="false"
-            class="ml-8"
-            style="width: 90px"
-            placeholder="长度"
-          />
-          <template v-if="draft.dataType === 'DECIMAL'">
-            <el-input-number v-model="draft.precision" :min="1" :controls="false" class="ml-8" style="width: 70px" placeholder="精度" />
-            <el-input-number v-model="draft.scale" :min="0" :controls="false" class="ml-4" style="width: 70px" placeholder="小数" />
-          </template>
-        </el-form-item>
-        <el-form-item label="约束">
-          <el-checkbox v-model="draft.isKey" @change="draft.isKey && (draft.notNull = true)">主键</el-checkbox>
-          <el-checkbox v-model="draft.notNull" :disabled="draft.isKey">非空</el-checkbox>
-        </el-form-item>
-        <el-form-item label="默认值">
-          <el-input v-model="draft.defaultValue" placeholder="DDL DEFAULT 子句" />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="draft.comment" type="textarea" :rows="2" />
-        </el-form-item>
+        <div class="grid grid-cols-2 gap-x-24">
+          <el-form-item label="code">
+            <el-input v-model="draft.code" @input="onCodeInput" />
+          </el-form-item>
+          <el-form-item label="prop">
+            <el-input v-model="draft.prop" />
+          </el-form-item>
+          <el-form-item label="名称">
+            <el-input v-model="draft.name" />
+          </el-form-item>
+          <el-form-item label="默认值">
+            <el-input v-model="draft.defaultValue" placeholder="DDL DEFAULT 子句" />
+          </el-form-item>
+          <el-form-item label="类型" class="col-span-2">
+            <el-select
+              :model-value="draft.dataType"
+              style="width: 160px"
+              @update:model-value="(v: DataType) => onDataTypeChange(v)"
+            >
+              <el-option v-for="dt in availableDataTypes" :key="dt" :label="dt" :value="dt" />
+            </el-select>
+            <el-input-number
+              v-if="draft.dataType === 'VARCHAR'"
+              v-model="draft.length"
+              :min="1"
+              :controls="false"
+              class="ml-8"
+              style="width: 90px"
+              placeholder="长度"
+            />
+            <template v-if="draft.dataType === 'DECIMAL'">
+              <el-input-number v-model="draft.precision" :min="1" :controls="false" class="ml-8" style="width: 70px" placeholder="精度" />
+              <el-input-number v-model="draft.scale" :min="0" :controls="false" class="ml-4" style="width: 70px" placeholder="小数" />
+            </template>
+          </el-form-item>
+          <el-form-item label="约束">
+            <el-checkbox v-model="draft.isKey" @change="draft.isKey && (draft.notNull = true)">主键</el-checkbox>
+            <el-checkbox v-model="draft.notNull" :disabled="draft.isKey">非空</el-checkbox>
+          </el-form-item>
+        </div>
       </el-form>
 
       <!-- autoGenerate -->
@@ -410,6 +413,14 @@ function save() {
             />
           </el-form-item>
         </template>
+      </el-form>
+
+      <!-- 备注(后置)-->
+      <el-divider content-position="left">备注</el-divider>
+      <el-form label-width="90px" class="pr-12">
+        <el-form-item label="备注">
+          <el-input v-model="draft.comment" type="textarea" :rows="2" />
+        </el-form-item>
       </el-form>
     </div>
 

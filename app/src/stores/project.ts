@@ -1,6 +1,6 @@
 // 项目状态(Pinia)。替代原 useProject composable。
 
-import { defineStore } from "pinia";
+import { acceptHMRUpdate, defineStore } from "pinia";
 import { nextTick, ref, watch } from "vue";
 import { ElMessageBox } from "element-plus";
 import type { Project, Table } from "@/types/schema";
@@ -17,7 +17,7 @@ function dirOf(path: string): string {
 
 /** 已打开的标签(表编辑 or 配置页)。 */
 export interface OpenedTab {
-  /** 唯一 key: 表用 "table:CODE",配置页用固定 key 如 "biztype" */
+  /** 唯一 key: 表用 "table:ID",配置页用固定 key 如 "biztype" */
   key: string;
   /** 标签标题 */
   title: string;
@@ -72,7 +72,9 @@ export const useProjectStore = defineStore("project", () => {
   /** 打开项目文件。调用方应先 confirmIfDirty。 */
   async function openProject(path: string) {
     suppressDirty = true;
-    currentProject.value = await tauri.projectOpen(path);
+    const p = await tauri.projectOpen(path);
+    p.tables.forEach((t) => (t.id = crypto.randomUUID()));
+    currentProject.value = p;
     currentPath.value = path;
     openedTabs.value = [];
     activeTab.value = "";
@@ -168,9 +170,9 @@ export const useProjectStore = defineStore("project", () => {
   /** 打开表编辑标签。 */
   function openTable(table: Table) {
     return openTab({
-      key: `table:${table.code}`,
+      key: `table:${table.id}`,
       title: table.code,
-      path: `/table/${table.code}`,
+      path: `/table/${table.id}`,
     });
   }
 
@@ -185,9 +187,29 @@ export const useProjectStore = defineStore("project", () => {
     return null;
   }
 
-  function renameGroup(code: string, name: string) {
-    const g = currentProject.value?.groups.find((g) => g.code === code);
-    if (g) g.name = name;
+  /** 更新分组:可改 code 与名称;改 code 时级联更新所有表的 group 引用。返回错误或 null。 */
+  function updateGroup(
+    oldCode: string,
+    newCode: string,
+    name: string
+  ): string | null {
+    const p = currentProject.value;
+    if (!p) return "无项目";
+    newCode = newCode.trim();
+    if (!newCode) return "code 不能为空";
+    if (newCode !== oldCode && p.groups.some((g) => g.code === newCode)) {
+      return `分组 ${newCode} 已存在`;
+    }
+    const g = p.groups.find((g) => g.code === oldCode);
+    if (!g) return `分组 ${oldCode} 不存在`;
+    if (newCode !== oldCode) {
+      g.code = newCode;
+      for (const t of p.tables) {
+        if (t.group === oldCode) t.group = newCode;
+      }
+    }
+    g.name = name;
+    return null;
   }
 
   /** 删除分组(仅当无表引用)。返回错误信息或 null。 */
@@ -202,26 +224,66 @@ export const useProjectStore = defineStore("project", () => {
 
   // ===== 表 CRUD =====
 
-  function addTable(code: string, name: string, group: string): string | null {
+  function addTable(code: string, name: string, group: string, comment?: string): string | null {
     if (!currentProject.value) return "无项目";
     if (currentProject.value.tables.some((t) => t.code === code)) {
       return `表 ${code} 已存在`;
     }
-    currentProject.value.tables.push({ code, name, group, fields: [] });
+    currentProject.value.tables.push({ id: crypto.randomUUID(), code, name, group, fields: [], comment: comment || undefined });
     return null;
   }
 
-  function renameTable(code: string, name: string) {
-    const t = currentProject.value?.tables.find((t) => t.code === code);
-    if (t) t.name = name;
+  /** 更新表:可改 code 与名称;页签用 id 标识,改 code 不影响页签。返回错误或 null。 */
+  function updateTable(id: string, code: string, name: string, comment?: string): string | null {
+    const p = currentProject.value;
+    if (!p) return "无项目";
+    code = code.trim().toUpperCase();
+    if (!code) return "code 不能为空";
+    if (p.tables.some((t) => t.id !== id && t.code === code)) {
+      return `表 ${code} 已存在`;
+    }
+    const t = p.tables.find((t) => t.id === id);
+    if (!t) return "表不存在";
+    t.code = code;
+    t.name = name;
+    t.comment = comment || undefined;
+    // 页签 key/path 用 id 不变,但 title 用 code 展示,需同步
+    const tab = openedTabs.value.find((x) => x.key === `table:${id}`);
+    if (tab) tab.title = code;
+    return null;
   }
 
-  function deleteTable(code: string) {
-    if (!currentProject.value) return;
-    const idx = currentProject.value.tables.findIndex((t) => t.code === code);
-    if (idx >= 0) currentProject.value.tables.splice(idx, 1);
-    // 关闭对应标签
-    closeTab(`table:${code}`);
+  function deleteTable(code: string): string {
+    const p = currentProject.value;
+    if (!p) return "";
+    const idx = p.tables.findIndex((t) => t.code === code);
+    if (idx < 0) return "";
+    const id = p.tables[idx].id;
+    p.tables.splice(idx, 1);
+    // 关闭对应标签(key 用 id,与 openTable 一致);返回下一个应跳转的路径(删的是当前页签时非空)
+    return closeTab(`table:${id}`);
+  }
+
+  // ===== 字段级联索引(索引 fields 存 field code,字段删/改需同步)=====
+
+  /** 字段 code 改名后,同步该表索引中引用旧 code 的字段。 */
+  function renameFieldCode(tableId: string, oldCode: string, newCode: string) {
+    const t = currentProject.value?.tables.find((x) => x.id === tableId);
+    if (!t?.indexes) return;
+    for (const ix of t.indexes) {
+      for (const f of ix.fields) {
+        if (f.code === oldCode) f.code = newCode;
+      }
+    }
+  }
+
+  /** 字段删除后,从该表索引中移除引用该 code 的字段。 */
+  function removeFieldFromIndexes(tableId: string, code: string) {
+    const t = currentProject.value?.tables.find((x) => x.id === tableId);
+    if (!t?.indexes) return;
+    for (const ix of t.indexes) {
+      ix.fields = ix.fields.filter((f) => f.code !== code);
+    }
   }
 
   /**
@@ -324,6 +386,7 @@ export const useProjectStore = defineStore("project", () => {
       newCode = `${code}_COPY${n++}`;
     }
     const copy: Table = {
+      id: crypto.randomUUID(),
       code: newCode,
       name: `${src.name}(副本)`,
       group: src.group,
@@ -350,14 +413,20 @@ export const useProjectStore = defineStore("project", () => {
     closeTab,
     openTable,
     addGroup,
-    renameGroup,
+    updateGroup,
     deleteGroup,
     addTable,
-    renameTable,
+    updateTable,
     deleteTable,
+    renameFieldCode,
+    removeFieldFromIndexes,
     reorderGroups,
     moveTable,
     duplicateTable,
     mergeImportedTables,
   };
 });
+
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useProjectStore, import.meta.hot));
+}

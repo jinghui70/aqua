@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 表编辑器:表头 + 4 Tab(fields/index/java/json)。
-// 通过 route param code 定位 store 里的表,直接编辑(Pinia 响应式)。
+// 通过 route param id 定位 store 里的表,直接编辑(Pinia 响应式)。
 import { computed, ref, watchEffect } from "vue";
 import { useProjectStore } from "@/stores/project";
 import FieldsTab from "./table-editor/FieldsTab.vue";
@@ -9,16 +9,14 @@ import DdlTab from "./table-editor/DdlTab.vue";
 import JavaTab from "./table-editor/JavaTab.vue";
 import JsonTab from "./table-editor/JsonTab.vue";
 
-const props = defineProps<{ code: string }>();
+const props = defineProps<{ id: string }>();
 const store = useProjectStore();
 
 const activeTab = ref("fields");
 
 const table = computed(() =>
-  store.currentProject?.tables.find((t) => t.code === props.code)
+  store.currentProject?.tables.find((t) => t.id === props.id)
 );
-
-const groups = computed(() => store.currentProject?.groups ?? []);
 
 // 保证 indexes 是 table 上的真实数组(否则 IndexTab 拿到临时数组,增删丢失)
 watchEffect(() => {
@@ -29,36 +27,28 @@ watchEffect(() => {
 <template>
   <div v-if="table" class="h-full flex flex-col p-12 overflow-hidden">
     <!-- 表头 -->
-    <div class="flex items-center gap-12 mb-12 flex-wrap flex-shrink-0">
+    <div class="flex items-center gap-12 mb-12 flex-shrink-0">
       <span class="font-bold text-16">{{ table.code }}</span>
-      <el-input v-model="table.name" size="small" placeholder="中文名" style="width: 140px" />
-      <el-select v-model="table.group" size="small" placeholder="分组" style="width: 140px">
-        <el-option v-for="g in groups" :key="g.code" :label="g.name" :value="g.code" />
-      </el-select>
-      <el-input
-        v-model="table.comment"
-        size="small"
-        placeholder="表备注"
-        style="width: 200px"
-      />
+      <span class="text-gray-500 text-14">{{ table.name }}</span>
+      <span v-if="table.comment" class="text-gray-400 text-12 truncate max-w-400">{{ table.comment }}</span>
     </div>
 
     <!-- 4 Tab -->
     <el-tabs v-model="activeTab" class="flex-1 flex flex-col table-tabs">
       <el-tab-pane label="字段" name="fields">
-        <FieldsTab :fields="table.fields" />
+        <FieldsTab :fields="table.fields" :table-id="table.id" />
       </el-tab-pane>
       <el-tab-pane label="索引" name="index">
-        <IndexTab :indexes="table.indexes ?? []" :fields="table.fields" />
+        <IndexTab :indexes="table.indexes ?? []" :fields="table.fields" :table-code="table.code" />
       </el-tab-pane>
       <el-tab-pane label="DDL" name="ddl" lazy>
-        <DdlTab :table-code="table.code" />
+        <DdlTab :table-code="table.code" :active="activeTab === 'ddl'" />
       </el-tab-pane>
       <el-tab-pane label="Java" name="java" lazy>
-        <JavaTab :table-code="table.code" />
+        <JavaTab :table-code="table.code" :active="activeTab === 'java'" />
       </el-tab-pane>
       <el-tab-pane label="JSON" name="json" lazy>
-        <JsonTab :table-code="table.code" />
+        <JsonTab :table-code="table.code" :active="activeTab === 'json'" />
       </el-tab-pane>
     </el-tabs>
   </div>
@@ -84,6 +74,7 @@ watchEffect(() => {
 }
 .table-tabs :deep(.el-tab-pane) {
   height: 100%;
+  margin-top: 8px;
   overflow: hidden;
 }
 </style>

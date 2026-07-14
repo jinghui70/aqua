@@ -268,8 +268,7 @@ mod tests {
     #[test]
     fn test_load_missing_file_returns_empty() {
         let dir = tmp_dir();
-        let out =
-            load_db_config(dir.to_str().unwrap(), dir.join("key").to_str().unwrap()).unwrap();
+        let out = load_db_config(dir.to_str().unwrap(), dir.join("key").to_str().unwrap()).unwrap();
         assert!(out.is_empty());
         std::fs::remove_dir_all(&dir).ok();
     }

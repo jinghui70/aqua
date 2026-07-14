@@ -108,8 +108,8 @@
         }
       ],
       "indexes": [
-        { "fields": ["USER_NAME"], "unique": true },
-        { "name": "IDX_GENDER", "fields": ["GENDER"], "unique": false }
+        { "fields": [{ "code": "USER_NAME", "direction": "ASC" }], "unique": true },
+        { "name": "IDX_GENDER", "fields": [{ "code": "GENDER", "direction": "ASC" }], "unique": false }
       ]
     }
   ]

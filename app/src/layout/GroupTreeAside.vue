@@ -36,8 +36,8 @@ const treeData = computed<TreeNode[]>(() => {
     children: p.tables
       .filter((t) => t.group === g.code)
       .map((t) => ({
-        id: `table:${t.code}`,
-        label: `${t.code} (${t.name})`,
+        id: `table:${t.id}`,
+        label: `${t.code} ${t.name}`,
         type: "table" as const,
         groupCode: g.code,
         tableCode: t.code,
@@ -140,46 +140,53 @@ function onBarLeave() {
 }
 
 // ===== 分组操作 =====
-// 新建分组对话框(code + 中文名)
-const addGroupVisible = ref(false);
-const addGroupCode = ref("");
-const addGroupName = ref("");
+// 新建/编辑共用对话框:code 编辑时只读(业务键,被表引用,不可改)
+const groupDialogVisible = ref(false);
+const groupDialogMode = ref<"add" | "edit">("add");
+const groupEditingCode = ref("");
+const groupCode = ref("");
+const groupName = ref("");
 
 function openAddGroup() {
-  addGroupCode.value = "";
-  addGroupName.value = "";
-  addGroupVisible.value = true;
+  groupDialogMode.value = "add";
+  groupEditingCode.value = "";
+  groupCode.value = "";
+  groupName.value = "";
+  groupDialogVisible.value = true;
 }
-function confirmAddGroup() {
-  const code = addGroupCode.value.trim();
-  const name = addGroupName.value.trim();
+function openEditGroup(code?: string) {
+  if (!code) return;
+  const g = store.currentProject?.groups.find((x) => x.code === code);
+  if (!g) return;
+  groupDialogMode.value = "edit";
+  groupEditingCode.value = code;
+  groupCode.value = g.code;
+  groupName.value = g.name;
+  groupDialogVisible.value = true;
+}
+function confirmGroupDialog() {
+  const code = groupCode.value.trim();
+  const name = groupName.value.trim();
   if (!code || !name) {
     ElMessage.warning("code 和名称不能为空");
     return;
   }
-  const err = store.addGroup(code, name);
-  if (err) {
-    ElMessage.error(err);
-    return;
+  if (groupDialogMode.value === "add") {
+    const err = store.addGroup(code, name);
+    if (err) {
+      ElMessage.error(err);
+      return;
+    }
+    ElMessage.success("分组已创建");
+  } else {
+    const err = store.updateGroup(groupEditingCode.value, code, name);
+    if (err) {
+      ElMessage.error(err);
+      return;
+    }
+    ElMessage.success("分组已更新");
   }
-  addGroupVisible.value = false;
-  ElMessage.success("分组已创建");
-}
-
-async function renameGroup(groupCode?: string) {
-  if (!groupCode) return;
-  const g = store.currentProject?.groups.find((x) => x.code === groupCode);
-  if (!g) return;
-  try {
-    const { value } = await ElMessageBox.prompt("分组名称", "重命名分组", {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      inputValue: g.name,
-    });
-    if (value) store.renameGroup(groupCode, value.trim());
-  } catch {
-    /* 取消 */
-  }
+  groupDialogVisible.value = false;
 }
 
 async function deleteGroup(groupCode?: string) {
@@ -199,50 +206,61 @@ async function deleteGroup(groupCode?: string) {
 }
 
 // ===== 表操作 =====
-// 新建表对话框(code + 中文名)
-const addTableVisible = ref(false);
+// 新建/编辑共用对话框:code 可编辑;归属通过拖拽改,对话框内不出现
+const tableDialogVisible = ref(false);
+const tableDialogMode = ref<"add" | "edit">("add");
+const tableEditingId = ref("");
 const addTableGroup = ref("");
-const addTableCode = ref("");
-const addTableName = ref("");
+const tableCode = ref("");
+const tableName = ref("");
+const tableComment = ref("");
 
 function openAddTable(groupCode?: string) {
   if (!groupCode) return;
+  tableDialogMode.value = "add";
   addTableGroup.value = groupCode;
-  addTableCode.value = "";
-  addTableName.value = "";
-  addTableVisible.value = true;
+  tableEditingId.value = "";
+  tableCode.value = "";
+  tableName.value = "";
+  tableComment.value = "";
+  tableDialogVisible.value = true;
 }
-function confirmAddTable() {
-  const code = addTableCode.value.trim().toUpperCase();
-  const name = addTableName.value.trim();
+function openEditTable(code?: string) {
+  if (!code) return;
+  const t = store.currentProject?.tables.find((x) => x.code === code);
+  if (!t) return;
+  tableDialogMode.value = "edit";
+  tableEditingId.value = t.id;
+  tableCode.value = t.code;
+  tableName.value = t.name;
+  tableComment.value = t.comment ?? "";
+  tableDialogVisible.value = true;
+}
+function confirmTableDialog() {
+  const code = tableCode.value.trim().toUpperCase();
+  const name = tableName.value.trim();
   if (!code || !name) {
     ElMessage.warning("code 和名称不能为空");
     return;
   }
-  const err = store.addTable(code, name, addTableGroup.value);
-  if (err) {
-    ElMessage.error(err);
-    return;
-  }
-  addTableVisible.value = false;
-  ElMessage.success("表已创建");
-  const table = store.currentProject?.tables.find((t) => t.code === code);
-  if (table) router.push(store.openTable(table));
-}
-
-async function renameTable(tableCode?: string) {
-  if (!tableCode) return;
-  const t = store.currentProject?.tables.find((x) => x.code === tableCode);
-  if (!t) return;
-  try {
-    const { value } = await ElMessageBox.prompt("表中文名", "重命名表", {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      inputValue: t.name,
-    });
-    if (value) store.renameTable(tableCode, value.trim());
-  } catch {
-    /* 取消 */
+  if (tableDialogMode.value === "add") {
+    const err = store.addTable(code, name, addTableGroup.value, tableComment.value.trim());
+    if (err) {
+      ElMessage.error(err);
+      return;
+    }
+    ElMessage.success("表已创建");
+    tableDialogVisible.value = false;
+    const table = store.currentProject?.tables.find((t) => t.code === code);
+    if (table) router.push(store.openTable(table));
+  } else {
+    const err = store.updateTable(tableEditingId.value, code, name, tableComment.value.trim());
+    if (err) {
+      ElMessage.error(err);
+      return;
+    }
+    ElMessage.success("表已更新");
+    tableDialogVisible.value = false;
   }
 }
 
@@ -254,7 +272,8 @@ async function deleteTable(tableCode?: string) {
       confirmButtonText: "删除",
       cancelButtonText: "取消",
     });
-    store.deleteTable(tableCode);
+    const nextPath = store.deleteTable(tableCode);
+    if (nextPath) router.push(nextPath);
     ElMessage.success("表已删除");
   } catch {
     /* 取消 */
@@ -346,38 +365,50 @@ function onDuplicate(tableCode?: string) {
       </el-tree>
     </div>
 
-    <!-- 新建分组对话框 -->
-    <el-dialog v-model="addGroupVisible" title="新建分组" width="420px">
+    <!-- 新建/编辑分组对话框 -->
+    <el-dialog
+      v-model="groupDialogVisible"
+      :title="groupDialogMode === 'add' ? '新建分组' : '编辑分组'"
+      width="420px"
+    >
       <el-form label-width="80px">
         <el-form-item label="编码">
-          <el-input v-model="addGroupCode" placeholder="如:order" />
+          <el-input v-model="groupCode" placeholder="如:order" />
         </el-form-item>
         <el-form-item label="中文名">
-          <el-input v-model="addGroupName" placeholder="如:订单模块" />
+          <el-input v-model="groupName" placeholder="如:订单模块" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="addGroupVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmAddGroup">创建</el-button>
+        <el-button @click="groupDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmGroupDialog">{{
+          groupDialogMode === "add" ? "创建" : "保存"
+        }}</el-button>
       </template>
     </el-dialog>
 
-    <!-- 新建表对话框 -->
-    <el-dialog v-model="addTableVisible" title="新建表" width="420px">
+    <!-- 新建/编辑表对话框 -->
+    <el-dialog
+      v-model="tableDialogVisible"
+      :title="tableDialogMode === 'add' ? '新建表' : '编辑表'"
+      width="420px"
+    >
       <el-form label-width="80px">
         <el-form-item label="编码">
-          <el-input
-            v-model="addTableCode"
-            placeholder="大写蛇形,如:SYS_USER"
-          />
+          <el-input v-model="tableCode" placeholder="大写蛇形,如:SYS_USER" />
         </el-form-item>
         <el-form-item label="中文名">
-          <el-input v-model="addTableName" placeholder="如:用户表" />
+          <el-input v-model="tableName" placeholder="如:用户表" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="tableComment" type="textarea" :rows="2" placeholder="表说明(输出设计文档用)" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="addTableVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmAddTable">创建</el-button>
+        <el-button @click="tableDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmTableDialog">{{
+          tableDialogMode === "add" ? "创建" : "保存"
+        }}</el-button>
       </template>
     </el-dialog>
 
@@ -385,7 +416,7 @@ function onDuplicate(tableCode?: string) {
     <Teleport to="body">
       <div
         v-if="hoverNode"
-        class="fixed flex items-center gap-2 bg-white border border-gray-200 rounded-4 shadow px-6 py-2 z-50"
+        class="hover-bar fixed flex flex-col items-center gap-1 bg-white border border-gray-200 rounded-4 shadow px-4 py-4 z-50"
         :style="hoverBarStyle"
         @mouseenter="onBarEnter"
         @mouseleave="onBarLeave"
@@ -398,30 +429,30 @@ function onDuplicate(tableCode?: string) {
             @click="openAddTable(hoverNode?.groupCode)"
             >+表</el-button
           >
-          <el-button size="small" link @click="renameGroup(hoverNode?.groupCode)"
-            >改</el-button
+          <el-button size="small" link @click="openEditGroup(hoverNode?.groupCode)"
+            >修改</el-button
           >
           <el-button
             size="small"
             link
             type="danger"
             @click="deleteGroup(hoverNode?.groupCode)"
-            >删</el-button
+            >删除</el-button
           >
         </template>
         <template v-else>
           <el-button size="small" link @click="onDuplicate(hoverNode?.tableCode)"
             >复制</el-button
           >
-          <el-button size="small" link @click="renameTable(hoverNode?.tableCode)"
-            >改</el-button
+          <el-button size="small" link @click="openEditTable(hoverNode?.tableCode)"
+            >修改</el-button
           >
           <el-button
             size="small"
             link
             type="danger"
             @click="deleteTable(hoverNode?.tableCode)"
-            >删</el-button
+            >删除</el-button
           >
         </template>
       </div>
@@ -434,5 +465,11 @@ function onDuplicate(tableCode?: string) {
    长 label 会溢出树边界。content 加 overflow:hidden 裁剪在树宽内。 */
 :deep(.el-tree-node__content) {
   overflow: hidden;
+}
+/* hover 操作栏:按钮等宽居中,纵向整齐;清掉 el-button 相邻默认 margin-left 的错位 */
+.hover-bar :deep(.el-button) {
+  width: 56px;
+  justify-content: center;
+  margin-left: 0;
 }
 </style>

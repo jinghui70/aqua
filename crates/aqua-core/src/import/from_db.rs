@@ -2,7 +2,7 @@
 
 use crate::driver::{ColumnMeta, Driver, DriverError, IndexMeta};
 use crate::generators::java::naming::snake_to_camel;
-use crate::schema::{Field, Index, Project, Table};
+use crate::schema::{Direction, Field, Index, IndexField, Project, Table};
 
 /// 从数据库导入 schema,生成 Project。
 ///
@@ -90,7 +90,14 @@ fn column_to_field(col: ColumnMeta) -> Field {
 fn index_meta_to_index(idx: IndexMeta) -> Index {
     Index {
         name: Some(idx.name),
-        fields: idx.fields.iter().map(|f| f.to_uppercase()).collect(),
+        fields: idx
+            .fields
+            .iter()
+            .map(|f| IndexField {
+                code: f.to_uppercase(),
+                direction: Direction::Asc,
+            })
+            .collect(),
         unique: idx.unique,
     }
 }
@@ -132,7 +139,19 @@ mod tests {
 
         let index = index_meta_to_index(idx);
         assert_eq!(index.name, Some("idx_user_name".to_string()));
-        assert_eq!(index.fields, vec!["USER_NAME", "STATUS"]);
+        assert_eq!(
+            index.fields,
+            vec![
+                IndexField {
+                    code: "USER_NAME".to_string(),
+                    direction: Direction::Asc,
+                },
+                IndexField {
+                    code: "STATUS".to_string(),
+                    direction: Direction::Asc,
+                },
+            ]
+        );
         assert_eq!(index.unique, true);
     }
 }

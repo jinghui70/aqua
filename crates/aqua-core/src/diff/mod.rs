@@ -167,11 +167,18 @@ fn diff_indexes(old: &[Index], new: &[Index]) -> IndexDiff {
     IndexDiff { added, removed }
 }
 
-/// 索引匹配键: name 优先,无 name 用 fields 组合。
-fn index_key(idx: &Index) -> String {
-    idx.name
-        .clone()
-        .unwrap_or_else(|| format!("IDX_{}", idx.fields.join("_")))
+/// 索引匹配键: name 优先,无 name 用 fields 的 code+方向组合(方向不同 = 变更)。
+pub(crate) fn index_key(idx: &Index) -> String {
+    idx.name.clone().unwrap_or_else(|| {
+        format!(
+            "IDX_{}",
+            idx.fields
+                .iter()
+                .map(|f| format!("{}_{}", f.code, f.direction.as_str()))
+                .collect::<Vec<_>>()
+                .join("_")
+        )
+    })
 }
 
 /// 简单 code 列表 diff(用于 bizTypes/enums)。

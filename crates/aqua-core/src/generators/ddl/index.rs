@@ -1,14 +1,17 @@
 //! CREATE INDEX 生成逻辑。
 
-use crate::schema::{Index, Table};
+use crate::schema::{Direction, Index, IndexField, Table};
 
-/// 生成 CREATE INDEX 语句: `CREATE [UNIQUE] INDEX name ON table (fields);`。
+/// 生成 CREATE INDEX 语句: `CREATE [UNIQUE] INDEX name ON table (F1 ASC, F2 DESC);`。
 pub fn generate_index(table: &Table, index: &Index) -> String {
     let table_name = table.code.to_uppercase();
     let fields = index
         .fields
         .iter()
-        .map(|f| f.to_uppercase())
+        .map(|f| match f.direction {
+            Direction::Asc => f.code.to_uppercase(),
+            Direction::Desc => format!("{} DESC", f.code.to_uppercase()),
+        })
         .collect::<Vec<_>>()
         .join(", ");
 
@@ -26,7 +29,16 @@ pub fn generate_index(table: &Table, index: &Index) -> String {
     )
 }
 
-/// 自动索引名: `IDX_<TABLE>_<F1>_<F2>`。
-fn auto_index_name(table: &str, fields: &[String]) -> String {
-    format!("IDX_{}_{}", table, fields.join("_")).to_uppercase()
+/// 自动索引名: `IDX_<TABLE>_<F1>_<F2>`(方向不入名)。
+fn auto_index_name(table: &str, fields: &[IndexField]) -> String {
+    format!(
+        "IDX_{}_{}",
+        table,
+        fields
+            .iter()
+            .map(|f| f.code.as_str())
+            .collect::<Vec<_>>()
+            .join("_")
+    )
+    .to_uppercase()
 }

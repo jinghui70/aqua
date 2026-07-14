@@ -179,10 +179,7 @@ fn row_to_json(field: &Field, row: &rusqlite::Row, idx: usize) -> SqlResult<Valu
 }
 
 /// JSON 值 → rusqlite 参数(按字段类型绑定)。
-fn json_to_sql(
-    field: &Field,
-    v: Option<&Value>,
-) -> Result<Box<dyn rusqlite::ToSql>, DatasetError> {
+fn json_to_sql(field: &Field, v: Option<&Value>) -> Result<Box<dyn rusqlite::ToSql>, DatasetError> {
     let v = v.unwrap_or(&Value::Null);
     Ok(match (field.data_type, v) {
         (_, Value::Null) => Box::new(rusqlite::types::Null),
@@ -483,7 +480,10 @@ mod tests {
         assert_eq!(loaded.len(), 1);
         assert_eq!(loaded[0].data.len(), 2);
         // DECIMAL 保精度(字符串)
-        assert_eq!(loaded[0].data[1]["AMOUNT"], Value::String("1234567890.12".into()));
+        assert_eq!(
+            loaded[0].data[1]["AMOUNT"],
+            Value::String("1234567890.12".into())
+        );
         // null 保留
         assert_eq!(loaded[0].data[1]["USER_NAME"], Value::Null);
         // INT 为数字
@@ -504,7 +504,10 @@ mod tests {
         let user = loaded.iter().find(|e| e.table == "SYS_USER").expect("缺表");
         assert_eq!(user.data.len(), 2);
         // DECIMAL 精度不丢(TEXT 存储)
-        assert_eq!(user.data[1]["AMOUNT"], Value::String("1234567890.12".into()));
+        assert_eq!(
+            user.data[1]["AMOUNT"],
+            Value::String("1234567890.12".into())
+        );
         // null 往返
         assert_eq!(user.data[1]["USER_NAME"], Value::Null);
         // INT 仍为数字

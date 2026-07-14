@@ -78,7 +78,10 @@ mod tests {
     fn test_field_with_string_default() {
         let json = r#"{"name":"format","type":"string","default":"YYYYMMDD"}"#;
         let f: BizTypeDataField = serde_json::from_str(json).unwrap();
-        assert_eq!(f.default_value, Some(serde_json::Value::String("YYYYMMDD".into())));
+        assert_eq!(
+            f.default_value,
+            Some(serde_json::Value::String("YYYYMMDD".into()))
+        );
     }
 
     #[test]

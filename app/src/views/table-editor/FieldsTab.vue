@@ -8,7 +8,7 @@ import { useProjectStore } from "@/stores/project";
 import { useBuiltinStore } from "@/stores/builtin";
 import FieldDetailDialog from "./FieldDetailDialog.vue";
 
-const props = defineProps<{ fields: Field[] }>();
+const props = defineProps<{ fields: Field[]; tableId: string }>();
 
 const store = useProjectStore();
 const builtin = useBuiltinStore();
@@ -95,13 +95,23 @@ function addField() {
 }
 
 function removeField(idx: number) {
+  const code = props.fields[idx]?.code;
   props.fields.splice(idx, 1);
+  if (code) store.removeFieldFromIndexes(props.tableId, code);
 }
 
-// code 蛇形 -> prop 驼峰(输入 code 时自动填 prop)
-function onCodeChange(field: Field) {
-  // code 统一大写
-  field.code = field.code.toUpperCase();
+// inline 改 code 前 focus 缓存旧值,用于级联索引
+const oldCodeOnFocus = ref("");
+function onCodeFocus(field: Field) {
+  oldCodeOnFocus.value = field.code;
+}
+
+// code 输入实时:大写 + 仅留合法字符(大写蛇形,不以数字开头)+ 联动 prop(蛇形->驼峰)
+function onCodeInput(field: Field) {
+  field.code = field.code
+    .toUpperCase()
+    .replace(/[^A-Z0-9_]/g, "")
+    .replace(/^[0-9]+/, "");
   const parts = field.code.split("_").filter(Boolean);
   if (parts.length) {
     field.prop =
@@ -110,6 +120,15 @@ function onCodeChange(field: Field) {
         .slice(1)
         .map((p) => p[0].toUpperCase() + p.slice(1).toLowerCase())
         .join("");
+  }
+}
+
+// code 失焦:级联索引(旧 code -> 新 code)
+function onCodeChange(field: Field) {
+  const oldCode = oldCodeOnFocus.value;
+  oldCodeOnFocus.value = "";
+  if (oldCode && oldCode !== field.code) {
+    store.renameFieldCode(props.tableId, oldCode, field.code);
   }
 }
 
@@ -138,17 +157,18 @@ function copyField(idx: number) {
         </template>
       </el-table-column>
       <el-table-column label="#" width="44" type="index" />
-      <el-table-column label="code" width="150">
+      <el-table-column label="编码" width="150">
         <template #default="{ row }">
           <el-input
             v-model="row.code"
             size="small"
-            @input="row.code = row.code.toUpperCase()"
+            @focus="onCodeFocus(row)"
+            @input="onCodeInput(row)"
             @change="onCodeChange(row)"
           />
         </template>
       </el-table-column>
-      <el-table-column label="prop" width="120">
+      <el-table-column label="属性名" width="120">
         <template #default="{ row }">
           <el-input v-model="row.prop" size="small" />
         </template>
@@ -227,7 +247,7 @@ function copyField(idx: number) {
           <el-input v-model="row.comment" size="small" placeholder="-" />
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="120" align="center">
+      <el-table-column label="操作" width="120" align="center" fixed="right">
         <template #default="{ row, $index }">
           <el-button size="small" link type="primary" @click="openDetail(row)">详情</el-button>
           <el-button size="small" link @click="copyField($index)">复制</el-button>
@@ -238,6 +258,6 @@ function copyField(idx: number) {
       </el-table-column>
     </el-table>
     </div>
-    <FieldDetailDialog v-model="detailVisible" :field="detailField" />
+    <FieldDetailDialog v-model="detailVisible" :field="detailField" :table-id="tableId" />
   </div>
 </template>

@@ -3,7 +3,7 @@
   "name": "table-editor-improve",
   "title": "表编辑页改进",
   "description": "去改分组、表code编辑(唯一校验+页签同步)、字段弹窗加宽、字段备注后置、索引规范化+字段顺序",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": "aqua",

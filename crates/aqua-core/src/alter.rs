@@ -3,7 +3,7 @@
 //! 规则见 `docs/design.md` §4.3。
 //! 依赖: diff 引擎 + DDL 生成器(复用 CREATE TABLE/INDEX)。
 
-use crate::diff::{DiffResult, TableChange};
+use crate::diff::{index_key, DiffResult, TableChange};
 use crate::generators::ddl::types::{escape_sql_string, map_type, Dialect};
 use crate::generators::ddl::{generate_index, generate_table};
 use crate::schema::{Field, Index, Project, Table};
@@ -184,13 +184,7 @@ fn def_type(field: &Field, dialect: &Dialect) -> String {
 /// 按 diff 索引 key 查找索引。
 fn find_index_by_key<'a>(indexes: Option<&'a Vec<Index>>, key: &str) -> Option<&'a Index> {
     let indexes = indexes?;
-    indexes.iter().find(|idx| {
-        let k = idx
-            .name
-            .clone()
-            .unwrap_or_else(|| format!("IDX_{}", idx.fields.join("_")));
-        k == key
-    })
+    indexes.iter().find(|idx| index_key(idx) == key)
 }
 
 // 避免未使用警告(escape_sql_string 在 column_def 暂未用,但保留供扩展)

@@ -8,7 +8,7 @@ const routes = [
     component: () => import("@/views/WorkspaceHome.vue"),
   },
   {
-    path: "/table/:code",
+    path: "/table/:id",
     name: "table",
     component: () => import("@/views/TableEditor.vue"),
     props: true,

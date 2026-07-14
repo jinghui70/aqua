@@ -1,1 +1,4 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/app/frontend/index.md", "reason": "前端 Table.id/页签/route/FieldDetailDialog/IndexTab 改动遵循前端 spec"}
+{"file": ".trellis/spec/aqua-core/backend/index.md", "reason": "后端 Index/IndexField/DDL generate_index/diff 改动遵循后端 spec"}
+{"file": "docs/architecture.md", "reason": "Rust+Tauri 架构权威,前后端边界与数据流契约"}
+{"file": "docs/design.md", "reason": "业务设计:数据模型/逻辑类型/DDL 规则边界"}

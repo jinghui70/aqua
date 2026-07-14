@@ -51,13 +51,20 @@ export interface Field {
   comment?: string;
 }
 
+export interface IndexField {
+  code: string;
+  direction: "ASC" | "DESC";
+}
+
 export interface Index {
   name?: string;
-  fields: string[];
+  fields: IndexField[];
   unique: boolean;
 }
 
 export interface Table {
+  /** 运行时唯一 id(页签/route 标识,不持久化;加载/新建时生成) */
+  id: string;
   code: string;
   name: string;
   group: string;

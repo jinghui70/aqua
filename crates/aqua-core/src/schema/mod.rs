@@ -17,5 +17,5 @@ pub use data_type::DataType;
 pub use enum_def::{EnumColor, EnumDefine, EnumValue, InlineEnum};
 pub use field::{AutoGenerate, Field, FieldEnum, GenerateTiming};
 pub use project::{GroupDefine, Project};
-pub use table::{Index, Table};
+pub use table::{Direction, Index, IndexField, Table};
 pub use validate::{parse_project, validate_project, ParseError, ValidationError};
