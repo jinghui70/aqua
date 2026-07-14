@@ -107,10 +107,7 @@ pub async fn generate_frontend_json_command(
 
 /// Tauri command: 生成全局枚举 Java 类。
 #[tauri::command]
-pub async fn generate_enum_command(
-    project: Project,
-    enum_code: String,
-) -> Result<String, String> {
+pub async fn generate_enum_command(project: Project, enum_code: String) -> Result<String, String> {
     use aqua_core::generators::java::enum_class::generate_global_enum_class;
     let def = project
         .enums
@@ -149,5 +146,9 @@ pub async fn generate_alter_command(
     use aqua_core::diff::diff_project;
     let dialect = Dialect::parse(&dialect).ok_or_else(|| format!("不支持的方言: {}", dialect))?;
     let diff = diff_project(&old_project, &new_project);
-    Ok(generate_alter(&diff, &new_project, &AlterOptions { dialect }))
+    Ok(generate_alter(
+        &diff,
+        &new_project,
+        &AlterOptions { dialect },
+    ))
 }

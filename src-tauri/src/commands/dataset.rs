@@ -5,10 +5,7 @@ use aqua_core::schema::Project;
 
 /// Tauri command: 加载数据集文件(.json / .db),按项目表结构校验后返回条目。
 #[tauri::command]
-pub async fn dataset_load(
-    path: String,
-    project: Project,
-) -> Result<Vec<DatasetEntry>, String> {
+pub async fn dataset_load(path: String, project: Project) -> Result<Vec<DatasetEntry>, String> {
     load_dataset(&path, &project).map_err(|e| e.to_string())
 }
 

@@ -22,8 +22,7 @@ pub async fn builtin_biztypes_load<R: Runtime>(
         .path()
         .resolve("resources/builtin-biztypes.json", BaseDirectory::Resource)
         .map_err(|e| format!("定位内置清单失败: {}", e))?;
-    let content = std::fs::read_to_string(&path)
-        .map_err(|e| format!("读取内置清单失败: {}", e))?;
+    let content = std::fs::read_to_string(&path).map_err(|e| format!("读取内置清单失败: {}", e))?;
     let file: BuiltinFile =
         serde_json::from_str(&content).map_err(|e| format!("内置清单 JSON 非法: {}", e))?;
     Ok(file.biz_types)
