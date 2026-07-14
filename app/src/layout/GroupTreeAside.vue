@@ -299,7 +299,7 @@ function onDuplicate(tableCode?: string) {
               <span class="flex-shrink-0">{{
                 data.type === "group" ? "📁" : "📄"
               }}</span>
-              <span class="truncate">{{ data.label }}</span>
+              <span class="truncate min-w-0">{{ data.label }}</span>
             </span>
             <!-- hover 操作:absolute 浮层,overflow:visible 保证不被裁 -->
             <span
