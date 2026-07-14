@@ -328,7 +328,7 @@ function onDuplicate(tableCode?: string) {
       >
         <template #default="{ data }">
           <div
-            class="flex items-center w-full"
+            class="flex items-center w-full overflow-hidden"
             @mouseenter="onNodeEnter(data, $event)"
             @mouseleave="onNodeLeave"
           >
@@ -428,3 +428,11 @@ function onDuplicate(tableCode?: string) {
     </Teleport>
   </div>
 </template>
+
+<style scoped>
+/* el-tree-node white-space:nowrap + content 默认 overflow:visible,
+   长 label 会溢出树边界。content 加 overflow:hidden 裁剪在树宽内。 */
+:deep(.el-tree-node__content) {
+  overflow: hidden;
+}
+</style>
