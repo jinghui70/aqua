@@ -291,7 +291,7 @@ function onDuplicate(tableCode?: string) {
         @node-drop="onNodeDrop"
       >
         <template #default="{ data }">
-          <div class="relative flex items-center w-full group pr-4">
+          <div class="flex items-center w-full group">
             <span
               class="flex items-center gap-4 min-w-0 flex-1"
               :class="data.type === 'table' ? 'text-13' : 'font-bold text-13'"
@@ -301,10 +301,8 @@ function onDuplicate(tableCode?: string) {
               }}</span>
               <span class="truncate">{{ data.label }}</span>
             </span>
-            <!-- hover 操作:绝对定位浮于 label 上层,避免长名遮挡按钮 -->
-            <span
-              class="hidden group-hover:flex absolute right-0 top-0 h-full items-center gap-2 pl-16 pr-4 bg-white"
-            >
+            <!-- hover 操作:flex-shrink-0 保证按钮完整,label 让位截断 -->
+            <span class="hidden group-hover:flex flex-shrink-0 items-center gap-2 pl-8">
               <template v-if="data.type === 'group'">
                 <el-button
                   size="small"
