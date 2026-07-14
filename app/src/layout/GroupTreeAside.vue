@@ -347,7 +347,7 @@ function onDuplicate(tableCode: string) {
     <!-- 新建分组对话框 -->
     <el-dialog v-model="addGroupVisible" title="新建分组" width="420px">
       <el-form label-width="80px">
-        <el-form-item label="code">
+        <el-form-item label="编码">
           <el-input v-model="addGroupCode" placeholder="如:order" />
         </el-form-item>
         <el-form-item label="中文名">
@@ -363,7 +363,7 @@ function onDuplicate(tableCode: string) {
     <!-- 新建表对话框 -->
     <el-dialog v-model="addTableVisible" title="新建表" width="420px">
       <el-form label-width="80px">
-        <el-form-item label="code">
+        <el-form-item label="编码">
           <el-input
             v-model="addTableCode"
             placeholder="大写蛇形,如:SYS_USER"
