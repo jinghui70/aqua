@@ -327,8 +327,8 @@ export const useProjectStore = defineStore("project", () => {
       code: newCode,
       name: `${src.name}(副本)`,
       group: src.group,
-      fields: structuredClone(src.fields),
-      indexes: src.indexes ? structuredClone(src.indexes) : undefined,
+      fields: JSON.parse(JSON.stringify(src.fields)),
+      indexes: src.indexes ? JSON.parse(JSON.stringify(src.indexes)) : undefined,
       comment: src.comment,
     };
     p.tables.push(copy);

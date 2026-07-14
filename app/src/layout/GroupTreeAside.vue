@@ -293,14 +293,18 @@ function onDuplicate(tableCode?: string) {
         <template #default="{ data }">
           <div class="flex items-center justify-between w-full group pr-8">
             <span
-              class="flex items-center gap-4"
+              class="flex items-center gap-4 min-w-0 flex-1"
               :class="data.type === 'table' ? 'text-13' : 'font-bold text-13'"
             >
-              <span>{{ data.type === "group" ? "📁" : "📄" }}</span>
-              {{ data.label }}
+              <span class="flex-shrink-0">{{
+                data.type === "group" ? "📁" : "📄"
+              }}</span>
+              <span class="truncate">{{ data.label }}</span>
             </span>
             <!-- hover 操作 -->
-            <span class="hidden group-hover:flex items-center gap-2">
+            <span
+              class="hidden group-hover:flex flex-shrink-0 items-center gap-2"
+            >
               <template v-if="data.type === 'group'">
                 <el-button
                   size="small"
