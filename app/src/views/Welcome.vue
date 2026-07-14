@@ -71,8 +71,8 @@ function basename(path: string): string {
     <div class="w-full max-w-720">
       <!-- 标题 -->
       <div class="text-center mb-40">
-        <div class="text-32 font-bold text-gray-700">aqua v2</div>
-        <div class="text-14 text-gray-400 mt-8">JSON-SSOT 数据库结构管理工具</div>
+        <div class="text-32 font-bold text-gray-700">Aqua</div>
+        <div class="text-14 text-gray-400 mt-8">JSON-SSOT 数据库结构设计</div>
       </div>
 
       <!-- 操作卡片 -->
@@ -83,7 +83,6 @@ function basename(path: string): string {
         >
           <div class="text-32 mb-8">📄</div>
           <div class="text-14 font-bold">新建项目</div>
-          <div class="text-12 text-gray-400 mt-4">空白 schema</div>
         </div>
         <div
           class="flex-1 flex flex-col items-center py-24 border border-gray-200 rounded-8 cursor-pointer hover:border-blue-400 hover:shadow transition"
@@ -91,7 +90,6 @@ function basename(path: string): string {
         >
           <div class="text-32 mb-8">📂</div>
           <div class="text-14 font-bold">打开项目</div>
-          <div class="text-12 text-gray-400 mt-4">已有 schema.json</div>
         </div>
         <div
           class="flex-1 flex flex-col items-center py-24 border border-gray-200 rounded-8 cursor-pointer hover:border-blue-400 hover:shadow transition"
@@ -99,7 +97,6 @@ function basename(path: string): string {
         >
           <div class="text-32 mb-8">🗄️</div>
           <div class="text-14 font-bold">从数据库导入</div>
-          <div class="text-12 text-gray-400 mt-4">连库反解结构</div>
         </div>
       </div>
 
