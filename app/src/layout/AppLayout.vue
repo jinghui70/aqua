@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 布局分两态:
 // - 无项目: 全屏欢迎页(独立,无左树)
-// - 有项目: 左分组树 + 多标签工作区 + 状态栏
+// - 有项目: 左分组树 + 多标签工作区 + 状态栏(splitter 可拖动调整树宽度)
 // 菜单是原生窗口菜单(Rust 侧)。
 import { useProjectStore } from "@/stores/project";
 import Welcome from "@/views/Welcome.vue";
@@ -23,16 +23,16 @@ const store = useProjectStore();
     <!-- 无项目: 全屏欢迎页 -->
     <Welcome v-if="!store.currentProject" class="flex-1 overflow-auto" />
 
-    <!-- 有项目: 工作区布局 -->
+    <!-- 有项目: 工作区布局(splitter 分割) -->
     <template v-else>
-      <div class="flex-1 min-h-0 flex overflow-hidden">
-        <aside class="w-260 border-r border-gray-200 flex-shrink-0">
+      <el-splitter class="flex-1" style="height: 0">
+        <template #pane-1>
           <GroupTreeAside />
-        </aside>
-        <main class="flex-1 min-w-0 overflow-hidden">
+        </template>
+        <template #pane-2>
           <TabWorkspace />
-        </main>
-      </div>
+        </template>
+      </el-splitter>
       <StatusBar />
     </template>
 

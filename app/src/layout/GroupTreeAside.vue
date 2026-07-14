@@ -194,7 +194,8 @@ function confirmAddTable() {
   if (table) router.push(store.openTable(table));
 }
 
-async function renameTable(tableCode: string) {
+async function renameTable(tableCode?: string) {
+  if (!tableCode) return;
   const t = store.currentProject?.tables.find((x) => x.code === tableCode);
   if (!t) return;
   try {
@@ -209,7 +210,8 @@ async function renameTable(tableCode: string) {
   }
 }
 
-async function deleteTable(tableCode: string) {
+async function deleteTable(tableCode?: string) {
+  if (!tableCode) return;
   try {
     await ElMessageBox.confirm(`确认删除表 ${tableCode}?`, "删除表", {
       type: "warning",
@@ -223,7 +225,11 @@ async function deleteTable(tableCode: string) {
   }
 }
 
-function onDuplicate(tableCode: string) {
+function onDuplicate(tableCode?: string) {
+  if (!tableCode) {
+    ElMessage.error("表编码缺失");
+    return;
+  }
   const newCode = store.duplicateTable(tableCode);
   if (!newCode) {
     ElMessage.error("复制失败");
@@ -231,7 +237,7 @@ function onDuplicate(tableCode: string) {
   }
   const table = store.currentProject?.tables.find((t) => t.code === newCode);
   if (table) router.push(store.openTable(table));
-  ElMessage.success("已复制");
+  ElMessage.success(`已复制为 ${newCode}`);
 }
 </script>
 
