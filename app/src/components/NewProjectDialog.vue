@@ -42,7 +42,7 @@ function confirm() {
       <el-form-item label="项目中文名">
         <el-input v-model="name" placeholder="如:订单管理系统" />
       </el-form-item>
-      <el-form-item label="basePackage">
+      <el-form-item label="基础包名">
         <el-input v-model="basePackage" placeholder="com.example" />
       </el-form-item>
     </el-form>

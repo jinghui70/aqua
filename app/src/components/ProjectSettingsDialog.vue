@@ -39,10 +39,10 @@ function save() {
 <template>
   <el-dialog v-model="ui.projectSettingsVisible" title="项目设置" width="480px">
     <el-form label-width="100px">
-      <el-form-item label="中文名">
+      <el-form-item label="项目中文名">
         <el-input v-model="name" placeholder="如:订单管理系统" />
       </el-form-item>
-      <el-form-item label="basePackage">
+      <el-form-item label="基础包名">
         <el-input v-model="basePackage" placeholder="com.example" />
       </el-form-item>
     </el-form>
