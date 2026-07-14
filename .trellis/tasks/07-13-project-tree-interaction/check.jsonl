@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/app/frontend/state-management.md", "reason": "校验 dirty/关闭/未保存提醒 store 逻辑"}
+{"file": ".trellis/spec/app/frontend/quality-guidelines.md", "reason": "校验组件质量与交互完整性"}

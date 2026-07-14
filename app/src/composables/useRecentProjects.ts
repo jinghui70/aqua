@@ -5,6 +5,8 @@ const MAX = 10;
 
 export interface RecentProject {
   path: string;
+  /** 项目中文名(可选,旧记录无此字段时 fallback 文件名) */
+  name?: string;
   /** 最后打开时间戳(ms) */
   openedAt: number;
 }
@@ -25,9 +27,9 @@ export function useRecentProjects() {
   }
 
   /** 记录一次打开(去重 + 置顶 + 更新时间)。 */
-  function record(path: string) {
+  function record(path: string, name?: string) {
     const list = load().filter((r) => r.path !== path);
-    list.unshift({ path, openedAt: Date.now() });
+    list.unshift({ path, name, openedAt: Date.now() });
     save(list);
   }
 

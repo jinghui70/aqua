@@ -19,9 +19,9 @@ function refresh() {
   recentList.value = recent.load();
 }
 
-function handleNew() {
-  store.newProject();
-  ElMessage.success("已新建项目");
+async function handleNew() {
+  if (!(await store.confirmIfDirty())) return;
+  ui.openNewProject();
 }
 
 async function handleOpen() {
@@ -30,6 +30,7 @@ async function handleOpen() {
 }
 
 async function openPath(path: string) {
+  if (!(await store.confirmIfDirty())) return;
   try {
     await store.openProject(path);
     ElMessage.success(`已打开 ${path}`);
@@ -113,7 +114,7 @@ function basename(path: string): string {
             @click="openPath(r.path)"
           >
             <div class="flex flex-col">
-              <span class="text-13">{{ basename(r.path) }}</span>
+              <span class="text-13">{{ r.name ?? basename(r.path) }}</span>
               <span class="text-12 text-gray-400">{{ r.path }}</span>
             </div>
             <div class="flex items-center gap-12">

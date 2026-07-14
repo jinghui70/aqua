@@ -26,9 +26,8 @@ export function useMenuActions() {
     switch (id) {
       // 文件
       case "file.new":
-        store.newProject();
-        router.push("/");
-        ElMessage.success("已新建项目");
+        if (!(await store.confirmIfDirty())) break;
+        ui.openNewProject();
         break;
       case "file.open":
         await doOpen();
@@ -41,6 +40,9 @@ export function useMenuActions() {
         break;
       case "file.saveAs":
         await doSave(true);
+        break;
+      case "file.close":
+        if (await store.closeProject()) router.push("/");
         break;
       case "file.import":
         if (!store.currentProject) {
@@ -107,6 +109,7 @@ export function useMenuActions() {
   async function doOpen() {
     const path = await pickOpenFile();
     if (!path) return;
+    if (!(await store.confirmIfDirty())) return;
     try {
       await store.openProject(path);
       router.push("/");

@@ -23,6 +23,7 @@ watch(
 );
 
 async function openPath(path: string) {
+  if (!(await store.confirmIfDirty())) return;
   try {
     await store.openProject(path);
     router.push("/");
@@ -61,7 +62,7 @@ function basename(path: string): string {
         @click="openPath(r.path)"
       >
         <div class="flex flex-col min-w-0">
-          <span class="text-13">{{ basename(r.path) }}</span>
+          <span class="text-13">{{ r.name ?? basename(r.path) }}</span>
           <span class="text-12 text-gray-400 truncate">{{ r.path }}</span>
         </div>
         <div class="flex items-center gap-12 flex-shrink-0">

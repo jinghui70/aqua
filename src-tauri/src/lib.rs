@@ -22,6 +22,7 @@ fn build_menu<R: tauri::Runtime>(
         .text("file.recent", "最近项目")
         .text("file.save", "保存")
         .text("file.saveAs", "另存为")
+        .text("file.close", "关闭项目")
         .separator()
         .text("file.import", "从数据库导入");
     // 非 macOS: 文件菜单末尾加退出(macOS 的退出在应用菜单)
