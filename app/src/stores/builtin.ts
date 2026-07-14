@@ -1,5 +1,5 @@
 // 内置业务类型(打包资源文件加载,只读)。与项目自定义 bizType 分离存储。
-import { defineStore } from "pinia";
+import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
 import type { BizTypeDefine } from "@/types/schema";
 import { useTauri } from "@/composables/useTauri";
@@ -23,3 +23,7 @@ export const useBuiltinStore = defineStore("builtin", () => {
 
   return { bizTypes, loaded, load, isBuiltin };
 });
+
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useBuiltinStore, import.meta.hot));
+}

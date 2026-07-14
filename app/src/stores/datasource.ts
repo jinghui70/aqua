@@ -1,5 +1,5 @@
 // 数据源列表(Pinia)。持久化到项目目录 .dbconfig.json,密码 AES 加密。
-import { defineStore } from "pinia";
+import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
 import type { DbConfig } from "@/types/schema";
 import { useTauri } from "@/composables/useTauri";
@@ -96,3 +96,7 @@ export const useDataSourceStore = defineStore("datasource", () => {
     remove,
   };
 });
+
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useDataSourceStore, import.meta.hot));
+}

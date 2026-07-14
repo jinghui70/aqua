@@ -1,5 +1,5 @@
 // UI 状态(弹窗开关等)。
-import { defineStore } from "pinia";
+import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
 
 export type ExportKind = "ddl" | "diff" | "strconst";
@@ -60,3 +60,7 @@ export const useUiStore = defineStore("ui", () => {
     openNewProject,
   };
 });
+
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useUiStore, import.meta.hot));
+}
