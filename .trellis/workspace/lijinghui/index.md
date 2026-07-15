@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 21
-- **Last Active**: 2026-07-13
+- **Total Sessions**: 22
+- **Last Active**: 2026-07-15
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~723 | Active |
+| `journal-1.md` | ~758 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 22 | 2026-07-15 | 数据库清单简化与反解通用化 | `b0aae59`, `b5ce6ab`, `c06b79f` | `main` |
 | 21 | 2026-07-13 | 项目中文名 + 项目设置对话框 | `45efe7d` | `main` |
 | 20 | 2026-07-13 | 删除级联提示改表级 + 枚举级联保护 | `1bef488`, `06cd457` | `main` |
 | 19 | 2026-07-13 | 内置业务类型加载(外置清单+只读+参数默认值) | `3e4ecbb`, `93bc5eb` | `main` |
