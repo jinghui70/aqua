@@ -21,8 +21,6 @@ pub struct InstalledDriver {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DatabaseState {
     #[serde(default)]
-    pub hidden: Vec<String>,
-    #[serde(default)]
     pub installed: Vec<InstalledDriver>,
 }
 
@@ -84,7 +82,7 @@ pub fn list_databases_with_state(dir: &Path) -> Vec<DatabaseInfo> {
                 driver_class: d.driver_class.map(|s| s.to_string()),
                 reverse_supported: d.reverse_supported,
                 builtin_driver: d.builtin_driver,
-                hidden: state.hidden.contains(&d.name.to_string()),
+                hidden: false, // 固定 false,前端类型兼容
                 installed: installed.is_some(),
                 installed_jar: installed.map(|i| i.driver_jar.clone()),
             }
@@ -134,16 +132,6 @@ pub fn uninstall_driver(dir: &Path, dialect: &str) -> Result<(), String> {
     }
 }
 
-/// 设置数据库显示/隐藏。
-pub fn set_hidden(dir: &Path, dialect: &str, hidden: bool) -> Result<(), String> {
-    let mut state = load_state(dir);
-    state.hidden.retain(|h| h != dialect);
-    if hidden {
-        state.hidden.push(dialect.to_string());
-    }
-    save_state(dir, &state)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -162,7 +150,6 @@ mod tests {
     fn test_state_roundtrip() {
         let dir = tmp_dir();
         let state = DatabaseState {
-            hidden: vec!["gbase".into()],
             installed: vec![InstalledDriver {
                 dialect: "oracle".into(),
                 driver_jar: "ojdbc8.jar".into(),
@@ -171,7 +158,6 @@ mod tests {
         };
         save_state(&dir, &state).unwrap();
         let loaded = load_state(&dir);
-        assert_eq!(loaded.hidden, vec!["gbase".to_string()]);
         assert_eq!(loaded.installed.len(), 1);
         assert_eq!(loaded.installed[0].dialect, "oracle");
         // 验证 camelCase 序列化
@@ -185,7 +171,6 @@ mod tests {
     fn test_load_missing_returns_default() {
         let dir = tmp_dir();
         let state = load_state(&dir);
-        assert!(state.hidden.is_empty());
         assert!(state.installed.is_empty());
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -194,7 +179,6 @@ mod tests {
     fn test_list_databases_with_state() {
         let dir = tmp_dir();
         let state = DatabaseState {
-            hidden: vec!["gbase".into()],
             installed: vec![InstalledDriver {
                 dialect: "oracle".into(),
                 driver_jar: "ojdbc8.jar".into(),
@@ -203,33 +187,20 @@ mod tests {
         };
         save_state(&dir, &state).unwrap();
         let list = list_databases_with_state(&dir);
-        assert_eq!(list.len(), 11);
+        assert_eq!(list.len(), 8);
         let oracle = list.iter().find(|d| d.name == "oracle").unwrap();
         assert!(oracle.installed);
         assert_eq!(oracle.installed_jar.as_deref(), Some("ojdbc8.jar"));
-        assert!(!oracle.hidden);
+        assert!(!oracle.hidden); // 固定 false
         let gbase = list.iter().find(|d| d.name == "gbase").unwrap();
-        assert!(gbase.hidden);
+        assert!(!gbase.hidden); // 固定 false
         assert!(!gbase.installed);
-        std::fs::remove_dir_all(&dir).ok();
-    }
-
-    #[test]
-    fn test_set_hidden_toggle() {
-        let dir = tmp_dir();
-        set_hidden(&dir, "tidb", true).unwrap();
-        assert!(load_state(&dir).hidden.contains(&"tidb".to_string()));
-        set_hidden(&dir, "tidb", false).unwrap();
-        assert!(!load_state(&dir).hidden.contains(&"tidb".to_string()));
         std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
     fn test_install_driver_rejects_unsupported() {
         let dir = tmp_dir();
-        // dm 不支持反解
-        let err = install_driver(&dir, "dm", "/tmp/x.jar").unwrap_err();
-        assert!(err.contains("暂不支持反解"));
         // mysql 内置
         let err = install_driver(&dir, "mysql", "/tmp/x.jar").unwrap_err();
         assert!(err.contains("内置"));

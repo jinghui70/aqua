@@ -92,7 +92,6 @@ pub fn run() {
             database::list_databases,
             database::install_driver,
             database::uninstall_driver,
-            database::set_database_hidden,
             builtin::builtin_biztypes_load,
         ])
         .run(tauri::generate_context!())

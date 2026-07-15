@@ -35,10 +35,10 @@ pub struct DialectInfo {
     pub builtin_driver: bool,
 }
 
-/// 全部支持的数据库清单(11 个)。
+/// 全部支持的数据库清单(8 个)。
 ///
-/// 核心层: mysql/postgresql/h2/oracle/dm/kingbase/gbase/sqlserver
-/// 兼容层: oceanbase/tidb/gaussdb(生成复用 MySQL/PostgreSQL)
+/// 内置: mysql/postgresql/h2
+/// 外置 JDBC: oracle/dm/kingbase/gbase/sqlserver
 pub static ALL_DATABASES: &[DialectInfo] = &[
     // === native 固定,不可卸载 ===
     DialectInfo {
@@ -95,7 +95,7 @@ pub static ALL_DATABASES: &[DialectInfo] = &[
         needs_schema: true,
         generate_as: None,
         driver_class: Some("dm.jdbc.driver.DmDriver"),
-        reverse_supported: false,
+        reverse_supported: true, // 通用兜底反解,未实测
         builtin_driver: false,
     },
     DialectInfo {
@@ -106,7 +106,7 @@ pub static ALL_DATABASES: &[DialectInfo] = &[
         needs_schema: true,
         generate_as: None,
         driver_class: Some("com.kingbase8.Driver"),
-        reverse_supported: false,
+        reverse_supported: true, // 通用兜底反解,未实测
         builtin_driver: false,
     },
     DialectInfo {
@@ -117,7 +117,7 @@ pub static ALL_DATABASES: &[DialectInfo] = &[
         needs_schema: true,
         generate_as: None,
         driver_class: Some("com.gbase.jdbc.Driver"),
-        reverse_supported: false,
+        reverse_supported: true, // 通用兜底反解,未实测
         builtin_driver: false,
     },
     DialectInfo {
@@ -128,41 +128,7 @@ pub static ALL_DATABASES: &[DialectInfo] = &[
         needs_schema: false,
         generate_as: None,
         driver_class: Some("com.microsoft.sqlserver.jdbc.SQLServerDriver"),
-        reverse_supported: false,
-        builtin_driver: false,
-    },
-    // === 兼容层(生成复用) ===
-    DialectInfo {
-        name: "oceanbase",
-        label: "OceanBase",
-        category: DbCategory::Jdbc,
-        default_port: 2881,
-        needs_schema: true,
-        generate_as: Some("mysql"),
-        driver_class: None,
-        reverse_supported: false,
-        builtin_driver: false,
-    },
-    DialectInfo {
-        name: "tidb",
-        label: "TiDB",
-        category: DbCategory::Jdbc,
-        default_port: 4000,
-        needs_schema: false,
-        generate_as: Some("mysql"),
-        driver_class: None,
-        reverse_supported: false,
-        builtin_driver: false,
-    },
-    DialectInfo {
-        name: "gaussdb",
-        label: "GaussDB",
-        category: DbCategory::Jdbc,
-        default_port: 5432,
-        needs_schema: true,
-        generate_as: Some("postgresql"),
-        driver_class: None,
-        reverse_supported: false,
+        reverse_supported: true, // 通用兜底反解,未实测
         builtin_driver: false,
     },
 ];
@@ -183,7 +149,7 @@ mod tests {
 
     #[test]
     fn test_list_dialects_count() {
-        assert_eq!(ALL_DATABASES.len(), 11);
+        assert_eq!(ALL_DATABASES.len(), 8);
     }
 
     #[test]
@@ -203,18 +169,30 @@ mod tests {
 
     #[test]
     fn test_reverse_supported_set() {
-        // 本任务反解只 oracle + h2(+ native mysql/pg)
+        // 全部 8 个库都支持反解(native 已验证 + H2/Oracle 已验证 + 信创/SQLServer 通用兜底未实测)
         let rev: Vec<_> = ALL_DATABASES
             .iter()
             .filter(|d| d.reverse_supported)
             .map(|d| d.name)
             .collect();
-        assert_eq!(rev, vec!["mysql", "postgresql", "h2", "oracle"]);
+        assert_eq!(
+            rev,
+            vec![
+                "mysql",
+                "postgresql",
+                "h2",
+                "oracle",
+                "dm",
+                "kingbase",
+                "gbase",
+                "sqlserver"
+            ]
+        );
     }
 
     #[test]
     fn test_builtin_driver_set() {
-        // native 三 + h2(shade) 内置驱动
+        // native 双 + h2(shade) 内置驱动
         let builtin: Vec<_> = ALL_DATABASES
             .iter()
             .filter(|d| d.builtin_driver)

@@ -60,16 +60,6 @@ async function onUninstall(d: DatabaseInfo) {
     /* useTauri 已提示 */
   }
 }
-
-async function onToggleVisible(d: DatabaseInfo, visible: boolean | string | number) {
-  // visible = !hidden
-  try {
-    await tauri.setDatabaseHidden(d.name, !visible);
-    await refresh();
-  } catch {
-    /* useTauri 已提示 */
-  }
-}
 </script>
 
 <template>
@@ -86,14 +76,6 @@ async function onToggleVisible(d: DatabaseInfo, visible: boolean | string | numb
           <span :class="row.installed || row.builtinDriver ? 'text-gray-600' : 'text-gray-400'">
             {{ driverText(row) }}
           </span>
-        </template>
-      </el-table-column>
-      <el-table-column label="显示" width="80" align="center">
-        <template #default="{ row }">
-          <el-switch
-            :model-value="!row.hidden"
-            @change="(v: boolean | string | number) => onToggleVisible(row, v)"
-          />
         </template>
       </el-table-column>
       <el-table-column label="操作" width="100" align="center">
@@ -121,7 +103,7 @@ async function onToggleVisible(d: DatabaseInfo, visible: boolean | string | numb
       </el-table-column>
     </el-table>
     <div class="mt-12 text-12 text-gray-400">
-      native(MySQL/PostgreSQL)与 H2 驱动内置;Oracle 等需安装 JDBC 驱动 jar。隐藏的数据库不出现在生成/反解下拉。
+      native(MySQL/PostgreSQL)与 H2 驱动内置;Oracle 等外置 JDBC 库需安装驱动 jar。未装驱动的外置库不出现在下拉中。
     </div>
   </el-dialog>
 </template>

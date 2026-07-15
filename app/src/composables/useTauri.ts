@@ -94,8 +94,6 @@ export function useTauri() {
       invoke<void>("install_driver", { dialect, jarPath }),
     uninstallDriver: (dialect: string) =>
       invoke<void>("uninstall_driver", { dialect }),
-    setDatabaseHidden: (dialect: string, hidden: boolean) =>
-      invoke<void>("set_database_hidden", { dialect, hidden }),
   };
 }
 

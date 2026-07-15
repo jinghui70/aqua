@@ -14,15 +14,14 @@ export const useDatabaseStore = defineStore("database", () => {
     loaded.value = true;
   }
 
-  /** 生成下拉:显示的(!hidden),不需驱动。 */
-  const generatable = computed(() => databases.value.filter((d) => !d.hidden));
+  /** 生成下拉:有驱动的(内置或已装)。 */
+  const generatable = computed(() =>
+    databases.value.filter((d) => d.builtinDriver || d.installed)
+  );
 
-  /** 反解下拉:显示且可用(!hidden && (builtinDriver||installed) && reverseSupported)。 */
-  const reversible = computed(
-    () =>
-      databases.value.filter(
-        (d) => !d.hidden && (d.builtinDriver || d.installed) && d.reverseSupported
-      )
+  /** 反解下拉:有驱动且支持反解。 */
+  const reversible = computed(() =>
+    databases.value.filter((d) => (d.builtinDriver || d.installed) && d.reverseSupported)
   );
 
   return { databases, loaded, load, generatable, reversible };

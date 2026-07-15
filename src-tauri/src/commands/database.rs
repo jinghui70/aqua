@@ -43,14 +43,3 @@ pub async fn uninstall_driver<R: Runtime>(
     let dir = drivers_dir(&app)?;
     state::uninstall_driver(&dir, &dialect)
 }
-
-/// 设置数据库显示/隐藏。
-#[tauri::command]
-pub async fn set_database_hidden<R: Runtime>(
-    app: AppHandle<R>,
-    dialect: String,
-    hidden: bool,
-) -> Result<(), String> {
-    let dir = drivers_dir(&app)?;
-    state::set_hidden(&dir, &dialect, hidden)
-}
