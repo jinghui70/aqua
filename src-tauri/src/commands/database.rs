@@ -6,7 +6,7 @@ use aqua_core::driver::state::{self, DatabaseInfo};
 use tauri::{AppHandle, Manager, Runtime};
 
 /// 解析 app_data_dir/drivers/ 路径,必要时创建。
-fn drivers_dir<R: Runtime>(app: &AppHandle<R>) -> Result<std::path::PathBuf, String> {
+pub fn drivers_dir<R: Runtime>(app: &AppHandle<R>) -> Result<std::path::PathBuf, String> {
     let dir = app
         .path()
         .app_data_dir()

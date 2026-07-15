@@ -117,6 +117,20 @@ echo '{"action":"listTables","schema":"SCOTT"}' | java -jar connector.jar
 
 aqua-core 用 `tokio::process::Command` spawn,stdin/stdout JSON 通信,进程结束即连接关闭。
 
+### 外置 JDBC 驱动加载(关键,易错)
+
+Oracle/信创等 JDBC 驱动 jar 用户自备(许可证),不打包进 connector.jar。加载链路:
+
+1. **Rust 传 `driversDir`**: `create_driver(config, drivers_dir)` 第二参数为 `app_data_dir/drivers/`;`JdbcDriver::call` 把 `driversDir` 注入 stdin JSON
+2. **connector URLClassLoader**: `Main` 读 `drivers/databases.json` 的 `installed`,用 `URLClassLoader` 加载 jar 并 `setContextClassLoader`
+3. **Dialect 用 `driver.connect`**: `Dialect.connect` **必须** `Class.forName(driverClass, true, contextClassLoader)` + `driver.connect(url, props)`,**不能**用 `DriverManager.getConnection`
+
+**❌ `DriverManager.getConnection` 报 "No suitable driver"**: URLClassLoader 加载的 driver 虽触发静态块 `registerDriver`,但 `DriverManager.getConnection` 由系统类加载器的 `Main` 调用,内部 `isDriverAllowed` 类加载器隔离检查会跳过 URLClassLoader 的 driver。
+
+**✅ `driver.connect` 绕过隔离**: 直接调 driver 实例的 `connect`,不经 DriverManager。
+
+**Oracle schema = 登录用户名**: `listTables` 用 `conn.getSchema()`,不要用传入的 schema(实为 service name / database,非 schema)。`getColumns`/`getIndexes` 同。
+
 ---
 
 ## Error Handling

@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.aqua.connector.h2.H2Dialect;
+import com.aqua.connector.oracle.OracleDialect;
 
 /**
  * Dialect 注册表(name -> Dialect 实例)。
@@ -15,7 +16,7 @@ public class DialectRegistry {
 
     static {
         register(new H2Dialect());
-        // 后续: register(new OracleDialect()); 等
+        register(new OracleDialect());
     }
 
     public static void register(Dialect dialect) {

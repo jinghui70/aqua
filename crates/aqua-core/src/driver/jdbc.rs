@@ -7,6 +7,7 @@ use crate::driver::{ColumnMeta, DbConfig, Driver, DriverError, IndexMeta};
 use crate::schema::DataType;
 use async_trait::async_trait;
 use serde_json::{json, Value};
+use std::path::PathBuf;
 use std::process::Stdio;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
@@ -15,16 +16,21 @@ use tokio::process::Command;
 pub struct JdbcDriver {
     config: DbConfig,
     connector_path: String,
+    /// drivers/ 目录(含 databases.json + 外置 JDBC jar)。
+    /// 传给 connector,触发其加载 installed 驱动(Oracle 等)。
+    drivers_dir: Option<PathBuf>,
 }
 
 impl JdbcDriver {
     /// 创建 JDBC 驱动。
     ///
-    /// `connector_path`: connector.jar 路径(默认 "connector.jar")。
-    pub fn new(config: &DbConfig, connector_path: &str) -> Self {
+    /// - `connector_path`: connector.jar 路径(默认 "connector.jar")。
+    /// - `drivers_dir`: drivers/ 目录;`Some` 时 connector 会加载其中 installed 的 JDBC jar。
+    pub fn new(config: &DbConfig, connector_path: &str, drivers_dir: Option<PathBuf>) -> Self {
         Self {
             config: config.clone(),
             connector_path: connector_path.to_string(),
+            drivers_dir,
         }
     }
 
@@ -39,6 +45,11 @@ impl JdbcDriver {
             "password": self.config.password,
             "database": self.config.database,
         });
+
+        // 传 drivers/ 目录,connector 据此加载 installed 的外置 JDBC jar(Oracle 等)
+        if let Some(ref dir) = self.drivers_dir {
+            request["driversDir"] = json!(dir.to_string_lossy());
+        }
 
         if let Some(extra_val) = extra {
             if let (Some(req_map), Some(extra_map)) =

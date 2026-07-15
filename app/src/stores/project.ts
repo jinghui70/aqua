@@ -305,7 +305,8 @@ export const useProjectStore = defineStore("project", () => {
     for (const code of tableCodes) {
       const src = imported.tables.find((t) => t.code === code);
       if (!src) continue;
-      const table = { ...src, group };
+      // 导入表来自反解(后端 Table 无运行时 id),须生成新 id,否则页签/route key 缺失
+      const table = { ...src, id: crypto.randomUUID(), group };
       const existIdx = currentProject.value.tables.findIndex(
         (t) => t.code === code
       );
