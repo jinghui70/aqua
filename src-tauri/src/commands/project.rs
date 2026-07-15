@@ -42,3 +42,46 @@ pub async fn project_validate(project: Project) -> Result<String, String> {
         }
     }
 }
+
+/// 更新项目目录下的 .gitignore，确保包含 *.aqua.conf 和 *.aqua.db
+#[tauri::command]
+pub async fn update_gitignore(project_path: String) -> Result<(), String> {
+    use std::path::Path;
+
+    let path = Path::new(&project_path);
+    let dir = path.parent().ok_or("无效项目路径")?;
+    let gitignore_path = dir.join(".gitignore");
+
+    let patterns = vec!["*.aqua.conf", "*.aqua.db"];
+
+    // 读取现有内容
+    let mut content = if gitignore_path.exists() {
+        tokio::fs::read_to_string(&gitignore_path)
+            .await
+            .map_err(|e| format!("读取 .gitignore 失败: {}", e))?
+    } else {
+        String::new()
+    };
+
+    // 检查并追加缺失的模式
+    let mut modified = false;
+    for pattern in patterns {
+        if !content.lines().any(|line| line.trim() == pattern) {
+            if !content.is_empty() && !content.ends_with('\n') {
+                content.push('\n');
+            }
+            content.push_str(pattern);
+            content.push('\n');
+            modified = true;
+        }
+    }
+
+    // 仅在有变更时写入
+    if modified || !gitignore_path.exists() {
+        tokio::fs::write(&gitignore_path, content)
+            .await
+            .map_err(|e| format!("写入 .gitignore 失败: {}", e))?;
+    }
+
+    Ok(())
+}

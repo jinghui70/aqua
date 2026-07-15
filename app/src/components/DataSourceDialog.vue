@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 数据源配置弹窗(§6.7):列表 + 表单 + 测试连接。
-import { reactive, ref } from "vue";
+import { reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { useUiStore } from "@/stores/ui";
 import { useDataSourceStore, type DataSource } from "@/stores/datasource";
@@ -38,6 +38,13 @@ function resetForm() {
   editing.value = false;
   originalName.value = "";
 }
+
+// 监听对话框打开，重置表单
+watch(() => ui.dataSourceVisible, (visible) => {
+  if (visible) {
+    resetForm();
+  }
+});
 
 function newSource() {
   resetForm();

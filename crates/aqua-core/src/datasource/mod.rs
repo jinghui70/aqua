@@ -1,6 +1,6 @@
 //! datasource 模块 - 数据源配置持久化。
 //!
-//! 落盘到项目目录 `.dbconfig.json`,密码用 AES-256-GCM 加密。
+//! 落盘到项目目录 `<prefix>.aqua.conf`,密码用 AES-256-GCM 加密。
 //! 密钥为用户数据目录下的 32 字节随机 key(路径由调用方传入,核心不感知平台目录)。
 //! 见 `docs/design.md` §7 与本任务 design.md。
 
@@ -48,11 +48,25 @@ pub struct DbConfigFile {
 
 const KEY_LEN: usize = 32;
 const NONCE_LEN: usize = 12;
-const DBCONFIG_NAME: &str = ".dbconfig.json";
 
-/// 拼项目目录下的 `.dbconfig.json` 路径。
-fn config_path(project_dir: &str) -> PathBuf {
-    Path::new(project_dir).join(DBCONFIG_NAME)
+/// 从项目文件路径提取前缀（去掉 .aqua 扩展名 + 取文件名）
+/// 如 "/path/to/myproject.aqua" → "myproject"
+/// 如 "/path/to/my.project.aqua" → "my.project"
+pub fn extract_project_prefix(project_path: &str) -> Option<String> {
+    let path = Path::new(project_path);
+    path.file_stem()?.to_str().map(|s| s.to_string())
+}
+
+/// 拼接配置文件路径：<dir>/<prefix>.aqua.conf
+pub fn config_path_for_project(project_path: &str) -> Result<PathBuf, DataSourceError> {
+    let path = Path::new(project_path);
+    let dir = path.parent().ok_or_else(||
+        DataSourceError::Io(std::io::Error::new(std::io::ErrorKind::InvalidInput, "无效项目路径"))
+    )?;
+    let prefix = extract_project_prefix(project_path).ok_or_else(||
+        DataSourceError::Io(std::io::Error::new(std::io::ErrorKind::InvalidInput, "无法提取文件名前缀"))
+    )?;
+    Ok(dir.join(format!("{}.aqua.conf", prefix)))
 }
 
 /// 读取或首次生成 32 字节随机密钥。
@@ -119,17 +133,17 @@ fn decrypt(key: &[u8; KEY_LEN], token: &str) -> Result<String, DataSourceError> 
     String::from_utf8(plain).map_err(|_| DataSourceError::DecryptFailed)
 }
 
-/// 加载项目目录下的数据源配置,解密密码,返回按 name 排序的列表。
+/// 加载项目对应的数据源配置,解密密码,返回按 name 排序的列表。
 /// 文件不存在时返回空列表。
 pub fn load_db_config(
-    project_dir: &str,
+    project_path: &str,
     key_path: &str,
 ) -> Result<Vec<(String, DataSourceConfig)>, DataSourceError> {
-    let path = config_path(project_dir);
-    if !path.exists() {
+    let config_file = config_path_for_project(project_path)?;
+    if !config_file.exists() {
         return Ok(Vec::new());
     }
-    let content = std::fs::read_to_string(&path)?;
+    let content = std::fs::read_to_string(&config_file)?;
     let file: DbConfigFile = serde_json::from_str(&content)?;
     let key = load_or_create_key(key_path)?;
     let mut out = Vec::with_capacity(file.sources.len());
@@ -140,9 +154,9 @@ pub fn load_db_config(
     Ok(out)
 }
 
-/// 保存数据源配置到项目目录 `.dbconfig.json`,密码加密。
+/// 保存数据源配置到项目对应的配置文件,密码加密。
 pub fn save_db_config(
-    project_dir: &str,
+    project_path: &str,
     key_path: &str,
     sources: Vec<(String, DataSourceConfig)>,
 ) -> Result<(), DataSourceError> {
@@ -153,7 +167,8 @@ pub fn save_db_config(
         file.sources.insert(name, cfg);
     }
     let json = serde_json::to_string_pretty(&file)?;
-    std::fs::write(config_path(project_dir), json)?;
+    let config_file = config_path_for_project(project_path)?;
+    std::fs::write(config_file, json)?;
     Ok(())
 }
 
@@ -187,6 +202,35 @@ mod tests {
                 schema: None,
             },
         )
+    }
+
+    #[test]
+    fn test_extract_project_prefix_normal() {
+        assert_eq!(extract_project_prefix("/path/to/myproject.aqua"), Some("myproject".to_string()));
+        assert_eq!(extract_project_prefix("myproject.aqua"), Some("myproject".to_string()));
+    }
+
+    #[test]
+    fn test_extract_project_prefix_with_dots() {
+        assert_eq!(extract_project_prefix("/path/to/my.project.aqua"), Some("my.project".to_string()));
+        assert_eq!(extract_project_prefix("a.b.c.aqua"), Some("a.b.c".to_string()));
+    }
+
+    #[test]
+    fn test_extract_project_prefix_edge_cases() {
+        // .aqua 也有 file_stem，返回 ".aqua"
+        assert_eq!(extract_project_prefix(".aqua"), Some(".aqua".to_string()));
+        assert_eq!(extract_project_prefix(""), None);
+        assert_eq!(extract_project_prefix("/"), None);
+    }
+
+    #[test]
+    fn test_config_path_for_project() {
+        let result = config_path_for_project("/path/to/myproject.aqua").unwrap();
+        assert_eq!(result, PathBuf::from("/path/to/myproject.aqua.conf"));
+
+        let result = config_path_for_project("/path/to/my.project.aqua").unwrap();
+        assert_eq!(result, PathBuf::from("/path/to/my.project.aqua.conf"));
     }
 
     #[test]
@@ -230,14 +274,15 @@ mod tests {
     #[test]
     fn test_file_roundtrip_and_key_reuse() {
         let dir = tmp_dir();
-        let project_dir = dir.to_str().unwrap();
+        let project_path = dir.join("test.aqua");
+        let project_path_str = project_path.to_str().unwrap();
         let key_path = dir.join("key");
         let key_str = key_path.to_str().unwrap();
 
         // key 不存在 → save 自动生成
         assert!(!key_path.exists());
         save_db_config(
-            project_dir,
+            project_path_str,
             key_str,
             vec![sample("dev", "pwd_dev"), sample("prod", "pwd_prod")],
         )
@@ -245,12 +290,13 @@ mod tests {
         assert!(key_path.exists());
 
         // 文件中 password 为密文
-        let raw = std::fs::read_to_string(config_path(project_dir)).unwrap();
+        let config_file = config_path_for_project(project_path_str).unwrap();
+        let raw = std::fs::read_to_string(&config_file).unwrap();
         assert!(!raw.contains("pwd_dev"));
         assert!(!raw.contains("pwd_prod"));
 
         // load 还原明文,且按 name 排序
-        let loaded = load_db_config(project_dir, key_str).unwrap();
+        let loaded = load_db_config(project_path_str, key_str).unwrap();
         assert_eq!(loaded.len(), 2);
         assert_eq!(loaded[0].0, "dev");
         assert_eq!(loaded[0].1.password, "pwd_dev");
@@ -258,8 +304,8 @@ mod tests {
         assert_eq!(loaded[1].1.password, "pwd_prod");
 
         // 二次 save 复用同 key(未报 BadKey)
-        save_db_config(project_dir, key_str, vec![sample("dev", "pwd2")]).unwrap();
-        let reloaded = load_db_config(project_dir, key_str).unwrap();
+        save_db_config(project_path_str, key_str, vec![sample("dev", "pwd2")]).unwrap();
+        let reloaded = load_db_config(project_path_str, key_str).unwrap();
         assert_eq!(reloaded[0].1.password, "pwd2");
 
         std::fs::remove_dir_all(&dir).ok();
@@ -268,7 +314,8 @@ mod tests {
     #[test]
     fn test_load_missing_file_returns_empty() {
         let dir = tmp_dir();
-        let out = load_db_config(dir.to_str().unwrap(), dir.join("key").to_str().unwrap()).unwrap();
+        let project_path = dir.join("missing.aqua");
+        let out = load_db_config(project_path.to_str().unwrap(), dir.join("key").to_str().unwrap()).unwrap();
         assert!(out.is_empty());
         std::fs::remove_dir_all(&dir).ok();
     }

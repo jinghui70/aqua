@@ -22,6 +22,8 @@ export function useTauri() {
       invoke<void>("project_save", { path, project }),
     projectValidate: (project: Project) =>
       invoke<string>("project_validate", { project }),
+    updateGitignore: (projectPath: string) =>
+      invoke<void>("update_gitignore", { projectPath }),
 
     // 数据集
     datasetLoad: (path: string, project: Project) =>
@@ -29,11 +31,11 @@ export function useTauri() {
     datasetSave: (path: string, project: Project, entries: DatasetEntry[]) =>
       invoke<void>("dataset_save", { path, project, entries }),
 
-    // 数据源持久化(.dbconfig.json,密码 AES 加密)
-    datasourceLoad: (projectDir: string) =>
-      invoke<Array<[string, DbConfig]>>("datasource_load", { projectDir }),
-    datasourceSave: (projectDir: string, sources: Array<[string, DbConfig]>) =>
-      invoke<void>("datasource_save", { projectDir, sources }),
+    // 数据源持久化(密码 AES 加密)
+    datasourceLoad: (projectPath: string) =>
+      invoke<Array<[string, DbConfig]>>("datasource_load", { projectPath }),
+    datasourceSave: (projectPath: string, sources: Array<[string, DbConfig]>) =>
+      invoke<void>("datasource_save", { projectPath, sources }),
 
     // 内置业务类型清单(打包资源文件)
     builtinBiztypesLoad: () => invoke<BizTypeDefine[]>("builtin_biztypes_load"),

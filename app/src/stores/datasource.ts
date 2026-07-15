@@ -1,4 +1,4 @@
-// 数据源列表(Pinia)。持久化到项目目录 .dbconfig.json,密码 AES 加密。
+// 数据源列表(Pinia)。持久化到项目对应配置文件,密码 AES 加密。
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
 import type { DbConfig } from "@/types/schema";
@@ -24,39 +24,39 @@ function fromWire([sourceName, cfg]: [string, DbConfig]): DataSource {
 export const useDataSourceStore = defineStore("datasource", () => {
   const tauri = useTauri();
   const sources = ref<DataSource[]>([]);
-  /** 当前项目目录;空表示项目未保存,仅内存态。 */
-  const projectDir = ref<string>("");
+  /** 当前项目完整路径;空表示项目未保存,仅内存态。 */
+  const projectPath = ref<string>("");
   /** 串行化落盘:保证写顺序与调用顺序一致,后写覆盖前写,最终态=最新内存态。 */
   let flushChain: Promise<void> = Promise.resolve();
 
-  /** 从项目目录加载数据源(project open 时调)。无目录则清空。 */
-  async function load(dir: string) {
-    projectDir.value = dir;
-    if (!dir) {
+  /** 从项目路径加载数据源(project open 时调)。无路径则清空。 */
+  async function load(path: string) {
+    projectPath.value = path;
+    if (!path) {
       sources.value = [];
       return;
     }
-    const wire = await tauri.datasourceLoad(dir);
+    const wire = await tauri.datasourceLoad(path);
     sources.value = wire.map(fromWire);
   }
 
-  /** 落盘到项目目录。无目录(项目未保存)时跳过,仅保留内存态。
+  /** 落盘到项目对应的配置文件。无项目路径(项目未保存)时跳过,仅保留内存态。
    *  多次调用串行排队,避免并发写文件互相覆盖。 */
   function persist(): Promise<void> {
-    if (!projectDir.value) return Promise.resolve();
+    if (!projectPath.value) return Promise.resolve();
     // 每次排队时重新读取最新 sources,保证最后一次写反映最终内存态
     const run = () =>
       tauri.datasourceSave(
-        projectDir.value,
+        projectPath.value,
         sources.value.map(toWire)
       );
     flushChain = flushChain.then(run, run);
     return flushChain;
   }
 
-  /** 设置项目目录并把当前内存态数据源落盘(project 首次保存/另存时调)。 */
-  async function bindDirAndPersist(dir: string) {
-    projectDir.value = dir;
+  /** 设置项目路径并把当前内存态数据源落盘(project 首次保存/另存时调)。 */
+  async function bindDirAndPersist(path: string) {
+    projectPath.value = path;
     await persist();
   }
 
@@ -87,7 +87,7 @@ export const useDataSourceStore = defineStore("datasource", () => {
 
   return {
     sources,
-    projectDir,
+    projectPath,
     load,
     persist,
     bindDirAndPersist,

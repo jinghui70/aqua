@@ -80,7 +80,7 @@ export const useProjectStore = defineStore("project", () => {
     activeTab.value = "";
     dirty.value = false;
     recent.record(path, currentProject.value?.name ?? undefined);
-    await datasource.load(dirOf(path));
+    await datasource.load(path);
     void nextTick(() => {
       suppressDirty = false;
     });
@@ -92,12 +92,18 @@ export const useProjectStore = defineStore("project", () => {
     const target = path ?? currentPath.value;
     if (!target) throw new Error("未指定保存路径");
     await tauri.projectSave(target, currentProject.value);
-    const firstBind = dirOf(target) !== datasource.projectDir;
+    const pathChanged = target !== datasource.projectPath;
     currentPath.value = target;
     recent.record(target, currentProject.value.name ?? undefined);
     dirty.value = false;
-    // 首次保存/另存到新目录:把内存态数据源落盘到该目录
-    if (firstBind) await datasource.bindDirAndPersist(dirOf(target));
+    // 更新 .gitignore
+    try {
+      await tauri.updateGitignore(target);
+    } catch (err) {
+      console.warn('更新 .gitignore 失败:', err);
+    }
+    // 首次保存或另存为:把内存态数据源落盘到该路径对应配置文件
+    if (pathChanged) await datasource.bindDirAndPersist(target);
   }
 
   /**

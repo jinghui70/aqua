@@ -18,23 +18,23 @@ fn key_path<R: Runtime>(app: &AppHandle<R>) -> Result<String, String> {
         .ok_or_else(|| "密钥路径含非法字符".to_string())
 }
 
-/// 加载项目目录下的数据源配置(解密密码)。
+/// 加载项目对应的数据源配置(解密密码)。
 #[tauri::command]
 pub async fn datasource_load<R: Runtime>(
     app: AppHandle<R>,
-    project_dir: String,
+    project_path: String,
 ) -> Result<Vec<(String, DataSourceConfig)>, String> {
     let key = key_path(&app)?;
-    load_db_config(&project_dir, &key).map_err(|e| e.to_string())
+    load_db_config(&project_path, &key).map_err(|e| e.to_string())
 }
 
-/// 保存数据源配置到项目目录(加密密码)。
+/// 保存数据源配置到项目对应的配置文件(加密密码)。
 #[tauri::command]
 pub async fn datasource_save<R: Runtime>(
     app: AppHandle<R>,
-    project_dir: String,
+    project_path: String,
     sources: Vec<(String, DataSourceConfig)>,
 ) -> Result<(), String> {
     let key = key_path(&app)?;
-    save_db_config(&project_dir, &key, sources).map_err(|e| e.to_string())
+    save_db_config(&project_path, &key, sources).map_err(|e| e.to_string())
 }

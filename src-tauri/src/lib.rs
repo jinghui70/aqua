@@ -76,6 +76,7 @@ pub fn run() {
             project::project_open,
             project::project_save,
             project::project_validate,
+            project::update_gitignore,
             generate::generate_ddl_command,
             generate::generate_java_command,
             generate::generate_frontend_json_command,
