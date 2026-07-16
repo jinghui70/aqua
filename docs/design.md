@@ -68,7 +68,7 @@ JSON -> aqua generate --type ddl --dialect h2 + 数据集 -> 初始化内存库
 
 - **Tauri 2.x 桌面** + Rust 后端(`crates/aqua-core` 纯逻辑核心 + `src-tauri` 壳) + Vue3/element-plus 前端(`app/`) + Java connector(复用,`connector/`)
 - **连接层混合**:MySQL/PG 走 Rust native 免 Java;Oracle/信创/H2 走 Java JDBC(用户自备 JDK 17+)
-- **两类数据库**:内置方言(native,硬编码) + JDBC 方言(外置 resolver jar,零重编译扩展)
+- **两类数据库**:内置方言(native,硬编码) + JDBC 方言(外置 JDBC 驱动,零重编译扩展)
 - **CLI**:Tauri 二进制双模式(无 args 开 GUI / 有 args 走 CLI)
 - **打包**:~20MB(connector.jar 内置,JRE 用户自备,无 Chromium)
 - **不做**:自动更新、SSH 隧道、Web/Docker 部署。**仅中文**。
@@ -400,7 +400,7 @@ interface DiffResult {
 
 **反解分库归属**:
 - Native 库(MySQL/PG):反解写死 Rust 各驱动模块
-- Java 库(Oracle/信创/H2):反解在 Java 侧外置 resolver jar(URLClassLoader + registry.json)
+- Java 库(Oracle/信创/H2):反解在 Java 侧 Dialect 子类;外置 JDBC 驱动 jar 经 URLClassLoader 加载(databases.json 记录 installed)
 
 **不猜 bizType**(留空,人工标注)
 

@@ -121,14 +121,13 @@ public class DmDialect implements Dialect {
 }
 ```
 
-然后在 `registry.json` 注册:
+然后在 `DialectRegistry.java` 注册(与 `dialects.rs` ALL_DATABASES 人工同步):
 
-```json
-{
-  "dialects": {
-    "dm": "io.aqua.connector.dialects.DmDialect"
-  }
-}
+```java
+// 专门实现(需要特化反解时)
+register(new DmDialect());
+// 或通用兜底(零特化,装 jar 即可反解)
+register(new GenericJdbcDialect("dm", "dm.jdbc.driver.DmDriver"));
 ```
 
 ---
@@ -224,7 +223,7 @@ sqlite = ["rusqlite"]
 - [ ] COMMENT 语法配置(`generators/ddl/table.rs`)
 - [ ] DDL 生成器测试(`tests/generators_ddl.rs`)
 - [ ] (JDBC 方言) connector.jar Dialect 实现
-- [ ] (JDBC 方言) registry.json 注册
+- [ ] (JDBC 方言) `DialectRegistry.java` register + `dialects.rs` ALL_DATABASES 加项
 - [ ] (Native 方言) Driver trait 实现
 - [ ] (Native 方言) Cargo.toml 依赖
 - [ ] 更新文档(`docs/design.md` §4.1 类型映射表)
