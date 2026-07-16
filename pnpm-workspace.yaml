@@ -2,4 +2,3 @@ packages:
   - app
 allowBuilds:
   esbuild: true
-  vue-demi: true
