@@ -50,7 +50,7 @@ jobs:
       # beforeBuildCommand 自动:pnpm build:connector && pnpm --filter @aqua/app build
       - run: pnpm tauri build
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.glob }}
@@ -63,7 +63,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
