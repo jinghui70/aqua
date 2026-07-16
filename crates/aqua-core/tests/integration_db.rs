@@ -75,7 +75,7 @@ fn pg_config() -> DbConfig {
 #[tokio::test]
 #[ignore]
 async fn mysql_test_connection() {
-    let driver = create_driver(mysql_config(), None).expect("创建 MySQL 驱动失败");
+    let driver = create_driver(mysql_config(), None, "connector.jar").expect("创建 MySQL 驱动失败");
     driver.test_connection().await.expect("MySQL 连接应成功");
 }
 
@@ -113,7 +113,7 @@ async fn mysql_full_roundtrip() {
     pool.disconnect().await.expect("断开连接失败");
 
     // 2. Driver: test_connection
-    let driver = create_driver(config.clone(), None).expect("创建驱动失败");
+    let driver = create_driver(config.clone(), None, "connector.jar").expect("创建驱动失败");
     driver.test_connection().await.expect("连接应成功");
 
     // 3. Driver: list_tables
@@ -150,7 +150,7 @@ async fn mysql_full_roundtrip() {
     assert!(indexes.iter().any(|i| i.unique), "应有唯一索引(USER_NAME)");
 
     // 6. import_from_db 全链路
-    let driver2 = create_driver(config.clone(), None).expect("创建导入驱动失败");
+    let driver2 = create_driver(config.clone(), None, "connector.jar").expect("创建导入驱动失败");
     let imported = import_from_db(
         driver2.as_ref(),
         &config.database,
@@ -191,7 +191,7 @@ async fn mysql_full_roundtrip() {
 #[tokio::test]
 #[ignore]
 async fn pg_test_connection() {
-    let driver = create_driver(pg_config(), None).expect("创建 PG 驱动失败");
+    let driver = create_driver(pg_config(), None, "connector.jar").expect("创建 PG 驱动失败");
     driver.test_connection().await.expect("PG 连接应成功");
 }
 
@@ -230,7 +230,7 @@ async fn pg_full_roundtrip() {
     }
 
     // 2. Driver: list_tables
-    let driver = create_driver(config.clone(), None).expect("创建驱动失败");
+    let driver = create_driver(config.clone(), None, "connector.jar").expect("创建驱动失败");
     driver.test_connection().await.expect("连接应成功");
 
     let tables = driver
@@ -256,7 +256,7 @@ async fn pg_full_roundtrip() {
     assert!(!columns.is_empty(), "应有列");
 
     // 4. import_from_db
-    let driver2 = create_driver(config.clone(), None).expect("创建导入驱动失败");
+    let driver2 = create_driver(config.clone(), None, "connector.jar").expect("创建导入驱动失败");
     let imported = import_from_db(driver2.as_ref(), "public", Some("com.example".to_string()))
         .await
         .expect("导入失败");
@@ -268,4 +268,37 @@ async fn pg_full_roundtrip() {
             .any(|t| t.code.eq_ignore_ascii_case("SYS_USER")),
         "导入应含 SYS_USER(导入时 to_uppercase)"
     );
+}
+
+// ============================================================
+// JDBC (H2) 集成测试 - 验证 connector.jar 路径 + check_java + spawn 全链路
+// ============================================================
+
+/// H2 内存库配置(对齐 connector H2Dialect: host 空 -> jdbc:h2:mem:)。
+fn h2_config() -> DbConfig {
+    DbConfig {
+        dialect: "h2".to_string(),
+        host: "".to_string(),
+        port: 0,
+        user: "sa".to_string(),
+        password: "".to_string(),
+        database: "aqua_test".to_string(),
+        schema: None,
+    }
+}
+
+/// connector.jar 绝对路径(需先 `pnpm build:connector` 产出 src-tauri/resources/connector.jar)。
+fn connector_jar() -> String {
+    format!(
+        "{}/../../src-tauri/resources/connector.jar",
+        env!("CARGO_MANIFEST_DIR")
+    )
+}
+
+#[tokio::test]
+#[ignore]
+async fn h2_test_connection() {
+    // 全链路:create_driver(connector_path) -> JdbcDriver::call -> check_java -> spawn connector.jar
+    let driver = create_driver(h2_config(), None, &connector_jar()).expect("创建 H2 驱动失败");
+    driver.test_connection().await.expect("H2 连接应成功");
 }

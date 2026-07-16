@@ -12,6 +12,7 @@ use super::{DbConfig, Driver, DriverError};
 /// # 参数
 /// - `config`: 数据库连接配置
 /// - `drivers_dir`: drivers/ 目录(JDBC 方言加载外置 jar 用;native 方言忽略)。`None` 则不加载外置驱动。
+/// - `connector_path`: connector.jar 绝对路径(JDBC 方言 spawn 用;native 方言忽略)。
 ///
 /// # 支持的方言
 /// - "mysql": MySQL native 驱动
@@ -20,6 +21,7 @@ use super::{DbConfig, Driver, DriverError};
 pub fn create_driver(
     config: DbConfig,
     drivers_dir: Option<PathBuf>,
+    connector_path: &str,
 ) -> Result<Box<dyn Driver>, DriverError> {
     match config.dialect.as_str() {
         "mysql" => Ok(Box::new(MysqlDriver::new(&config)?)),
@@ -27,7 +29,7 @@ pub fn create_driver(
         // 其他方言(Oracle/DM/KingBase/GBase/H2 等)走 JDBC connector.jar
         _ => Ok(Box::new(JdbcDriver::new(
             &config,
-            "connector.jar",
+            connector_path,
             drivers_dir,
         ))),
     }

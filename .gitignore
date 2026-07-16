@@ -14,6 +14,9 @@ connector/target
 connector/build
 connector/.gradle
 
+# connector.jar 打包产物(由 build:connector 脚本复制,不入库)
+src-tauri/resources/connector.jar
+
 # aqua 项目运行时
 *.db
 .dbconfig.json

@@ -11,6 +11,10 @@ use std::path::PathBuf;
 use std::process::Stdio;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
+use tokio::sync::OnceCell;
+
+/// 连接 Java 数据源所需的最低 JDK 版本。
+const MIN_JAVA_MAJOR: u32 = 17;
 
 /// JDBC 驱动(spawn connector.jar)。
 pub struct JdbcDriver {
@@ -19,23 +23,40 @@ pub struct JdbcDriver {
     /// drivers/ 目录(含 databases.json + 外置 JDBC jar)。
     /// 传给 connector,触发其加载 installed 驱动(Oracle 等)。
     drivers_dir: Option<PathBuf>,
+    /// java 版本检测缓存(首次 call 时检测一次,通过则后续跳过,避免每次 spawn 开销)。
+    java_checked: OnceCell<()>,
 }
 
 impl JdbcDriver {
     /// 创建 JDBC 驱动。
     ///
-    /// - `connector_path`: connector.jar 路径(默认 "connector.jar")。
+    /// - `connector_path`: connector.jar 路径(打包后为 resource_dir 绝对路径)。
     /// - `drivers_dir`: drivers/ 目录;`Some` 时 connector 会加载其中 installed 的 JDBC jar。
     pub fn new(config: &DbConfig, connector_path: &str, drivers_dir: Option<PathBuf>) -> Self {
         Self {
             config: config.clone(),
             connector_path: connector_path.to_string(),
             drivers_dir,
+            java_checked: OnceCell::new(),
         }
+    }
+
+    /// 检测 java 运行时是否存在且版本 >= 17(首次检测后缓存结果)。
+    ///
+    /// 在每次 `call` 前调用:缺失/版本不足时返回清晰提示,不静默失败。
+    /// 失败不缓存,用户安装/升级 JDK 后重试会重新检测。
+    async fn check_java(&self) -> Result<(), DriverError> {
+        self.java_checked
+            .get_or_try_init(|| async { check_java_once().await })
+            .await
+            .map(|_| ())
     }
 
     /// 调用 connector.jar,发送请求,返回响应 JSON。
     async fn call(&self, action: &str, extra: Option<Value>) -> Result<Value, DriverError> {
+        // 连接前确保 java >= 17(首次检测后缓存)
+        self.check_java().await?;
+
         let mut request = json!({
             "action": action,
             "dialect": self.config.dialect,
@@ -101,6 +122,69 @@ impl JdbcDriver {
 
         Ok(response)
     }
+}
+
+/// 检测 java 运行时:spawn `java -version`,解析主版本号,要求 >= 17。
+///
+/// `java -version` 将版本信息输出到 stderr。缺失或版本不足返回带明确指引的 `DriverError`。
+async fn check_java_once() -> Result<(), DriverError> {
+    let output = Command::new("java")
+        .arg("-version")
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .await
+        .map_err(|e| {
+            DriverError::ConnectionFailed(format!(
+                "未检测到 Java 运行时(连接 JDBC 数据源需 JDK 17+,请安装并配置 JAVA_HOME/PATH): {}",
+                e
+            ))
+        })?;
+
+    // java -version 输出到 stderr;个别发行版可能输出到 stdout,合并解析
+    let combined = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stderr),
+        String::from_utf8_lossy(&output.stdout)
+    );
+
+    let major = parse_java_major_version(&combined).ok_or_else(|| {
+        DriverError::ConnectionFailed(
+            "无法解析 Java 版本(连接 JDBC 数据源需 JDK 17+,请检查 JAVA_HOME/PATH 配置)".to_string(),
+        )
+    })?;
+
+    if major < MIN_JAVA_MAJOR {
+        return Err(DriverError::ConnectionFailed(format!(
+            "Java 版本过低(当前 {},需 {}+),请升级 JDK 并配置 JAVA_HOME/PATH",
+            major, MIN_JAVA_MAJOR
+        )));
+    }
+
+    Ok(())
+}
+
+/// 从 `java -version` 输出解析主版本号。
+///
+/// - Java 8 及更早:`1.8.0_292` -> 8
+/// - Java 9+:`17.0.1` -> 17、`21.0.1` -> 21
+fn parse_java_major_version(output: &str) -> Option<u32> {
+    let line = output.lines().find(|l| l.contains("version"))?;
+    let start = line.find('"')?;
+    let rest = &line[start + 1..];
+    let end = rest.find('"')?;
+    let version_str = &rest[..end]; // e.g. "17.0.1" / "1.8.0_292"
+
+    let mut parts = version_str.split('.');
+    let first = parts.next()?;
+    // 旧版 "1.8.x" 取第二段;新版 "17.x" 取首段
+    let major_str = if first == "1" {
+        parts.next()?.split('_').next()?
+    } else {
+        first
+    };
+    major_str.parse().ok()
 }
 
 #[async_trait]
@@ -224,6 +308,27 @@ mod tests {
         assert_eq!(parse_data_type("DECIMAL"), DataType::Decimal);
         assert_eq!(parse_data_type("DATETIME"), DataType::Datetime);
         assert_eq!(parse_data_type("BLOB"), DataType::Blob);
+    }
+
+    #[test]
+    fn test_parse_java_major_version() {
+        // Java 9+: 主版本号取首段
+        let openjdk17 = "openjdk version \"17.0.19\" 2026-04-21\n\
+             OpenJDK Runtime Environment (build 17.0.19+0)";
+        assert_eq!(parse_java_major_version(openjdk17), Some(17));
+
+        let temurin21 = "openjdk version \"21.0.3\" 2024-04-16";
+        assert_eq!(parse_java_major_version(temurin21), Some(21));
+
+        // Java 8: "1.8.0_292" -> 8
+        let java8 = "java version \"1.8.0_292\"\nJava(TM) SE Runtime Environment (build 1.8.0_292-b10)";
+        assert_eq!(parse_java_major_version(java8), Some(8));
+
+        // 版本输出在 stderr(实际场景),解析逻辑与位置无关
+        assert_eq!(parse_java_major_version("noise\nversion \"11.0.1\""), Some(11));
+
+        // 无法解析
+        assert_eq!(parse_java_major_version("no version here"), None);
     }
 
     #[test]

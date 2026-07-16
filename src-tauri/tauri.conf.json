@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../app/dist",
     "devUrl": "http://localhost:1420",
-    "beforeDevCommand": "pnpm --filter @aqua/app dev",
-    "beforeBuildCommand": "pnpm --filter @aqua/app build"
+    "beforeDevCommand": "pnpm build:connector:if-missing && pnpm --filter @aqua/app dev",
+    "beforeBuildCommand": "pnpm build:connector && pnpm --filter @aqua/app build"
   },
   "app": {
     "windows": [
@@ -25,8 +25,14 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
-    "icon": ["icons/icon.png"],
-    "resources": ["resources/builtin-biztypes.json"]
+    "targets": ["dmg", "nsis"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": ["resources/builtin-biztypes.json", "resources/connector.jar"]
   }
 }
