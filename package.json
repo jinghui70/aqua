@@ -7,7 +7,6 @@
     "tauri": "tauri",
     "dev": "tauri dev",
     "build": "tauri build",
-    "app:dev": "pnpm --filter @aqua/app dev",
     "build:connector": "node scripts/build-connector.mjs",
     "build:connector:if-missing": "node scripts/build-connector.mjs --if-missing"
   },
