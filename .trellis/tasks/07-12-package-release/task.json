@@ -3,7 +3,7 @@
   "name": "package-release",
   "title": "打包发布",
   "description": "Tauri bundle + 精简 JRE + connector.jar 分发打包",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": "aqua",

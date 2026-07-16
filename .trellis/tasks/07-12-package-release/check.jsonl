@@ -1,1 +1,2 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/aqua-core/backend/index.md", "reason": "aqua-core 后端质量检查规范:factory.rs/jdbc.rs 改动校验依据"}
+{"file": ".trellis/spec/aqua/backend/index.md", "reason": "src-tauri 壳层质量检查规范:commands/tauri.conf 改动校验依据"}

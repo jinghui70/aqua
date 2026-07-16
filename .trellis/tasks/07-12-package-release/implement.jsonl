@@ -1,1 +1,3 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": "docs/architecture.md", "reason": "连接层架构权威说明:connector.jar stdin/stdout 协议、Driver trait、native vs JDBC 分流。factory.rs/jdbc.rs 改动前必读"}
+{"file": ".trellis/spec/aqua-core/backend/index.md", "reason": "aqua-core 纯逻辑层规范:factory.rs(create_driver 加参)、jdbc.rs(check_java)改动需遵循"}
+{"file": ".trellis/spec/aqua/backend/index.md", "reason": "src-tauri 壳层规范:import.rs(resource_dir 定位)、tauri.conf.json(bundle 配置)改动需遵循"}
