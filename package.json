@@ -8,10 +8,11 @@
     "dev": "tauri dev",
     "build": "tauri build",
     "build:connector": "node scripts/build-connector.mjs",
-    "build:connector:if-missing": "node scripts/build-connector.mjs --if-missing"
+    "build:connector:if-missing": "node scripts/build-connector.mjs --if-missing",
+    "release": "bumpp"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2"
+    "@tauri-apps/cli": "^2",
+    "bumpp": "^11.1.0"
   }
 }
-

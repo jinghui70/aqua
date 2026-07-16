@@ -78,7 +78,7 @@ pnpm tauri build
 - **macOS**:双击 dmg 拖入应用后,首次启动若提示"无法打开"或"已损坏",**右键点击应用 → 打开** → 确认。仅首次需要。
 - **Windows**:运行 setup.exe 后,SmartScreen 可能提示"未识别的应用",点击 **"更多信息" → "仍要运行"**。
 
-分发方式:GitHub Release 或内部共享,手动上传安装包。无应用内自动更新。
+分发方式:GitHub Release(发版时 CI 自动上传,见 §8)或内部共享。无应用内自动更新。
 
 ---
 
@@ -87,3 +87,24 @@ pnpm tauri build
 - `src-tauri/resources/connector.jar` 是构建产物(已 gitignore)。`tauri dev` 启动时通过 `beforeDevCommand` 自动执行 `pnpm build:connector:if-missing`:**仅在 jar 不存在时构建一次**(fresh clone 首次启动会跑一次 Maven,之后启动只做一次文件存在性检查,近乎零开销)。
 - connector 源码(`connector/`)改动后,dev 不会自动重建;需手动 `pnpm build:connector` 全量重建后再 `tauri dev`。
 - 仅 `tauri build` 的 `beforeBuildCommand` 每次全量重建 connector.jar(确保产物最新)。
+
+---
+
+## 8. CI 自动打包与发版
+
+发版由 GitHub Actions(`.github/workflows/release.yml`)自动打包,本地 `bumpp` 触发。
+
+### 发版
+
+```sh
+pnpm release
+```
+
+`bumpp` 交互选版本(patch/minor/major/pre-release),自动同步 4 处版本号(根 + `app/package.json`、`tauri.conf.json`、`Cargo.toml` `[workspace.package]`,经 `scripts/version-sync.mjs`),再 `commit + tag vX.Y.Z + push`。推送 tag 触发 CI:macOS + Windows 并行构建,产出 dmg/exe 上传到 GitHub Release(附自动 release notes)。
+
+### CI 触发方式
+
+- `push tag v*`:两平台并行构建 -> 上传 dmg + nsis exe 到 GitHub Release。
+- `workflow_dispatch`(Actions 页手动):只构建留 artifact 供下载测试,不建 Release。
+
+> 产物版本一致性:`tauri.conf.json`(dmg/exe 文件名)、`Cargo.toml`(二进制)、`package.json`(bumpp 入口)三者由 `version-sync.mjs` 发版时强制同步。

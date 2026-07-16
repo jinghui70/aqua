@@ -1,0 +1,76 @@
+name: release
+
+# 触发:
+#   - push tag v*: 构建 macOS dmg + Windows nsis,上传到 GitHub Release
+#   - workflow_dispatch: 手动触发,仅留 artifact 下载测试(不建 Release)
+# 本地试跑:Actions 页 -> release -> Run workflow;发版:git tag v0.1.0 && git push origin v0.1.0
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest        # arm64 runner -> aarch64 dmg
+            artifact: aqua-macos-arm64
+            glob: target/release/bundle/dmg/*.dmg
+          - os: windows-latest      # x64 runner -> x64 nsis setup.exe
+            artifact: aqua-windows-x64
+            glob: target/release/bundle/nsis/*.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.8.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # connector.jar 构建(Maven package,需 JDK 17);runner 预装 Maven
+      - uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - uses: Swatinem/rust-cache@v2
+
+      # beforeBuildCommand 自动:pnpm build:connector && pnpm --filter @aqua/app build
+      - run: pnpm tauri build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.glob }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/*.dmg
+            artifacts/*.exe
+          generate_release_notes: true
