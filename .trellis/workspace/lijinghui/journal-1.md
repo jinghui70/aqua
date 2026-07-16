@@ -756,3 +756,40 @@ Project 加 name:Option<String>(serde default+skip,向后兼容旧 schema),Rust 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 23: 打包发布实施 + 连接层过时遗留清理
+
+**Date**: 2026-07-16
+**Task**: 打包发布实施 + 连接层过时遗留清理
+**Branch**: `main`
+
+### Summary
+
+package-release 任务实施:connector.jar 经 resource_dir 定位(dev/打包一致)、check_java 检测 JDK17+(OnceCell 缓存失败不缓存)、build:connector 跨平台脚本接入 beforeBuild/beforeDev(if-missing)、macOS dmg 打包闭环验证、Tauri bundle resource 定位 spec。清理过时遗留:移除未用 app:dev script;删两份 registry.json + 9 处文档对齐到硬编码 driverClass 机制(dialects.rs ALL_DATABASES + DialectRegistry 人工同步,外置 jar 经 databases.json+URLClassLoader)。Windows nsis 待用户实测。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3e4908c` | (see git log) |
+| `b79cb0b` | (see git log) |
+| `00bee35` | (see git log) |
+| `7ca58d9` | (see git log) |
+| `2a9f9f8` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
