@@ -106,14 +106,6 @@ impl JdbcDriver {
             }
         }
 
-        // 诊断日志:完整 spawn 现场(password 脱敏),定位"手动成功、应用失败"差异
-        log::info!(
-            "spawn connector: java -jar {} (drivers_dir={:?})",
-            connector_path,
-            drivers_dir
-        );
-        log::info!("connector request: {}", redact_password(&request));
-
         let mut cmd = java_command();
         cmd.arg("-jar")
             .arg(&connector_path)
@@ -141,14 +133,6 @@ impl JdbcDriver {
             .await
             .map_err(|e| DriverError::ConnectionFailed(format!("connector 执行失败: {}", e)))?;
 
-        // 诊断日志:exit code + stdout/stderr 双解码(UTF-8 lossy 与 GBK),
-        // 用于定位"手动成功、应用失败"的差异(Windows 中文控制台按 GBK 输出)。
-        log::info!("connector exit: {:?}", output.status.code());
-        log::info!("connector stdout (utf8-lossy): {}", String::from_utf8_lossy(&output.stdout));
-        log::info!("connector stdout (gbk): {}", encoding_rs::GBK.decode(&output.stdout).0);
-        log::info!("connector stderr (utf8-lossy): {}", String::from_utf8_lossy(&output.stderr));
-        log::info!("connector stderr (gbk): {}", encoding_rs::GBK.decode(&output.stderr).0);
-
         // 错误处理:优先解析 stdout 的 JSON 业务错误(Java 经 writeError 写 stdout);
         // stdout 非 JSON 时(通常是 JVM launcher 直接报错,如"无法访问 jarfile"),
         // 按 GBK 解码回传,避免中文乱码遮蔽真实原因。
@@ -165,10 +149,16 @@ impl JdbcDriver {
         if !output.status.success() {
             // JVM launcher 报错或进程异常:stdout+stderr 合并,按系统编码解码可读
             let detail = if !stdout_str.trim().is_empty() {
-                stdout_str
+                &stdout_str
             } else {
-                stderr_str
+                &stderr_str
             };
+            log::error!(
+                "connector 失败 exit={}: stdout={} stderr={}",
+                output.status.code().map(|c| c.to_string()).unwrap_or_else(|| "?".into()),
+                stdout_str.trim(),
+                stderr_str.trim()
+            );
             return Err(DriverError::ConnectionFailed(format!(
                 "connector 失败(exit={}): {}",
                 output.status.code().map(|c| c.to_string()).unwrap_or_else(|| "?".into()),
@@ -176,8 +166,10 @@ impl JdbcDriver {
             )));
         }
 
-        let response: Value = serde_json::from_slice(&output.stdout)
-            .map_err(|e| DriverError::ConnectionFailed(format!("connector 响应解析失败: {}", e)))?;
+        let response: Value = serde_json::from_slice(&output.stdout).map_err(|e| {
+            log::error!("connector 响应解析失败: {} stdout={}", e, stdout_str);
+            DriverError::ConnectionFailed(format!("connector 响应解析失败: {}", e))
+        })?;
 
         Ok(response)
     }
@@ -203,17 +195,6 @@ fn decode_console(bytes: &[u8]) -> String {
         Ok(s) => s.to_string(),
         Err(_) => encoding_rs::GBK.decode(bytes).0.into_owned(),
     }
-}
-
-/// 生成 request JSON 的脱敏字符串(日志用):password 替换为 "***"。
-fn redact_password(request: &Value) -> String {
-    let mut sanitized = request.clone();
-    if let Some(obj) = sanitized.as_object_mut() {
-        if obj.contains_key("password") {
-            obj.insert("password".to_string(), json!("***"));
-        }
-    }
-    sanitized.to_string()
 }
 
 /// 检测 java 运行时:spawn `java -version`,解析主版本号,要求 >= 17。
@@ -257,7 +238,6 @@ async fn check_java_once() -> Result<(), DriverError> {
         )));
     }
 
-    log::info!("java 检测通过,主版本 {}", major);
     Ok(())
 }
 
@@ -448,15 +428,6 @@ mod tests {
         // "错误" 的 GBK 字节: 0xB4 0xED 0xCE 0xF3
         let gbk_bytes = &[0xB4, 0xED, 0xCE, 0xF3];
         assert_eq!(decode_console(gbk_bytes), "错误");
-    }
-
-    #[test]
-    fn test_redact_password() {
-        let req = json!({ "action": "testConnection", "user": "admin", "password": "secret123" });
-        let redacted = redact_password(&req);
-        assert!(redacted.contains("***"));
-        assert!(!redacted.contains("secret123"));
-        assert!(redacted.contains("admin")); // 非敏感字段保留
     }
 
     #[test]

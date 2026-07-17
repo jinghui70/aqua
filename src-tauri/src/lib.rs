@@ -104,8 +104,13 @@ fn init_logger<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     let _ = log::set_boxed_logger(Box::new(FileLogger {
         file: Mutex::new(file),
     }));
-    log::set_max_level(log::LevelFilter::Info);
-    log::info!("aqua 日志初始化: {}", dir.join("aqua.log").display());
+    // 日志级别由 AQUA_LOG 环境变量控制(info/warn/error/off),默认 info
+    let level = std::env::var("AQUA_LOG")
+        .ok()
+        .and_then(|s| s.parse::<log::LevelFilter>().ok())
+        .unwrap_or(log::LevelFilter::Info);
+    log::set_max_level(level);
+    log::info!("aqua 日志初始化 (级别={}): {}", level, dir.join("aqua.log").display());
 }
 
 /// 启动 GUI 模式,注册原生菜单 + Tauri commands。
