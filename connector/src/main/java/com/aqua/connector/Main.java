@@ -1,8 +1,12 @@
 package com.aqua.connector;
 
 import java.io.File;
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,6 +33,10 @@ public class Main {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public static void main(String[] args) {
+        // Windows 中文系统 System.out 默认 GBK 编码,JSON 响应含中文(如列注释)时输出 GBK 字节,
+        // Rust 端按 UTF-8 解析失败("invalid unicode code point")。强制 stdout/stderr 为 UTF-8。
+        System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out), true, StandardCharsets.UTF_8));
+        System.setErr(new PrintStream(new FileOutputStream(FileDescriptor.err), true, StandardCharsets.UTF_8));
         try {
             // 1. 读 stdin
             String stdin = readStdin();
