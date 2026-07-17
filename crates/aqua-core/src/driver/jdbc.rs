@@ -67,9 +67,19 @@ impl JdbcDriver {
             "database": self.config.database,
         });
 
+        // Windows: Tauri resource_dir/app_data_dir 返回带 `\\?\` verbatim 前缀的路径
+        // (绕过 MAX_PATH 限制)。但 Java launcher 无法打开带此前缀的 jar,报
+        // "尝试打开文件 \\?\... 时出现意外错误"。strip 成普通 Win32 路径再传给 java。
+        // 其他平台路径无此前缀,strip 为 no-op。
+        let connector_path = strip_verbatim(&self.connector_path).to_string();
+        let drivers_dir = self
+            .drivers_dir
+            .as_ref()
+            .map(|d| strip_verbatim(&d.to_string_lossy()).to_string());
+
         // 传 drivers/ 目录,connector 据此加载 installed 的外置 JDBC jar(Oracle 等)
-        if let Some(ref dir) = self.drivers_dir {
-            request["driversDir"] = json!(dir.to_string_lossy());
+        if let Some(ref dir) = drivers_dir {
+            request["driversDir"] = json!(dir);
         }
 
         if let Some(extra_val) = extra {
@@ -83,14 +93,14 @@ impl JdbcDriver {
         // 诊断日志:完整 spawn 现场(password 脱敏),定位"手动成功、应用失败"差异
         log::info!(
             "spawn connector: java -jar {} (drivers_dir={:?})",
-            self.connector_path,
-            self.drivers_dir
+            connector_path,
+            drivers_dir
         );
         log::info!("connector request: {}", redact_password(&request));
 
         let mut child = Command::new("java")
             .arg("-jar")
-            .arg(&self.connector_path)
+            .arg(&connector_path)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -154,6 +164,16 @@ impl JdbcDriver {
 
         Ok(response)
     }
+}
+
+/// 去掉 Windows verbatim 路径前缀 `\\?\`。
+///
+/// Tauri 在 Windows 上 `resource_dir`/`app_data_dir` 返回带 `\\?\` 前缀的 verbatim 路径
+/// (用于绕过 MAX_PATH 260 限制)。但 Java launcher 无法打开带此前缀的 jar,报
+/// "尝试打开文件 \\?\... 时出现意外错误"。strip 成普通 Win32 路径后 java 可正常打开。
+/// connector.jar 在本地盘且路径远 < 260,strip 安全;其他平台无此前缀,no-op。
+fn strip_verbatim(path: &str) -> &str {
+    path.strip_prefix(r"\\?\").unwrap_or(path)
 }
 
 /// 解码子进程输出:先严格 UTF-8,失败回退 GBK(Windows 中文控制台)。
@@ -412,6 +432,25 @@ mod tests {
         assert!(redacted.contains("***"));
         assert!(!redacted.contains("secret123"));
         assert!(redacted.contains("admin")); // 非敏感字段保留
+    }
+
+    #[test]
+    fn test_strip_verbatim() {
+        // Windows verbatim 前缀 -> 普通 Win32 路径
+        assert_eq!(
+            strip_verbatim(r"\\?\C:\Users\app\connector.jar"),
+            r"C:\Users\app\connector.jar"
+        );
+        // 无前缀 -> no-op
+        assert_eq!(
+            strip_verbatim(r"C:\Users\app\connector.jar"),
+            r"C:\Users\app\connector.jar"
+        );
+        // 其他平台路径无此前缀 -> no-op
+        assert_eq!(
+            strip_verbatim("/usr/local/app/connector.jar"),
+            "/usr/local/app/connector.jar"
+        );
     }
 
     #[test]
