@@ -8,9 +8,13 @@
 pub mod cli;
 pub mod commands;
 
+use std::fs::{File, OpenOptions};
+use std::io::Write;
+use std::sync::Mutex;
+
 use commands::{builtin, database, dataset, datasource, generate, import, project};
 use tauri::menu::{MenuBuilder, SubmenuBuilder};
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 
 /// 构建原生窗口菜单(§6.1),菜单事件通过 "menu" event 发到前端。
 fn build_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<tauri::menu::Menu<R>> {
@@ -63,22 +67,51 @@ fn build_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<tau
     builder.items(&[&file, &config, &export, &help]).build()
 }
 
+/// 落文件日志(GUI 无 console,Windows 上 spawn connector 的现场靠此定位)。
+/// 自实现而非 tauri-plugin-log:确保日志目录创建 + logger 注册可控,避免 plugin setup
+/// 失败被吞导致日志静默丢失。Windows 路径: %LOCALAPPDATA%\com.aqua.app\logs\aqua.log
+struct FileLogger {
+    file: Mutex<File>,
+}
+
+impl log::Log for FileLogger {
+    fn enabled(&self, _: &log::Metadata) -> bool {
+        true
+    }
+    fn log(&self, record: &log::Record) {
+        if let Ok(mut f) = self.file.lock() {
+            let _ = writeln!(f, "{} {}", record.level(), record.args());
+        }
+    }
+    fn flush(&self) {}
+}
+
+/// 初始化文件日志:创建日志目录,注册全局 logger(Info 级别)。
+fn init_logger<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    let dir = match app.path().app_log_dir() {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+    let _ = std::fs::create_dir_all(&dir);
+    let file = match OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(dir.join("aqua.log"))
+    {
+        Ok(f) => f,
+        Err(_) => return,
+    };
+    let _ = log::set_boxed_logger(Box::new(FileLogger {
+        file: Mutex::new(file),
+    }));
+    log::set_max_level(log::LevelFilter::Info);
+    log::info!("aqua 日志初始化: {}", dir.join("aqua.log").display());
+}
+
 /// 启动 GUI 模式,注册原生菜单 + Tauri commands。
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        // 落文件日志:GUI 无 console,Windows 上 spawn connector 的现场靠此定位。
-        // Windows 路径: %LOCALAPPDATA%\com.aqua.app\logs\aqua.log
-        .plugin(
-            tauri_plugin_log::Builder::new()
-                .target(tauri_plugin_log::Target::new(
-                    tauri_plugin_log::TargetKind::LogDir {
-                        file_name: Some("aqua".into()),
-                    },
-                ))
-                .level(log::LevelFilter::Info)
-                .build(),
-        )
         .menu(build_menu)
         .on_menu_event(|app, event| {
             // 菜单项 id 发到前端,由 useMenuActions 分发
@@ -107,6 +140,10 @@ pub fn run() {
             database::uninstall_driver,
             builtin::builtin_biztypes_load,
         ])
+        .setup(|app| {
+            init_logger(app.handle());
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("aqua 启动失败");
 }
