@@ -6,6 +6,7 @@ import java.sql.Driver;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,15 @@ public abstract class AbstractJdbcDialect implements Dialect {
     /** 子类覆写 schema 解析逻辑(默认直接用传入 schema,Oracle 覆写为 conn.getSchema()) */
     protected String resolveSchema(Connection conn, String schema) throws SQLException {
         return schema;
+    }
+
+    /**
+     * 解析表的列注释补充(默认空,用 ResultSetMetaData REMARKS)。
+     * Oracle 等方言覆写:REMARKS 常为空,从数据字典(如 USER_COL_COMMENTS)批量补查。
+     * 返回 columnName -> comment;getColumns 中 REMARKS 为空时取用。
+     */
+    protected Map<String, String> resolveColumnComments(Connection conn, String schema, String table) throws SQLException {
+        return Collections.emptyMap();
     }
 
     @Override
@@ -84,6 +94,8 @@ public abstract class AbstractJdbcDialect implements Dialect {
         }
 
         List<ColumnMeta> columns = new ArrayList<>();
+        // Oracle 等方言 REMARKS 为空,从数据字典批量补查列注释
+        Map<String, String> extraComments = resolveColumnComments(conn, schema, table);
         try (ResultSet rs = meta.getColumns(conn.getCatalog(), schema, table, "%")) {
             while (rs.next()) {
                 String colName = rs.getString("COLUMN_NAME");
@@ -94,7 +106,10 @@ public abstract class AbstractJdbcDialect implements Dialect {
                 int scale = rs.getInt("DECIMAL_DIGITS");
                 boolean nullable = rs.getInt("NULLABLE") == DatabaseMetaData.columnNullable;
                 String defaultValue = rs.getString("COLUMN_DEF");
-                String comment = rs.getString("REMARKS");
+                String remarks = rs.getString("REMARKS");
+                String comment = (remarks != null && !remarks.isBlank())
+                        ? remarks
+                        : extraComments.get(colName);
 
                 columns.add(new ColumnMeta(
                         colName,
