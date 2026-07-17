@@ -793,3 +793,40 @@ package-release 任务实施:connector.jar 经 resource_dir 定位(dev/打包一
 ### Next Steps
 
 - None - task complete
+
+## Session: connector spawn 诊断日志 + 编码修复
+
+**Date**: 2026-07-16
+**Task**: 07-16-connector-spawn-diagnostics
+**Branch**: `main`
+
+### Summary
+
+Windows 发版后测试连接报"连接失败 + 乱码 + jar 路径 + 乱码"。三轮排查确认:同机同 jar 手动成功、应用失败,核心矛盾未知。停止推测,改为加落文件诊断日志拿确凿现场,并顺带修编码可读性。
+
+### Main Changes
+
+- 依赖:`aqua-core` 加 `log`+`encoding_rs`;`src-tauri` 加 `tauri-plugin-log` v2.9.0。
+- MSRV 修正:workspace `rust-version` 1.77 -> 1.77.2(对齐 tauri 2.x 生态真实要求,消除 tauri-plugin-log 被降到 rc2 的根因)。
+- `src-tauri/src/lib.rs`:注册日志 plugin,落 `%LOCALAPPDATA%\com.aqua.app\logs\aqua.log`。
+- `jdbc.rs`:
+  - `call()` 埋点:完整 argv、脱敏 request、exit code、stdout/stderr 的 UTF-8+GBK 双解码。
+  - 错误处理重写:优先解析 stdout JSON `{error}`(Java writeError 走 stdout),否则按系统编码解码回传;修复 exit≠0 只读 stderr 丢失真实报错的 bug。
+  - 新增 `decode_console`(UTF-8 严格 -> GBK 回退,跨平台自适应)与 `redact_password`。
+  - `check_java_once()` 改用 `decode_console` + 加 log。
+
+### Verification
+
+- `cargo test -p aqua-core`:全绿(jdbc 模块 7 测试,含新 decode_console/redact_password 3 个)。
+- `cargo build -p aqua`:通过。
+- `cargo clippy -p aqua-core -p aqua`:零警告。
+- Windows 真机验证待发版后回收 `aqua.log` 定位根因。
+
+### Status
+
+[OK] **代码完成,待发版回收日志定位根因**
+
+### Next Steps
+
+- 用户发版后复现一次测试连接,回收 `aqua.log`,据 `connector exit`/`stdout(gbk)`/`argv` 定位"手动成功 vs 应用失败"差异。
+- 黑窗口本轮保留(证据),根因定位后另开 task 用 CREATE_NO_WINDOW 消除。

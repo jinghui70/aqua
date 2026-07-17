@@ -67,6 +67,18 @@ fn build_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<tau
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        // 落文件日志:GUI 无 console,Windows 上 spawn connector 的现场靠此定位。
+        // Windows 路径: %LOCALAPPDATA%\com.aqua.app\logs\aqua.log
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::LogDir {
+                        file_name: Some("aqua".into()),
+                    },
+                ))
+                .level(log::LevelFilter::Info)
+                .build(),
+        )
         .menu(build_menu)
         .on_menu_event(|app, event| {
             // 菜单项 id 发到前端,由 useMenuActions 分发

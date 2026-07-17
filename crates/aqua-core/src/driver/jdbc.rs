@@ -80,6 +80,14 @@ impl JdbcDriver {
             }
         }
 
+        // 诊断日志:完整 spawn 现场(password 脱敏),定位"手动成功、应用失败"差异
+        log::info!(
+            "spawn connector: java -jar {} (drivers_dir={:?})",
+            self.connector_path,
+            self.drivers_dir
+        );
+        log::info!("connector request: {}", redact_password(&request));
+
         let mut child = Command::new("java")
             .arg("-jar")
             .arg(&self.connector_path)
@@ -88,6 +96,7 @@ impl JdbcDriver {
             .stderr(Stdio::piped())
             .spawn()
             .map_err(|e| {
+                log::error!("spawn connector 失败: {}", e);
                 DriverError::ConnectionFailed(format!("启动 connector 失败(需 JDK 17+): {}", e))
             })?;
 
@@ -105,23 +114,69 @@ impl JdbcDriver {
             .await
             .map_err(|e| DriverError::ConnectionFailed(format!("connector 执行失败: {}", e)))?;
 
+        // 诊断日志:exit code + stdout/stderr 双解码(UTF-8 lossy 与 GBK),
+        // 用于定位"手动成功、应用失败"的差异(Windows 中文控制台按 GBK 输出)。
+        log::info!("connector exit: {:?}", output.status.code());
+        log::info!("connector stdout (utf8-lossy): {}", String::from_utf8_lossy(&output.stdout));
+        log::info!("connector stdout (gbk): {}", encoding_rs::GBK.decode(&output.stdout).0);
+        log::info!("connector stderr (utf8-lossy): {}", String::from_utf8_lossy(&output.stderr));
+        log::info!("connector stderr (gbk): {}", encoding_rs::GBK.decode(&output.stderr).0);
+
+        // 错误处理:优先解析 stdout 的 JSON 业务错误(Java 经 writeError 写 stdout);
+        // stdout 非 JSON 时(通常是 JVM launcher 直接报错,如"无法访问 jarfile"),
+        // 按 GBK 解码回传,避免中文乱码遮蔽真实原因。
+        let stdout_str = decode_console(&output.stdout);
+        let stderr_str = decode_console(&output.stderr);
+
+        // stdout 可能为有效 JSON 响应(含 {error:...}),即使 exit≠0 也优先取
+        if let Ok(response) = serde_json::from_slice::<Value>(&output.stdout) {
+            if let Some(error) = response.get("error").and_then(|v| v.as_str()) {
+                return Err(DriverError::QueryFailed(error.to_string()));
+            }
+        }
+
         if !output.status.success() {
+            // JVM launcher 报错或进程异常:stdout+stderr 合并,按系统编码解码可读
+            let detail = if !stdout_str.trim().is_empty() {
+                stdout_str
+            } else {
+                stderr_str
+            };
             return Err(DriverError::ConnectionFailed(format!(
-                "connector 失败: {}",
-                String::from_utf8_lossy(&output.stderr)
+                "connector 失败(exit={}): {}",
+                output.status.code().map(|c| c.to_string()).unwrap_or_else(|| "?".into()),
+                detail.trim()
             )));
         }
 
         let response: Value = serde_json::from_slice(&output.stdout)
             .map_err(|e| DriverError::ConnectionFailed(format!("connector 响应解析失败: {}", e)))?;
 
-        // 检查错误响应
-        if let Some(error) = response.get("error").and_then(|v| v.as_str()) {
-            return Err(DriverError::QueryFailed(error.to_string()));
-        }
-
         Ok(response)
     }
+}
+
+/// 解码子进程输出:先严格 UTF-8,失败回退 GBK(Windows 中文控制台)。
+///
+/// connector 正常 JSON 响应为 UTF-8/ASCII,严格解码必成功;
+/// JVM launcher 的本地化错误(如"无法访问 jarfile")在中文 Windows 上按 GBK 输出,
+/// UTF-8 严格解码失败 -> 回退 GBK -> 可读。跨平台自适应,无需平台条件编译。
+fn decode_console(bytes: &[u8]) -> String {
+    match std::str::from_utf8(bytes) {
+        Ok(s) => s.to_string(),
+        Err(_) => encoding_rs::GBK.decode(bytes).0.into_owned(),
+    }
+}
+
+/// 生成 request JSON 的脱敏字符串(日志用):password 替换为 "***"。
+fn redact_password(request: &Value) -> String {
+    let mut sanitized = request.clone();
+    if let Some(obj) = sanitized.as_object_mut() {
+        if obj.contains_key("password") {
+            obj.insert("password".to_string(), json!("***"));
+        }
+    }
+    sanitized.to_string()
 }
 
 /// 检测 java 运行时:spawn `java -version`,解析主版本号,要求 >= 17。
@@ -136,6 +191,7 @@ async fn check_java_once() -> Result<(), DriverError> {
         .output()
         .await
         .map_err(|e| {
+            log::error!("spawn java -version 失败: {}", e);
             DriverError::ConnectionFailed(format!(
                 "未检测到 Java 运行时(连接 JDBC 数据源需 JDK 17+,请安装并配置 JAVA_HOME/PATH): {}",
                 e
@@ -145,11 +201,12 @@ async fn check_java_once() -> Result<(), DriverError> {
     // java -version 输出到 stderr;个别发行版可能输出到 stdout,合并解析
     let combined = format!(
         "{}\n{}",
-        String::from_utf8_lossy(&output.stderr),
-        String::from_utf8_lossy(&output.stdout)
+        decode_console(&output.stderr),
+        decode_console(&output.stdout)
     );
 
     let major = parse_java_major_version(&combined).ok_or_else(|| {
+        log::warn!("无法解析 Java 版本,原始输出: {}", combined);
         DriverError::ConnectionFailed(
             "无法解析 Java 版本(连接 JDBC 数据源需 JDK 17+,请检查 JAVA_HOME/PATH 配置)".to_string(),
         )
@@ -162,6 +219,7 @@ async fn check_java_once() -> Result<(), DriverError> {
         )));
     }
 
+    log::info!("java 检测通过,主版本 {}", major);
     Ok(())
 }
 
@@ -329,6 +387,31 @@ mod tests {
 
         // 无法解析
         assert_eq!(parse_java_major_version("no version here"), None);
+    }
+
+    #[test]
+    fn test_decode_console_utf8() {
+        // 纯 ASCII / UTF-8:严格解码直通
+        assert_eq!(decode_console(b"{\"status\":\"ok\"}"), "{\"status\":\"ok\"}");
+        // UTF-8 中文(connector 正常 JSON 响应)
+        assert_eq!(decode_console("连接成功".as_bytes()), "连接成功");
+    }
+
+    #[test]
+    fn test_decode_console_gbk_fallback() {
+        // GBK 编码的"错误"(JVM launcher 在中文 Windows 的输出)
+        // "错误" 的 GBK 字节: 0xB4 0xED 0xCE 0xF3
+        let gbk_bytes = &[0xB4, 0xED, 0xCE, 0xF3];
+        assert_eq!(decode_console(gbk_bytes), "错误");
+    }
+
+    #[test]
+    fn test_redact_password() {
+        let req = json!({ "action": "testConnection", "user": "admin", "password": "secret123" });
+        let redacted = redact_password(&req);
+        assert!(redacted.contains("***"));
+        assert!(!redacted.contains("secret123"));
+        assert!(redacted.contains("admin")); // 非敏感字段保留
     }
 
     #[test]

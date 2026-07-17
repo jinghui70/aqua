@@ -29,3 +29,5 @@ base64 = "0.22"
 
 # data source 密码加密 (design.md AES-256-GCM)
 aes-gcm = "0.10"
+log = "0.4"
+encoding_rs = "0.8"
