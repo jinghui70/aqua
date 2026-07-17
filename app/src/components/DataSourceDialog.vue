@@ -104,7 +104,7 @@ async function testConnection() {
 </script>
 
 <template>
-  <el-dialog v-model="ui.dataSourceVisible" title="数据源配置" width="720px">
+  <el-dialog v-model="ui.dataSourceVisible" title="数据源配置" width="720px" :close-on-click-modal="false">
     <div class="flex gap-16" style="height: 400px">
       <!-- 左列表 -->
       <div class="w-200 border-r border-gray-200 flex flex-col flex-shrink-0">

@@ -370,6 +370,7 @@ function onDuplicate(tableCode?: string) {
       v-model="groupDialogVisible"
       :title="groupDialogMode === 'add' ? '新建分组' : '编辑分组'"
       width="420px"
+      :close-on-click-modal="false"
     >
       <el-form label-width="80px">
         <el-form-item label="编码">
@@ -392,6 +393,7 @@ function onDuplicate(tableCode?: string) {
       v-model="tableDialogVisible"
       :title="tableDialogMode === 'add' ? '新建表' : '编辑表'"
       width="420px"
+      :close-on-click-modal="false"
     >
       <el-form label-width="80px">
         <el-form-item label="编码">

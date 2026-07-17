@@ -23,6 +23,8 @@ export function useMenuActions() {
   }
 
   async function handle(id: string) {
+    // 对话框打开时忽略菜单事件(模态:原生菜单栏无法灰显,但操作不执行,避免打断)
+    if (ui.anyDialogOpen) return;
     switch (id) {
       // 文件
       case "file.new":

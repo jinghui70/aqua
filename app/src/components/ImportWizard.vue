@@ -130,7 +130,7 @@ async function doImport() {
 </script>
 
 <template>
-  <el-dialog v-model="ui.importVisible" title="导入向导" width="640px">
+  <el-dialog v-model="ui.importVisible" title="导入向导" width="640px" :close-on-click-modal="false">
     <el-steps :active="step" finish-status="success" simple class="mb-16">
       <el-step title="数据源" />
       <el-step title="选表" />

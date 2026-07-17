@@ -1,6 +1,6 @@
 // UI 状态(弹窗开关等)。
 import { acceptHMRUpdate, defineStore } from "pinia";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
 export type ExportKind = "ddl" | "diff" | "strconst";
 
@@ -50,6 +50,18 @@ export const useUiStore = defineStore("ui", () => {
     newProjectVisible.value = true;
   }
 
+  // 是否有对话框打开(菜单事件据此忽略,避免操作被打断;原生菜单栏无法灰显)
+  const anyDialogOpen = computed(
+    () =>
+      exportVisible.value ||
+      dataSourceVisible.value ||
+      databaseConfigVisible.value ||
+      importVisible.value ||
+      recentVisible.value ||
+      projectSettingsVisible.value ||
+      newProjectVisible.value
+  );
+
   return {
     exportVisible,
     exportKind,
@@ -66,6 +78,7 @@ export const useUiStore = defineStore("ui", () => {
     openProjectSettings,
     newProjectVisible,
     openNewProject,
+    anyDialogOpen,
   };
 });
 

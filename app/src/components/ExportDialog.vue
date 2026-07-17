@@ -113,7 +113,7 @@ watch(
 </script>
 
 <template>
-  <el-dialog v-model="ui.exportVisible" :title="title" width="70%">
+  <el-dialog v-model="ui.exportVisible" :title="title" width="70%" :close-on-click-modal="false">
     <div class="flex flex-col gap-12">
       <!-- 配置区 -->
       <div class="flex items-center gap-16 flex-wrap">

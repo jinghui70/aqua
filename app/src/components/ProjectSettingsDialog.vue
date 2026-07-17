@@ -37,7 +37,7 @@ function save() {
 </script>
 
 <template>
-  <el-dialog v-model="ui.projectSettingsVisible" title="项目设置" width="480px">
+  <el-dialog v-model="ui.projectSettingsVisible" title="项目设置" width="480px" :close-on-click-modal="false">
     <el-form label-width="100px">
       <el-form-item label="项目中文名">
         <el-input v-model="name" placeholder="如:订单管理系统" />

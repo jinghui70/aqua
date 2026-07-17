@@ -246,7 +246,7 @@ function save() {
 </script>
 
 <template>
-  <el-dialog v-model="visible" title="字段编辑" width="900px" top="6vh">
+  <el-dialog v-model="visible" title="字段编辑" width="900px" top="6vh" :close-on-click-modal="false">
     <div v-if="draft" class="flex flex-col gap-4" style="max-height: 70vh; overflow-y: auto">
       <!-- 基本 -->
       <el-form label-width="90px" class="pr-12">
