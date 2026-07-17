@@ -110,3 +110,17 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("aqua 启动失败");
 }
+
+#[cfg(test)]
+mod tests {
+    /// 确保启用了 log 的 max_level_info feature:否则 log::info! 在编译期被静态过滤
+    /// (STATIC_MAX_LEVEL < Info),运行时 set_max_level 无效,诊断日志不落盘。
+    /// (Windows connector 问题曾因日志静默失效无法定位。)
+    #[test]
+    fn log_info_level_not_filtered_out() {
+        assert!(
+            log::STATIC_MAX_LEVEL >= log::LevelFilter::Info,
+            "log crate 未启用 max_level_info/release_max_level_info feature,info 日志会被静态过滤"
+        );
+    }
+}
