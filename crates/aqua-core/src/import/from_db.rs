@@ -6,34 +6,32 @@ use crate::schema::{Direction, Field, Index, IndexField, Project, Table};
 
 /// 从数据库导入 schema,生成 Project。
 ///
+/// 仅反解 `tables` 指定的表(用户在导入向导选中的表),避免整库反解的无效 spawn 开销。
+///
 /// # 参数
 /// - `driver`: 数据库驱动
-/// - `schema`: schema/database 名称
+/// - `tables`: 要导入的表名列表(用户选中)
 /// - `base_package`: 基础包名(默认 "com.example")
 ///
 /// # 返回
 /// - `Project`: aqua schema 模型
 pub async fn import_from_db(
     driver: &dyn Driver,
-    schema: &str,
+    tables: &[String],
     base_package: Option<String>,
 ) -> Result<Project, DriverError> {
-    // 1. 获取所有表
-    let table_names = driver.list_tables(schema).await?;
-
-    // 2. 逐表反解
-    let mut tables = Vec::new();
-    for table_name in &table_names {
+    // 逐表反解(仅选中表)
+    let mut result = Vec::new();
+    for table_name in tables {
         let table = import_table(driver, table_name).await?;
-        tables.push(table);
+        result.push(table);
     }
 
-    // 3. 构造 Project
     Ok(Project {
         version: "1.0.0".to_string(),
         name: None,
         base_package: base_package.unwrap_or_else(|| "com.example".to_string()),
-        tables,
+        tables: result,
         enums: vec![],
         biz_types: vec![],
         groups: vec![],

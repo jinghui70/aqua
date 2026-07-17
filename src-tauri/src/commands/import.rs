@@ -41,16 +41,13 @@ pub async fn test_connection_command<R: Runtime>(
 pub async fn import_from_db_command<R: Runtime>(
     app: AppHandle<R>,
     config: DbConfig,
+    tables: Vec<String>,
     base_package: Option<String>,
 ) -> Result<Project, String> {
-    let schema = config
-        .schema
-        .clone()
-        .unwrap_or_else(|| config.database.clone());
     let drivers = drivers_dir(&app).ok();
     let connector = connector_jar_path(&app);
     let driver = create_driver(config, drivers, &connector).map_err(|e| format!("创建驱动失败: {}", e))?;
-    import_from_db(driver.as_ref(), &schema, base_package)
+    import_from_db(driver.as_ref(), &tables, base_package)
         .await
         .map_err(|e| format!("导入失败: {}", e))
 }

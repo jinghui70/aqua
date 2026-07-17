@@ -106,9 +106,10 @@ async function nextFromTables() {
 async function doImport() {
   if (!config.value || !store.currentProject) return;
   try {
-    // 整库导入(后端),前端按选中表过滤合并
+    // 按选中表导入(后端只反解选中表,避免整库 spawn 开销)
     importedProject.value = await tauri.importFromDb(
       config.value,
+      selectedTables.value,
       store.currentProject.basePackage
     );
     const { added, skipped } = store.mergeImportedTables(

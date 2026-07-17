@@ -153,7 +153,7 @@ async fn mysql_full_roundtrip() {
     let driver2 = create_driver(config.clone(), None, "connector.jar").expect("创建导入驱动失败");
     let imported = import_from_db(
         driver2.as_ref(),
-        &config.database,
+        &["SYS_USER".to_string()],
         Some("com.example".to_string()),
     )
     .await
@@ -257,7 +257,7 @@ async fn pg_full_roundtrip() {
 
     // 4. import_from_db
     let driver2 = create_driver(config.clone(), None, "connector.jar").expect("创建导入驱动失败");
-    let imported = import_from_db(driver2.as_ref(), "public", Some("com.example".to_string()))
+    let imported = import_from_db(driver2.as_ref(), &["SYS_USER".to_string()], Some("com.example".to_string()))
         .await
         .expect("导入失败");
 
