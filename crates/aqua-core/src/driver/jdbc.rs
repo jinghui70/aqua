@@ -13,6 +13,22 @@ use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::sync::OnceCell;
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+/// Windows: spawn 子进程时不弹控制台黑窗口(GUI 进程 spawn java.exe 默认会弹黑窗)。
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+/// 构造 java 子进程 Command(Windows 下禁用控制台黑窗口)。
+fn java_command() -> Command {
+    #[allow(unused_mut)] // windows 下 creation_flags 需要 mut,其他平台不修改
+    let mut cmd = Command::new("java");
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    cmd
+}
+
 /// 连接 Java 数据源所需的最低 JDK 版本。
 const MIN_JAVA_MAJOR: u32 = 17;
 
@@ -98,12 +114,13 @@ impl JdbcDriver {
         );
         log::info!("connector request: {}", redact_password(&request));
 
-        let mut child = Command::new("java")
-            .arg("-jar")
+        let mut cmd = java_command();
+        cmd.arg("-jar")
             .arg(&connector_path)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
+            .stderr(Stdio::piped());
+        let mut child = cmd
             .spawn()
             .map_err(|e| {
                 log::error!("spawn connector 失败: {}", e);
@@ -203,11 +220,12 @@ fn redact_password(request: &Value) -> String {
 ///
 /// `java -version` 将版本信息输出到 stderr。缺失或版本不足返回带明确指引的 `DriverError`。
 async fn check_java_once() -> Result<(), DriverError> {
-    let output = Command::new("java")
-        .arg("-version")
+    let mut cmd = java_command();
+    cmd.arg("-version")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::piped());
+    let output = cmd
         .output()
         .await
         .map_err(|e| {
