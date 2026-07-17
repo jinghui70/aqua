@@ -1,6 +1,6 @@
 //! 导入 Tauri commands。
 
-use aqua_core::driver::{create_driver, DbConfig};
+use aqua_core::driver::{create_driver, DbConfig, TableInfo};
 use aqua_core::import::import_from_db;
 use aqua_core::schema::Project;
 use tauri::path::BaseDirectory;
@@ -41,7 +41,7 @@ pub async fn test_connection_command<R: Runtime>(
 pub async fn import_from_db_command<R: Runtime>(
     app: AppHandle<R>,
     config: DbConfig,
-    tables: Vec<String>,
+    tables: Vec<TableInfo>,
     base_package: Option<String>,
 ) -> Result<Project, String> {
     let drivers = drivers_dir(&app).ok();
@@ -57,7 +57,7 @@ pub async fn import_from_db_command<R: Runtime>(
 pub async fn list_tables_command<R: Runtime>(
     app: AppHandle<R>,
     config: DbConfig,
-) -> Result<Vec<String>, String> {
+) -> Result<Vec<TableInfo>, String> {
     let schema = config
         .schema
         .clone()

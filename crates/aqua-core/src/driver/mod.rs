@@ -19,4 +19,4 @@ pub use error::DriverError;
 pub use factory::create_driver;
 pub use state::{DatabaseInfo, DatabaseState, InstalledDriver};
 pub use trait_def::Driver;
-pub use types::{ColumnMeta, DbConfig, IndexMeta};
+pub use types::{ColumnMeta, DbConfig, IndexMeta, TableInfo};

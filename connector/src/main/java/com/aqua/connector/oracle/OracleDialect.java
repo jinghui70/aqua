@@ -66,4 +66,23 @@ public class OracleDialect extends AbstractJdbcDialect {
         }
         return map;
     }
+
+    @Override
+    protected Map<String, String> resolveTableComments(Connection conn, String schema) throws SQLException {
+        // Oracle 表注释存在 USER_TAB_COMMENTS,DatabaseMetaData 不返回,需补查
+        Map<String, String> map = new HashMap<>();
+        String sql = "SELECT TABLE_NAME, COMMENTS FROM USER_TAB_COMMENTS WHERE TABLE_TYPE = 'TABLE'";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String name = rs.getString("TABLE_NAME");
+                    String c = rs.getString("COMMENTS");
+                    if (c != null && !c.isBlank()) {
+                        map.put(name, c);
+                    }
+                }
+            }
+        }
+        return map;
+    }
 }

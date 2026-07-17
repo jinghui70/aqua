@@ -10,6 +10,7 @@ import com.aqua.connector.DataType;
 import com.aqua.connector.DbConfig;
 import com.aqua.connector.meta.ColumnMeta;
 import com.aqua.connector.meta.IndexMeta;
+import com.aqua.connector.meta.TableInfo;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,8 +56,8 @@ class H2DialectTest {
 
     @Test
     void testListTables() throws Exception {
-        List<String> tables = dialect.listTables(conn, null);
-        assertTrue(tables.contains("SYS_USER"), "应包含 SYS_USER: " + tables);
+        List<TableInfo> tables = dialect.listTables(conn, null);
+        assertTrue(tables.stream().anyMatch(t -> t.name.equals("SYS_USER")), "应包含 SYS_USER: " + tables);
     }
 
     @Test

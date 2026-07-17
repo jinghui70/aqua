@@ -1,6 +1,6 @@
 //! 从数据库导入 schema 核心逻辑。
 
-use crate::driver::{ColumnMeta, Driver, DriverError, IndexMeta};
+use crate::driver::{ColumnMeta, Driver, DriverError, IndexMeta, TableInfo};
 use crate::generators::java::naming::snake_to_camel;
 use crate::schema::{Direction, Field, Index, IndexField, Project, Table};
 
@@ -17,14 +17,14 @@ use crate::schema::{Direction, Field, Index, IndexField, Project, Table};
 /// - `Project`: aqua schema 模型
 pub async fn import_from_db(
     driver: &dyn Driver,
-    tables: &[String],
+    tables: &[TableInfo],
     base_package: Option<String>,
 ) -> Result<Project, DriverError> {
-    // 逐表反解(仅选中表)
+    // 逐表反解(仅选中表,表注释从 listTables 复用,不另 spawn)
     let mut result = Vec::new();
-    for table_name in tables {
-        let table = import_table(driver, table_name).await?;
-        result.push(table);
+    for table in tables {
+        let t = import_table(driver, table).await?;
+        result.push(t);
     }
 
     Ok(Project {
@@ -39,27 +39,27 @@ pub async fn import_from_db(
 }
 
 /// 导入单个表。
-async fn import_table(driver: &dyn Driver, table_name: &str) -> Result<Table, DriverError> {
+async fn import_table(driver: &dyn Driver, table: &TableInfo) -> Result<Table, DriverError> {
     // 1. 获取列
-    let columns = driver.get_columns(table_name).await?;
+    let columns = driver.get_columns(&table.name).await?;
     let fields: Vec<Field> = columns.into_iter().map(column_to_field).collect();
 
     // 2. 获取索引
-    let indexes_meta = driver.list_indexes(table_name).await?;
+    let indexes_meta = driver.list_indexes(&table.name).await?;
     let indexes: Vec<Index> = indexes_meta.into_iter().map(index_meta_to_index).collect();
 
-    // 3. 构造 Table
+    // 3. 构造 Table(注释从 listTables 复用)
     Ok(Table {
-        code: table_name.to_uppercase(),
-        name: table_name.to_string(), // 暂无注释,用表名
-        group: "default".to_string(), // 默认分组
+        code: table.name.to_uppercase(),
+        name: table.name.clone(),
+        group: "default".to_string(),
         fields,
         indexes: if indexes.is_empty() {
             None
         } else {
             Some(indexes)
         },
-        comment: None,
+        comment: table.comment.clone(),
     })
 }
 

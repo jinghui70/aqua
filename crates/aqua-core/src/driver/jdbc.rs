@@ -3,7 +3,7 @@
 //! 通信协议(architecture.md §2): 一次性命令,stdin JSON 请求 -> stdout JSON 响应 -> exit。
 //! connector.jar (Java) 负责实际 JDBC 连接 + 反解,本驱动只做子进程通信。
 
-use crate::driver::{ColumnMeta, DbConfig, Driver, DriverError, IndexMeta};
+use crate::driver::{ColumnMeta, DbConfig, Driver, DriverError, IndexMeta, TableInfo};
 use crate::schema::DataType;
 use async_trait::async_trait;
 use serde_json::{json, Value};
@@ -290,7 +290,7 @@ impl Driver for JdbcDriver {
         Ok(())
     }
 
-    async fn list_tables(&self, schema: &str) -> Result<Vec<String>, DriverError> {
+    async fn list_tables(&self, schema: &str) -> Result<Vec<TableInfo>, DriverError> {
         let resp = self
             .call("listTables", Some(json!({ "schema": schema })))
             .await?;
@@ -300,7 +300,14 @@ impl Driver for JdbcDriver {
             .and_then(|v| v.as_array())
             .map(|arr| {
                 arr.iter()
-                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                    .filter_map(|v| {
+                        let name = v.get("name")?.as_str()?.to_string();
+                        let comment = v
+                            .get("comment")
+                            .and_then(|c| c.as_str())
+                            .map(|s| s.to_string());
+                        Some(TableInfo { name, comment })
+                    })
                     .collect()
             })
             .unwrap_or_default();

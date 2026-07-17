@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.aqua.connector.meta.ColumnMeta;
 import com.aqua.connector.meta.IndexMeta;
+import com.aqua.connector.meta.TableInfo;
 
 /**
  * 数据库方言接口(v2 架构:反解在 Java 侧)。
@@ -22,8 +23,8 @@ public interface Dialect {
     /** 建立 JDBC 连接。 */
     Connection connect(DbConfig config) throws SQLException;
 
-    /** 列出所有表名。 */
-    List<String> listTables(Connection conn, String schema) throws SQLException;
+    /** 列出所有表名(含表注释)。 */
+    List<TableInfo> listTables(Connection conn, String schema) throws SQLException;
 
     /** 获取表的列元数据(反解为 aqua 逻辑类型)。 */
     List<ColumnMeta> getColumns(Connection conn, String table) throws SQLException;

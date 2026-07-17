@@ -14,6 +14,7 @@ import java.util.Properties;
 
 import com.aqua.connector.meta.ColumnMeta;
 import com.aqua.connector.meta.IndexMeta;
+import com.aqua.connector.meta.TableInfo;
 
 /**
  * JDBC 方言抽象基类 - 提取标准 JDBC 元数据遍历逻辑。
@@ -67,14 +68,24 @@ public abstract class AbstractJdbcDialect implements Dialect {
         }
     }
 
+    /**
+     * 解析表注释补充(默认空)。Oracle 等方言覆写:从数据字典(如 USER_TAB_COMMENTS)批量补查。
+     * 返回 tableName -> comment。
+     */
+    protected Map<String, String> resolveTableComments(Connection conn, String schema) throws SQLException {
+        return Collections.emptyMap();
+    }
+
     @Override
-    public final List<String> listTables(Connection conn, String schema) throws SQLException {
+    public final List<TableInfo> listTables(Connection conn, String schema) throws SQLException {
         DatabaseMetaData meta = conn.getMetaData();
         String resolvedSchema = resolveSchema(conn, schema);
-        List<String> tables = new ArrayList<>();
+        Map<String, String> comments = resolveTableComments(conn, resolvedSchema);
+        List<TableInfo> tables = new ArrayList<>();
         try (ResultSet rs = meta.getTables(conn.getCatalog(), resolvedSchema, "%", new String[]{"TABLE"})) {
             while (rs.next()) {
-                tables.add(rs.getString("TABLE_NAME"));
+                String name = rs.getString("TABLE_NAME");
+                tables.add(new TableInfo(name, comments.get(name)));
             }
         }
         return tables;

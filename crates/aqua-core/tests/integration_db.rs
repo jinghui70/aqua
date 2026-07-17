@@ -24,7 +24,7 @@
 //! - Driver trait: test_connection / list_tables / get_columns / list_indexes
 //! - import_from_db 全链路: DDL 建表 -> 导入 -> 比对 Project
 
-use aqua_core::driver::{create_driver, DbConfig};
+use aqua_core::driver::{create_driver, DbConfig, TableInfo};
 use aqua_core::generators::ddl::types::Dialect;
 use aqua_core::generators::ddl::{generate_ddl, DdlOptions};
 use aqua_core::import::import_from_db;
@@ -122,7 +122,7 @@ async fn mysql_full_roundtrip() {
         .await
         .expect("list_tables 失败");
     assert!(
-        tables.iter().any(|t| t == "SYS_USER"),
+        tables.iter().any(|t| t.name == "SYS_USER"),
         "应包含 SYS_USER 表,实际: {:?}",
         tables
     );
@@ -153,7 +153,7 @@ async fn mysql_full_roundtrip() {
     let driver2 = create_driver(config.clone(), None, "connector.jar").expect("创建导入驱动失败");
     let imported = import_from_db(
         driver2.as_ref(),
-        &["SYS_USER".to_string()],
+        &[TableInfo { name: "SYS_USER".to_string(), comment: None }],
         Some("com.example".to_string()),
     )
     .await
@@ -238,7 +238,7 @@ async fn pg_full_roundtrip() {
         .await
         .expect("list_tables 失败");
     assert!(
-        tables.iter().any(|t| t.eq_ignore_ascii_case("sys_user")),
+        tables.iter().any(|t| t.name.eq_ignore_ascii_case("sys_user")),
         "应包含 sys_user 表,实际: {:?}",
         tables
     );
@@ -246,9 +246,9 @@ async fn pg_full_roundtrip() {
     // 3. Driver: get_columns(PG 表名小写)
     let table_name = tables
         .iter()
-        .find(|t| t.eq_ignore_ascii_case("sys_user"))
-        .unwrap()
-        .clone();
+        .find(|t| t.name.eq_ignore_ascii_case("sys_user"))
+        .map(|t| t.name.clone())
+        .unwrap();
     let columns = driver
         .get_columns(&table_name)
         .await
@@ -257,7 +257,7 @@ async fn pg_full_roundtrip() {
 
     // 4. import_from_db
     let driver2 = create_driver(config.clone(), None, "connector.jar").expect("创建导入驱动失败");
-    let imported = import_from_db(driver2.as_ref(), &["SYS_USER".to_string()], Some("com.example".to_string()))
+    let imported = import_from_db(driver2.as_ref(), &[TableInfo { name: "SYS_USER".to_string(), comment: None }], Some("com.example".to_string()))
         .await
         .expect("导入失败");
 

@@ -4,6 +4,12 @@ import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { ElMessage } from "element-plus";
 import type { Project, DbConfig, DatabaseInfo, ValidationError, DatasetEntry, BizTypeDefine } from "@/types/schema";
 
+/** 表信息(表名 + 注释),listTables 返回,对齐 Rust TableInfo。 */
+export interface TableInfo {
+  name: string;
+  comment: string | null;
+}
+
 /** 调用 Tauri command,失败时弹错误提示。 */
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   try {
@@ -85,10 +91,10 @@ export function useTauri() {
     // 导入
     testConnection: (config: DbConfig) =>
       invoke<string>("test_connection_command", { config }),
-    importFromDb: (config: DbConfig, tables: string[], basePackage?: string) =>
+    importFromDb: (config: DbConfig, tables: TableInfo[], basePackage?: string) =>
       invoke<Project>("import_from_db_command", { config, tables, basePackage }),
     listTables: (config: DbConfig) =>
-      invoke<string[]>("list_tables_command", { config }),
+      invoke<TableInfo[]>("list_tables_command", { config }),
 
     // 数据库支持管理(drivers/databases.json)
     listDatabases: () => invoke<DatabaseInfo[]>("list_databases"),

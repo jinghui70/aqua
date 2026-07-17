@@ -5,7 +5,7 @@ import { ElMessage } from "element-plus";
 import { useUiStore } from "@/stores/ui";
 import { useProjectStore } from "@/stores/project";
 import { useDataSourceStore } from "@/stores/datasource";
-import { useTauri } from "@/composables/useTauri";
+import { useTauri, type TableInfo } from "@/composables/useTauri";
 import type { DbConfig, Project } from "@/types/schema";
 
 const ui = useUiStore();
@@ -32,13 +32,13 @@ const config = computed<DbConfig | null>(() => {
 });
 
 // Step2: 表
-const allTables = ref<string[]>([]);
+const allTables = ref<TableInfo[]>([]);
 const selectedTables = ref<string[]>([]);
 const tableFilter = ref("");
 const loadingTables = ref(false);
 const filteredTables = computed(() =>
   allTables.value.filter((t) =>
-    t.toLowerCase().includes(tableFilter.value.toLowerCase())
+    t.name.toLowerCase().includes(tableFilter.value.toLowerCase())
   )
 );
 
@@ -92,7 +92,7 @@ function toggleAll() {
   selectedTables.value =
     selectedTables.value.length === filteredTables.value.length
       ? []
-      : [...filteredTables.value];
+      : filteredTables.value.map((t) => t.name);
 }
 
 async function nextFromTables() {
@@ -107,9 +107,12 @@ async function doImport() {
   if (!config.value || !store.currentProject) return;
   try {
     // 按选中表导入(后端只反解选中表,避免整库 spawn 开销)
+    const tableInfos = allTables.value.filter((t) =>
+      selectedTables.value.includes(t.name)
+    );
     importedProject.value = await tauri.importFromDb(
       config.value,
-      selectedTables.value,
+      tableInfos,
       store.currentProject.basePackage
     );
     const { added, skipped } = store.mergeImportedTables(
@@ -163,7 +166,9 @@ async function doImport() {
         <span class="text-12 text-gray-400">已选 {{ selectedTables.length }}</span>
       </div>
       <el-checkbox-group v-model="selectedTables" class="flex flex-col gap-4" style="max-height: 220px; overflow-y: auto">
-        <el-checkbox v-for="t in filteredTables" :key="t" :value="t" :label="t" />
+        <el-checkbox v-for="t in filteredTables" :key="t.name" :value="t.name">
+          {{ t.name }}<span v-if="t.comment" class="text-12 text-gray-400 ml-8">{{ t.comment }}</span>
+        </el-checkbox>
       </el-checkbox-group>
     </div>
 

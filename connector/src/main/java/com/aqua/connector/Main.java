@@ -15,6 +15,7 @@ import java.util.Map;
 
 import com.aqua.connector.meta.ColumnMeta;
 import com.aqua.connector.meta.IndexMeta;
+import com.aqua.connector.meta.TableInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -81,10 +82,12 @@ public class Main {
                 return resp;
             }
             case "listTables": {
-                List<String> tables = dialect.listTables(conn, config.schema);
+                List<TableInfo> tables = dialect.listTables(conn, config.schema);
                 ObjectNode resp = MAPPER.createObjectNode();
                 ArrayNode arr = resp.putArray("tables");
-                tables.forEach(arr::add);
+                for (TableInfo t : tables) {
+                    arr.addPOJO(t);
+                }
                 return resp;
             }
             case "getColumns": {

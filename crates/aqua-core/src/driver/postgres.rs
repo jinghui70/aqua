@@ -1,6 +1,6 @@
 //! PostgreSQL native 驱动实现。
 
-use crate::driver::{ColumnMeta, DbConfig, Driver, DriverError, IndexMeta};
+use crate::driver::{ColumnMeta, DbConfig, Driver, DriverError, IndexMeta, TableInfo};
 use crate::schema::DataType;
 use async_trait::async_trait;
 use deadpool_postgres::{Config, Pool};
@@ -51,7 +51,7 @@ impl Driver for PostgresDriver {
         Ok(())
     }
 
-    async fn list_tables(&self, schema: &str) -> Result<Vec<String>, DriverError> {
+    async fn list_tables(&self, schema: &str) -> Result<Vec<TableInfo>, DriverError> {
         let client = self
             .pool
             .get()
@@ -68,7 +68,7 @@ impl Driver for PostgresDriver {
             .await
             .map_err(|e| DriverError::QueryFailed(e.to_string()))?;
 
-        Ok(rows.iter().map(|r| r.get::<_, String>(0)).collect())
+        Ok(rows.iter().map(|r| TableInfo { name: r.get::<_, String>(0), comment: None }).collect())
     }
 
     async fn get_columns(&self, table: &str) -> Result<Vec<ColumnMeta>, DriverError> {

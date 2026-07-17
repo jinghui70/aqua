@@ -45,6 +45,15 @@ pub struct ColumnMeta {
     pub comment: Option<String>,
 }
 
+/// 表信息(表名 + 注释,listTables 返回,选表显示 + import 复用,避免再 spawn 取注释)。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TableInfo {
+    /// 表名
+    pub name: String,
+    /// 表注释
+    pub comment: Option<String>,
+}
+
 /// 索引元数据(反解结果)。
 #[derive(Debug, Clone)]
 pub struct IndexMeta {

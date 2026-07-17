@@ -1,7 +1,7 @@
 //! Driver trait 定义。
 
 use super::error::Result;
-use super::{ColumnMeta, IndexMeta};
+use super::{ColumnMeta, IndexMeta, TableInfo};
 use async_trait::async_trait;
 
 /// 数据库驱动统一接口。
@@ -24,7 +24,7 @@ pub trait Driver: Send + Sync {
     ///
     /// # 参数
     /// - `schema`: schema/database 名称(MySQL 用 database,Oracle/PG 用 schema)
-    async fn list_tables(&self, schema: &str) -> Result<Vec<String>>;
+    async fn list_tables(&self, schema: &str) -> Result<Vec<TableInfo>>;
 
     /// 获取表的列元数据(反解为 aqua 逻辑类型)。
     ///

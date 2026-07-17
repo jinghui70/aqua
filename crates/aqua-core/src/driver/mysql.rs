@@ -1,6 +1,6 @@
 //! MySQL native 驱动实现。
 
-use crate::driver::{ColumnMeta, DbConfig, Driver, DriverError, IndexMeta};
+use crate::driver::{ColumnMeta, DbConfig, Driver, DriverError, IndexMeta, TableInfo};
 use crate::schema::DataType;
 use async_trait::async_trait;
 use mysql_async::prelude::*;
@@ -50,7 +50,7 @@ impl Driver for MysqlDriver {
         Ok(())
     }
 
-    async fn list_tables(&self, schema: &str) -> Result<Vec<String>, DriverError> {
+    async fn list_tables(&self, schema: &str) -> Result<Vec<TableInfo>, DriverError> {
         let mut conn = self
             .pool
             .get_conn()
@@ -63,7 +63,7 @@ impl Driver for MysqlDriver {
             .await
             .map_err(|e| DriverError::QueryFailed(e.to_string()))?;
 
-        Ok(tables)
+        Ok(tables.into_iter().map(|name| TableInfo { name, comment: None }).collect())
     }
 
     async fn get_columns(&self, table: &str) -> Result<Vec<ColumnMeta>, DriverError> {
