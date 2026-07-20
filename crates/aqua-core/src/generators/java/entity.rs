@@ -139,7 +139,12 @@ fn generate_field(field: &Field, options: &JavaOptions) -> Vec<String> {
             if ag.timing == crate::schema::GenerateTiming::InsertUpdate {
                 parts.push("timing = \"INSERT_UPDATE\"".to_string());
             }
-            lines.push(format!("    @GeneratedValue({})", parts.join(", ")));
+            // 全默认(parts 空)时不带括号
+            if parts.is_empty() {
+                lines.push("    @GeneratedValue".to_string());
+            } else {
+                lines.push(format!("    @GeneratedValue({})", parts.join(", ")));
+            }
         }
     }
 

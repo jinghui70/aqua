@@ -169,10 +169,14 @@ fn test_generate_field_with_auto_generate() {
         java_code.contains("@GeneratedValue(strategy = \"now\", param = \"yyyy\", timing = \"INSERT_UPDATE\")"),
         "now 字段应全输出:\n{}", java_code
     );
-    // 全默认(strategy=default + timing=INSERT + 无 param):空参数
+    // 全默认(strategy=default + timing=INSERT + 无 param):无括号
     assert!(
-        java_code.contains("@GeneratedValue()"),
-        "全默认应输出空 @GeneratedValue():\n{}", java_code
+        java_code.contains("@GeneratedValue\n"),
+        "全默认应输出无括号 @GeneratedValue:\n{}", java_code
+    );
+    assert!(
+        !java_code.contains("@GeneratedValue()"),
+        "全默认不应带空括号:\n{}", java_code
     );
     // enabled=false 不输出;共 3 个 @GeneratedValue
     assert!(
