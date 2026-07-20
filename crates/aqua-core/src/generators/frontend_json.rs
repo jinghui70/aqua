@@ -29,10 +29,14 @@ pub fn map_data_type(dt: DataType) -> JsonUiDataType {
 }
 
 /// json-ui Field(排除 precision/autoGenerate/comment)。
+///
+/// 字段声明顺序即序列化顺序:code/prop/name 靠前,bizType/bizTypeData 靠后。
+/// 注意:序列化必须直接走 struct(见 generate_frontend_json),不能经 serde_json::Value 中转,
+/// 否则 Value::Object 的 BTreeMap 会把键重排成字母序。
 #[derive(Debug, Clone, Serialize)]
 pub struct JsonUiField {
-    pub prop: String,
     pub code: String,
+    pub prop: String,
     pub name: String,
     #[serde(rename = "dataType")]
     pub data_type: JsonUiDataType,
@@ -40,16 +44,16 @@ pub struct JsonUiField {
     pub length: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scale: Option<u32>,
+    #[serde(rename = "isKey")]
+    pub is_key: bool,
+    #[serde(rename = "notNull")]
+    pub not_null: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "bizType")]
     pub biz_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "bizTypeData")]
     pub biz_type_data: Option<serde_json::Value>,
-    #[serde(rename = "isKey")]
-    pub is_key: bool,
-    #[serde(rename = "notNull")]
-    pub not_null: bool,
 }
 
 /// json-ui Table。
@@ -58,6 +62,12 @@ pub struct JsonUiTable {
     pub code: String,
     pub name: String,
     pub fields: Vec<JsonUiField>,
+}
+
+/// json-ui 输出根(直接序列化,不经 Value 中转,保持字段声明顺序)。
+#[derive(Debug, Clone, Serialize)]
+struct JsonUiOutput {
+    tables: Vec<JsonUiTable>,
 }
 
 /// 前端 JSON 生成选项。
@@ -105,7 +115,8 @@ pub fn generate_frontend_json(project: &Project, options: &FrontendJsonOptions) 
     };
 
     let transformed: Vec<JsonUiTable> = tables.iter().map(|t| transform_table(t)).collect();
-    serde_json::to_string_pretty(&serde_json::json!({ "tables": transformed })).unwrap()
+    // 直接序列化 struct 保持字段顺序;经 serde_json::Value 会被 BTreeMap 重排成字母序
+    serde_json::to_string_pretty(&JsonUiOutput { tables: transformed }).unwrap()
 }
 
 #[cfg(test)]
@@ -160,5 +171,55 @@ mod tests {
         assert!(!serialized.contains("autoGenerate"));
         assert!(!serialized.contains("comment"));
         assert!(!serialized.contains("备注"));
+    }
+
+    #[test]
+    fn test_field_order_code_prop_name_first_biztype_last() {
+        // 序列化字段顺序: code/prop/name 靠前, bizType/bizTypeData 靠后
+        // (防回归: 经 serde_json::Value 中转会被 BTreeMap 重排成字母序)
+        let field = Field {
+            code: "NAME".to_string(),
+            prop: "name".to_string(),
+            name: "名字".to_string(),
+            data_type: DataType::Varchar,
+            length: Some(8),
+            precision: None,
+            scale: None,
+            biz_type: Some("Date".to_string()),
+            biz_type_data: Some(serde_json::json!("YYYYMMDD")),
+            is_key: Some(false),
+            not_null: Some(true),
+            auto_generate: None,
+            default_value: None,
+            enum_ref: None,
+            comment: None,
+        };
+        let project = Project {
+            version: "1.0.0".to_string(),
+            name: None,
+            base_package: "com.example".to_string(),
+            tables: vec![Table {
+                code: "T".to_string(),
+                name: "表".to_string(),
+                group: "g".to_string(),
+                fields: vec![field],
+                indexes: None,
+                comment: None,
+            }],
+            enums: vec![],
+            biz_types: vec![],
+            groups: vec![],
+        };
+        let json = generate_frontend_json(&project, &FrontendJsonOptions::default());
+
+        // 只看 field 对象片段(table 也有 name 字段,避免 find 匹配到 table.name)
+        let field_json = &json[json.find("\"fields\"").unwrap()..];
+        let pos = |k: &str| field_json.find(k).unwrap_or(usize::MAX);
+        // code < prop < name < dataType
+        assert!(pos("\"code\"") < pos("\"prop\""), "code 应在 prop 前:\n{}", json);
+        assert!(pos("\"prop\"") < pos("\"name\""), "prop 应在 name 前:\n{}", json);
+        assert!(pos("\"name\"") < pos("\"dataType\""), "name 应在 dataType 前:\n{}", json);
+        // bizType/bizTypeData 靠后(在 notNull 之后)
+        assert!(pos("\"notNull\"") < pos("\"bizType\""), "bizType 应靠后:\n{}", json);
     }
 }
