@@ -8,6 +8,7 @@ import Welcome from "@/views/Welcome.vue";
 import GroupTreeAside from "./GroupTreeAside.vue";
 import TabWorkspace from "./TabWorkspace.vue";
 import StatusBar from "./StatusBar.vue";
+import AppToolbar from "./AppToolbar.vue";
 import ExportDialog from "@/components/ExportDialog.vue";
 import DataSourceDialog from "@/components/DataSourceDialog.vue";
 import DatabaseConfigDialog from "@/components/DatabaseConfigDialog.vue";
@@ -24,8 +25,9 @@ const store = useProjectStore();
     <!-- 无项目: 全屏欢迎页 -->
     <Welcome v-if="!store.currentProject" class="flex-1 overflow-auto" />
 
-    <!-- 有项目: 工作区布局(splitter 分割) -->
+    <!-- 有项目: 工具栏 + 工作区布局(splitter 分割) -->
     <template v-else>
+      <AppToolbar />
       <el-splitter class="flex-1 min-h-0">
         <el-splitter-panel :size="260" :min="200" :max="500">
           <GroupTreeAside />

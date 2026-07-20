@@ -36,6 +36,8 @@ export const useProjectStore = defineStore("project", () => {
   const activeTab = ref<string>("");
   /** 有未保存改动(任何对 currentProject 的深层变动)。 */
   const dirty = ref(false);
+  /** 项目只读(打开默认只读防误改,新建可编辑,工具栏加/解锁切换)。 */
+  const readOnly = ref(false);
   // 加载/新建/关闭时短暂抑制 dirty watch,避免赋值本身被记为改动。
   let suppressDirty = false;
 
@@ -63,6 +65,7 @@ export const useProjectStore = defineStore("project", () => {
     openedTabs.value = [];
     activeTab.value = "";
     dirty.value = false;
+    readOnly.value = false;
     void datasource.load("");
     void nextTick(() => {
       suppressDirty = false;
@@ -79,6 +82,7 @@ export const useProjectStore = defineStore("project", () => {
     openedTabs.value = [];
     activeTab.value = "";
     dirty.value = false;
+    readOnly.value = true; // 打开已有项目默认只读
     recent.record(path, currentProject.value?.name ?? undefined);
     await datasource.load(path);
     void nextTick(() => {
@@ -144,6 +148,7 @@ export const useProjectStore = defineStore("project", () => {
     openedTabs.value = [];
     activeTab.value = "";
     dirty.value = false;
+    readOnly.value = false;
     void datasource.load("");
     void nextTick(() => {
       suppressDirty = false;
@@ -405,12 +410,19 @@ export const useProjectStore = defineStore("project", () => {
     return newCode;
   }
 
+  /** 切换项目只读/可编辑(工具栏加/解锁)。 */
+  function toggleReadOnly() {
+    readOnly.value = !readOnly.value;
+  }
+
   return {
     currentProject,
     currentPath,
     openedTabs,
     activeTab,
     dirty,
+    readOnly,
+    toggleReadOnly,
     newProject,
     openProject,
     saveProject,

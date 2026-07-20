@@ -42,14 +42,6 @@ async function openPath(path: string) {
   }
 }
 
-function handleImport() {
-  if (!store.currentProject) {
-    ElMessage.warning("请先新建或打开项目");
-    return;
-  }
-  ui.openImport();
-}
-
 function removeRecent(path: string) {
   recent.remove(path);
   refresh();
@@ -90,13 +82,6 @@ function basename(path: string): string {
         >
           <div class="text-32 mb-8">📂</div>
           <div class="text-14 font-bold">打开项目</div>
-        </div>
-        <div
-          class="flex-1 flex flex-col items-center py-24 border border-gray-200 rounded-8 cursor-pointer hover:border-blue-400 hover:shadow transition"
-          @click="handleImport"
-        >
-          <div class="text-32 mb-8">🗄️</div>
-          <div class="text-14 font-bold">从数据库导入</div>
         </div>
       </div>
 

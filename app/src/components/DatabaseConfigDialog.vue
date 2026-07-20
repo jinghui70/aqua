@@ -63,7 +63,7 @@ async function onUninstall(d: DatabaseInfo) {
 </script>
 
 <template>
-  <el-dialog v-model="ui.databaseConfigVisible" title="数据库配置" width="680px" :close-on-click-modal="false">
+  <el-dialog v-model="ui.databaseConfigVisible" title="驱动管理" width="680px" :close-on-click-modal="false">
     <el-table v-loading="loading" :data="dbStore.databases" size="small">
       <el-table-column label="数据库" prop="label" min-width="120" />
       <el-table-column label="类型" width="80">

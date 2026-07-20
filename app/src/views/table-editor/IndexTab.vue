@@ -2,6 +2,9 @@
 // index Tab: 索引列表,name/字段(可排序+方向)/unique。
 // indexes 由父组件保证为 table 上的真实数组引用,直接操作(Pinia 响应式)。
 import type { Index, Field } from "@/types/schema";
+import { useProjectStore } from "@/stores/project";
+
+const store = useProjectStore();
 
 const props = defineProps<{
   indexes: Index[];
@@ -43,7 +46,7 @@ function autoName(idx: Index): string {
 <template>
   <div class="h-full flex flex-col">
     <div class="mb-12 flex-shrink-0">
-      <el-button size="small" type="primary" @click="addIndex">
+      <el-button size="small" type="primary" :disabled="store.readOnly" @click="addIndex">
         + 新增索引
       </el-button>
     </div>

@@ -308,6 +308,7 @@ function onDuplicate(tableCode?: string) {
         size="small"
         type="primary"
         link
+        :disabled="store.readOnly"
         @click="openAddGroup"
       >
         + 分组
@@ -428,6 +429,7 @@ function onDuplicate(tableCode?: string) {
             size="small"
             link
             type="primary"
+            :disabled="store.readOnly"
             @click="openAddTable(hoverNode?.groupCode)"
             >+表</el-button
           >
