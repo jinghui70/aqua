@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // fields Tab: 字段表格行内编辑 + 增删 + 拖拽排序 + 详情弹窗。
-import { computed, nextTick, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import Sortable from "sortablejs";
 import { DataType, type Field } from "@/types/schema";
@@ -28,18 +28,20 @@ function rowKey(f: Field): number {
 
 // 拖拽排序: Sortable 挂在 el-table tbody,只允许手柄列触发
 const tableRef = ref();
+let sortableInst: Sortable | null = null;
 onMounted(() => {
   const tbody = tableRef.value?.$el?.querySelector(
     ".el-table__body-wrapper tbody"
   );
   if (!tbody) return;
-  Sortable.create(tbody, {
+  sortableInst = Sortable.create(tbody, {
     handle: ".drag-handle",
     animation: 150,
     // 用 JS 模拟拖拽,绕开 HTML5 原生 DnD 与 el-table 自绘 DOM 的竞态
     // (原生 DnD 的 mouseup 清理与 Vue 重渲染打架 → 视图不更新 + 需二次点击)
     forceFallback: true,
     fallbackOnBody: true,
+    disabled: store.readOnly,
     onEnd({ oldIndex, newIndex }) {
       if (oldIndex == null || newIndex == null || oldIndex === newIndex) return;
       // 延到下一 tick 改数据,让 Sortable 先完成本次拖拽的清理
@@ -50,6 +52,7 @@ onMounted(() => {
     },
   });
 });
+watch(() => store.readOnly, (ro) => sortableInst?.option("disabled", ro));
 
 // 详情弹窗
 const detailVisible = ref(false);
@@ -145,13 +148,13 @@ function copyField(idx: number) {
 <template>
   <div class="h-full flex flex-col">
     <div class="mb-12 flex-shrink-0">
-      <el-button size="small" type="primary" :disabled="store.readOnly" @click="addField">
+      <el-button v-if="!store.readOnly" size="small" type="primary" @click="addField">
         + 新增字段
       </el-button>
     </div>
     <div class="flex-1 min-h-0">
       <el-table ref="tableRef" :data="fields" :row-key="rowKey" border size="small" height="100%" class="select-none" style="width: 100%">
-      <el-table-column label="" width="36" align="center">
+      <el-table-column v-if="!store.readOnly" label="" width="36" align="center" key="drag">
         <template #default>
           <span class="drag-handle cursor-move text-gray-400 select-none">⣿</span>
         </template>
@@ -254,8 +257,8 @@ function copyField(idx: number) {
       <el-table-column label="操作" width="120" align="center" fixed="right">
         <template #default="{ row, $index }">
           <el-button size="small" link type="primary" @click="openDetail(row)">详情</el-button>
-          <el-button size="small" link :disabled="store.readOnly" @click="copyField($index)">复制</el-button>
-          <el-button size="small" link type="danger" :disabled="store.readOnly" @click="removeField($index)">
+          <el-button v-if="!store.readOnly" size="small" link @click="copyField($index)">复制</el-button>
+          <el-button v-if="!store.readOnly" size="small" link type="danger" @click="removeField($index)">
             删
           </el-button>
         </template>

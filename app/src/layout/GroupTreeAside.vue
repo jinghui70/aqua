@@ -418,7 +418,7 @@ function onDuplicate(tableCode?: string) {
     <!-- hover 操作栏:Teleport 到 body + fixed,脱离树 DOM,树窄时也不被裁 -->
     <Teleport to="body">
       <div
-        v-if="hoverNode"
+        v-if="hoverNode && !store.readOnly"
         class="hover-bar fixed flex flex-col items-center gap-1 bg-white border border-gray-200 rounded-4 shadow px-4 py-4 z-50"
         :style="hoverBarStyle"
         @mouseenter="onBarEnter"

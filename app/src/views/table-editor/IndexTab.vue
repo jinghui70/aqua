@@ -1,8 +1,10 @@
 <script setup lang="ts">
 // index Tab: 索引列表,name/字段(可排序+方向)/unique。
 // indexes 由父组件保证为 table 上的真实数组引用,直接操作(Pinia 响应式)。
+import { nextTick, onMounted, ref, watch } from "vue";
 import type { Index, Field } from "@/types/schema";
 import { useProjectStore } from "@/stores/project";
+import Sortable from "sortablejs";
 
 const store = useProjectStore();
 
@@ -41,6 +43,28 @@ function autoName(idx: Index): string {
   const codes = idx.fields.map((f) => f.code).filter(Boolean).join("_");
   return `IDX_${props.tableCode}_${codes}`.toUpperCase();
 }
+
+// 拖拽排序索引顺序(Sortable 挂 el-table tbody)
+const tableRef = ref();
+let sortableInst: Sortable | null = null;
+onMounted(() => {
+  const tbody = tableRef.value?.$el?.querySelector(".el-table__body-wrapper tbody");
+  if (!tbody) return;
+  sortableInst = Sortable.create(tbody, {
+    animation: 150,
+    forceFallback: true,
+    fallbackOnBody: true,
+    disabled: store.readOnly,
+    onEnd({ oldIndex, newIndex }) {
+      if (oldIndex == null || newIndex == null || oldIndex === newIndex) return;
+      nextTick(() => {
+        const [moved] = props.indexes.splice(oldIndex, 1);
+        props.indexes.splice(newIndex, 0, moved);
+      });
+    },
+  });
+});
+watch(() => store.readOnly, (ro) => sortableInst?.option("disabled", ro));
 </script>
 
 <template>
@@ -51,7 +75,7 @@ function autoName(idx: Index): string {
       </el-button>
     </div>
     <div class="flex-1 min-h-0">
-      <el-table :data="indexes ?? []" border size="small" height="100%" style="width: 100%">
+      <el-table ref="tableRef" :data="indexes ?? []" border size="small" height="100%" style="width: 100%">
       <el-table-column label="索引名" width="220">
         <template #default="{ row }">
           <el-input v-model="row.name" size="small" placeholder="留空自动生成" :disabled="store.readOnly" />
