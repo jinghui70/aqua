@@ -249,7 +249,7 @@ function save() {
   <el-dialog v-model="visible" title="字段编辑" width="900px" top="6vh" :close-on-click-modal="false">
     <div v-if="draft" class="flex flex-col gap-4" style="max-height: 70vh; overflow-y: auto">
       <!-- 基本 -->
-      <el-form label-width="90px" class="pr-12">
+      <el-form label-width="90px" class="pr-12" :disabled="store.readOnly">
         <div class="grid grid-cols-2 gap-x-24">
           <el-form-item label="code">
             <el-input v-model="draft.code" @input="onCodeInput" />
@@ -294,7 +294,7 @@ function save() {
 
       <!-- autoGenerate -->
       <el-divider content-position="left">自动生成</el-divider>
-      <el-form label-width="90px" class="pr-12">
+      <el-form label-width="90px" class="pr-12" :disabled="store.readOnly">
         <el-form-item label="启用">
           <el-switch
             :model-value="!!draft.autoGenerate"
@@ -325,7 +325,7 @@ function save() {
 
       <!-- 业务类型(Enum 是特殊 bizType,§3.5)-->
       <el-divider content-position="left">业务类型</el-divider>
-      <el-form label-width="90px" class="pr-12">
+      <el-form label-width="90px" class="pr-12" :disabled="store.readOnly">
         <el-form-item label="bizType">
           <el-select
             :model-value="draft.bizType"
@@ -361,7 +361,7 @@ function save() {
             </el-form-item>
             <el-form-item label="枚举值">
               <div class="w-full">
-                <el-button size="small" @click="addInlineValue" class="mb-8">+ 添加值</el-button>
+                <el-button size="small" :disabled="store.readOnly" @click="addInlineValue" class="mb-8">+ 添加值</el-button>
                 <el-table :data="inlineEnum.values" border size="small">
                   <el-table-column label="id" width="110">
                     <template #default="{ row }"><el-input v-model="row.id" size="small" /></template>
@@ -383,7 +383,7 @@ function save() {
                   </el-table-column>
                   <el-table-column label="操作" width="50" align="center">
                     <template #default="{ $index }">
-                      <el-button size="small" link type="danger" @click="removeInlineValue($index)">删</el-button>
+                      <el-button size="small" link type="danger" :disabled="store.readOnly" @click="removeInlineValue($index)">删</el-button>
                     </template>
                   </el-table-column>
                 </el-table>
@@ -417,7 +417,7 @@ function save() {
 
       <!-- 备注(后置)-->
       <el-divider content-position="left">备注</el-divider>
-      <el-form label-width="90px" class="pr-12">
+      <el-form label-width="90px" class="pr-12" :disabled="store.readOnly">
         <el-form-item label="备注">
           <el-input v-model="draft.comment" type="textarea" :rows="2" />
         </el-form-item>
@@ -426,7 +426,7 @@ function save() {
 
     <template #footer>
       <el-button @click="visible = false">取消</el-button>
-      <el-button type="primary" @click="save">保存</el-button>
+      <el-button type="primary" :disabled="store.readOnly" @click="save">保存</el-button>
     </template>
   </el-dialog>
 </template>

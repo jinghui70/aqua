@@ -341,7 +341,7 @@ function onDuplicate(tableCode?: string) {
         :filter-node-method="filterNode"
         :expand-on-click-node="false"
         :allow-drop="allowDrop"
-        draggable
+        :draggable="!store.readOnly"
         default-expand-all
         @node-click="onNodeClick"
         @node-drop="onNodeDrop"

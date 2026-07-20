@@ -175,18 +175,19 @@ function copyField(idx: number) {
       </el-table-column>
       <el-table-column label="名称" width="110">
         <template #default="{ row }">
-          <el-input v-model="row.name" size="small" />
+          <el-input v-model="row.name" size="small" :disabled="store.readOnly" />
         </template>
       </el-table-column>
       <el-table-column label="类型" width="200">
         <template #default="{ row }">
           <div class="flex items-center gap-4">
-            <el-select v-model="row.dataType" size="small" style="width: 100px">
+            <el-select v-model="row.dataType" size="small" style="width: 100px" :disabled="store.readOnly">
               <el-option v-for="dt in dataTypes" :key="dt" :label="dt" :value="dt" />
             </el-select>
             <el-input-number
               v-if="row.dataType === 'VARCHAR'"
               v-model="row.length"
+              :disabled="store.readOnly"
               size="small"
               :min="1"
               :controls="false"
@@ -196,6 +197,7 @@ function copyField(idx: number) {
             <template v-if="row.dataType === 'DECIMAL'">
               <el-input-number
                 v-model="row.precision"
+                :disabled="store.readOnly"
                 size="small"
                 :min="1"
                 :controls="false"
@@ -204,6 +206,7 @@ function copyField(idx: number) {
               />
               <el-input-number
                 v-model="row.scale"
+                :disabled="store.readOnly"
                 size="small"
                 :min="0"
                 :controls="false"
@@ -223,13 +226,14 @@ function copyField(idx: number) {
         <template #default="{ row }">
           <el-checkbox
             :model-value="row.isKey"
+            :disabled="store.readOnly"
             @change="(v: boolean) => onKeyChange(row, v)"
           />
         </template>
       </el-table-column>
       <el-table-column label="非空" width="50" align="center">
         <template #default="{ row }">
-          <el-checkbox v-model="row.notNull" :disabled="row.isKey" />
+          <el-checkbox v-model="row.notNull" :disabled="row.isKey || store.readOnly" />
         </template>
       </el-table-column>
       <el-table-column label="自动生成" width="140">
@@ -239,19 +243,19 @@ function copyField(idx: number) {
       </el-table-column>
       <el-table-column label="默认值" width="110">
         <template #default="{ row }">
-          <el-input v-model="row.defaultValue" size="small" placeholder="-" />
+          <el-input v-model="row.defaultValue" size="small" placeholder="-" :disabled="store.readOnly" />
         </template>
       </el-table-column>
       <el-table-column label="备注" min-width="120">
         <template #default="{ row }">
-          <el-input v-model="row.comment" size="small" placeholder="-" />
+          <el-input v-model="row.comment" size="small" placeholder="-" :disabled="store.readOnly" />
         </template>
       </el-table-column>
       <el-table-column label="操作" width="120" align="center" fixed="right">
         <template #default="{ row, $index }">
           <el-button size="small" link type="primary" @click="openDetail(row)">详情</el-button>
-          <el-button size="small" link @click="copyField($index)">复制</el-button>
-          <el-button size="small" link type="danger" @click="removeField($index)">
+          <el-button size="small" link :disabled="store.readOnly" @click="copyField($index)">复制</el-button>
+          <el-button size="small" link type="danger" :disabled="store.readOnly" @click="removeField($index)">
             删
           </el-button>
         </template>
