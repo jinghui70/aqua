@@ -124,17 +124,21 @@ fn generate_field(field: &Field, options: &JavaOptions) -> Vec<String> {
     }
 
     // @GeneratedValue(自动生成字段,enabled=false 不输出)
+    // 参数等于默认值即省略:strategy="default"、timing=INSERT、param=空
     if let Some(ag) = &field.auto_generate {
         if ag.enabled {
-            let mut parts = vec![format!("strategy = \"{}\"", ag.strategy)];
-            if let Some(param) = &ag.param {
-                parts.push(format!("param = \"{}\"", param));
+            let mut parts = Vec::new();
+            if ag.strategy != "default" {
+                parts.push(format!("strategy = \"{}\"", ag.strategy));
             }
-            let timing = match ag.timing {
-                crate::schema::GenerateTiming::Insert => "INSERT",
-                crate::schema::GenerateTiming::InsertUpdate => "INSERT_UPDATE",
-            };
-            parts.push(format!("timing = \"{}\"", timing));
+            if let Some(param) = &ag.param {
+                if !param.is_empty() {
+                    parts.push(format!("param = \"{}\"", param));
+                }
+            }
+            if ag.timing == crate::schema::GenerateTiming::InsertUpdate {
+                parts.push("timing = \"INSERT_UPDATE\"".to_string());
+            }
             lines.push(format!("    @GeneratedValue({})", parts.join(", ")));
         }
     }

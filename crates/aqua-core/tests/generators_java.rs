@@ -116,7 +116,7 @@ fn test_table_not_found() {
 
 #[test]
 fn test_generate_field_with_auto_generate() {
-    // autoGenerate 字段应生成 @GeneratedValue(strategy/param/timing)
+    // autoGenerate 字段应生成 @GeneratedValue,参数等于默认值(strategy=default/timing=INSERT/无 param)即省略
     let value = serde_json::json!({
         "version": "1.0.0",
         "basePackage": "com.example",
@@ -141,6 +141,12 @@ fn test_generate_field_with_auto_generate() {
                 "dataType": "DATETIME",
                 "autoGenerate": { "enabled": true, "strategy": "now", "param": "yyyy", "timing": "INSERT_UPDATE" }
             }, {
+                "code": "GMT_CREATE",
+                "prop": "gmtCreate",
+                "name": "创建时间",
+                "dataType": "DATETIME",
+                "autoGenerate": { "enabled": true, "strategy": "default", "timing": "INSERT" }
+            }, {
                 "code": "NAME",
                 "prop": "name",
                 "name": "名称",
@@ -153,19 +159,24 @@ fn test_generate_field_with_auto_generate() {
     let project = parse_project(value).expect("Project 校验失败");
     let java_code = generate_java_entity(&project, "SYS_LOG", &JavaOptions::default()).expect("生成失败");
 
-    // 无 param:strategy + timing
+    // strategy 非默认、timing=INSERT 省略、无 param
     assert!(
-        java_code.contains("@GeneratedValue(strategy = \"snowflake\", timing = \"INSERT\")"),
-        "snowflake 字段应有 @GeneratedValue(无 param):\n{}", java_code
+        java_code.contains("@GeneratedValue(strategy = \"snowflake\")"),
+        "snowflake+INSERT 应只输出 strategy:\n{}", java_code
     );
-    // 有 param:strategy + param + timing
+    // 三个参数都非默认:全输出
     assert!(
         java_code.contains("@GeneratedValue(strategy = \"now\", param = \"yyyy\", timing = \"INSERT_UPDATE\")"),
-        "now 字段应有 @GeneratedValue(含 param):\n{}", java_code
+        "now 字段应全输出:\n{}", java_code
     );
-    // enabled=false 不输出
+    // 全默认(strategy=default + timing=INSERT + 无 param):空参数
     assert!(
-        !java_code.contains("param = \"snowflake\"") && java_code.matches("@GeneratedValue").count() == 2,
-        "enabled=false 字段不应输出 @GeneratedValue:\n{}", java_code
+        java_code.contains("@GeneratedValue()"),
+        "全默认应输出空 @GeneratedValue():\n{}", java_code
+    );
+    // enabled=false 不输出;共 3 个 @GeneratedValue
+    assert!(
+        java_code.matches("@GeneratedValue").count() == 3,
+        "enabled=false 不输出,应共 3 个 @GeneratedValue:\n{}", java_code
     );
 }
