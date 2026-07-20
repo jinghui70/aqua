@@ -80,7 +80,7 @@ watch(() => store.readOnly, (ro) => sortableInst?.option("disabled", ro));
 <template>
   <div class="h-full flex flex-col">
     <div class="mb-12 flex-shrink-0">
-      <el-button size="small" type="primary" :disabled="store.readOnly" @click="addIndex">
+      <el-button v-if="!store.readOnly" size="small" type="primary" @click="addIndex">
         + 新增索引
       </el-button>
     </div>
