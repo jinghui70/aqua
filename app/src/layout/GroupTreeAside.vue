@@ -304,11 +304,10 @@ function onDuplicate(tableCode?: string) {
     >
       <span>表列表</span>
       <el-button
-        v-if="store.currentProject"
+        v-if="store.currentProject && !store.readOnly"
         size="small"
         type="primary"
         link
-        :disabled="store.readOnly"
         @click="openAddGroup"
       >
         + 分组
