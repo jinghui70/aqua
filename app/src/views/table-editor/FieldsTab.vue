@@ -162,7 +162,9 @@ function copyField(idx: number) {
       <el-table-column label="#" width="44" type="index" />
       <el-table-column label="编码" width="150">
         <template #default="{ row }">
+          <span v-if="store.readOnly" class="text-13">{{ row.code }}</span>
           <el-input
+            v-else
             v-model="row.code"
             size="small"
             @focus="onCodeFocus(row)"
@@ -173,24 +175,26 @@ function copyField(idx: number) {
       </el-table-column>
       <el-table-column label="属性名" width="120">
         <template #default="{ row }">
-          <el-input v-model="row.prop" size="small" />
+          <span v-if="store.readOnly" class="text-13">{{ row.prop }}</span>
+          <el-input v-else v-model="row.prop" size="small" />
         </template>
       </el-table-column>
       <el-table-column label="名称" width="110">
         <template #default="{ row }">
-          <el-input v-model="row.name" size="small" :disabled="store.readOnly" />
+          <span v-if="store.readOnly" class="text-13">{{ row.name }}</span>
+          <el-input v-else v-model="row.name" size="small" />
         </template>
       </el-table-column>
       <el-table-column label="类型" width="200">
         <template #default="{ row }">
-          <div class="flex items-center gap-4">
-            <el-select v-model="row.dataType" size="small" style="width: 100px" :disabled="store.readOnly">
+          <span v-if="store.readOnly" class="text-13">{{ row.dataType }}<template v-if="row.dataType === 'VARCHAR' && row.length">({{ row.length }})</template><template v-if="row.dataType === 'DECIMAL' && row.precision">({{ row.precision }},{{ row.scale ?? 0 }})</template></span>
+          <div v-else class="flex items-center gap-4">
+            <el-select v-model="row.dataType" size="small" style="width: 100px">
               <el-option v-for="dt in dataTypes" :key="dt" :label="dt" :value="dt" />
             </el-select>
             <el-input-number
               v-if="row.dataType === 'VARCHAR'"
               v-model="row.length"
-              :disabled="store.readOnly"
               size="small"
               :min="1"
               :controls="false"
@@ -200,7 +204,6 @@ function copyField(idx: number) {
             <template v-if="row.dataType === 'DECIMAL'">
               <el-input-number
                 v-model="row.precision"
-                :disabled="store.readOnly"
                 size="small"
                 :min="1"
                 :controls="false"
@@ -209,7 +212,6 @@ function copyField(idx: number) {
               />
               <el-input-number
                 v-model="row.scale"
-                :disabled="store.readOnly"
                 size="small"
                 :min="0"
                 :controls="false"
@@ -227,16 +229,18 @@ function copyField(idx: number) {
       </el-table-column>
       <el-table-column label="主键" width="50" align="center">
         <template #default="{ row }">
+          <span v-if="store.readOnly">{{ row.isKey ? "✓" : "" }}</span>
           <el-checkbox
+            v-else
             :model-value="row.isKey"
-            :disabled="store.readOnly"
             @change="(v: boolean) => onKeyChange(row, v)"
           />
         </template>
       </el-table-column>
       <el-table-column label="非空" width="50" align="center">
         <template #default="{ row }">
-          <el-checkbox v-model="row.notNull" :disabled="row.isKey || store.readOnly" />
+          <span v-if="store.readOnly">{{ row.notNull ? "✓" : "" }}</span>
+          <el-checkbox v-else v-model="row.notNull" :disabled="row.isKey" />
         </template>
       </el-table-column>
       <el-table-column label="自动生成" width="140">
@@ -246,12 +250,14 @@ function copyField(idx: number) {
       </el-table-column>
       <el-table-column label="默认值" width="110">
         <template #default="{ row }">
-          <el-input v-model="row.defaultValue" size="small" placeholder="-" :disabled="store.readOnly" />
+          <span v-if="store.readOnly" class="text-13">{{ row.defaultValue || "-" }}</span>
+          <el-input v-else v-model="row.defaultValue" size="small" placeholder="-" />
         </template>
       </el-table-column>
       <el-table-column label="备注" min-width="120">
         <template #default="{ row }">
-          <el-input v-model="row.comment" size="small" placeholder="-" :disabled="store.readOnly" />
+          <span v-if="store.readOnly" class="text-13">{{ row.comment || "-" }}</span>
+          <el-input v-else v-model="row.comment" size="small" placeholder="-" />
         </template>
       </el-table-column>
       <el-table-column label="操作" width="120" align="center" fixed="right">

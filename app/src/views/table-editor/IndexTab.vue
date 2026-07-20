@@ -43,6 +43,15 @@ function autoName(idx: Index): string {
   const codes = idx.fields.map((f) => f.code).filter(Boolean).join("_");
   return `IDX_${props.tableCode}_${codes}`.toUpperCase();
 }
+/** 只读展示:索引字段列表文本(如 USER_ID, NAME DESC) */
+function indexFieldsText(idx: Index): string {
+  return (
+    idx.fields
+      .map((f) => f.code + (f.direction === "DESC" ? " DESC" : ""))
+      .filter(Boolean)
+      .join(", ") || "-"
+  );
+}
 
 // 拖拽排序索引顺序(Sortable 挂 el-table tbody)
 const tableRef = ref();
@@ -51,6 +60,7 @@ onMounted(() => {
   const tbody = tableRef.value?.$el?.querySelector(".el-table__body-wrapper tbody");
   if (!tbody) return;
   sortableInst = Sortable.create(tbody, {
+    handle: ".drag-handle",
     animation: 150,
     forceFallback: true,
     fallbackOnBody: true,
@@ -76,50 +86,61 @@ watch(() => store.readOnly, (ro) => sortableInst?.option("disabled", ro));
     </div>
     <div class="flex-1 min-h-0">
       <el-table ref="tableRef" :data="indexes ?? []" border size="small" height="100%" style="width: 100%">
+      <el-table-column v-if="!store.readOnly" label="" width="36" align="center" key="drag">
+        <template #default>
+          <span class="drag-handle cursor-move text-gray-400 select-none">⣿</span>
+        </template>
+      </el-table-column>
       <el-table-column label="索引名" width="220">
         <template #default="{ row }">
-          <el-input v-model="row.name" size="small" placeholder="留空自动生成" :disabled="store.readOnly" />
-          <div v-if="!row.name" class="text-12 text-gray-400 mt-2">
-            → {{ autoName(row) }}
-          </div>
+          <span v-if="store.readOnly" class="text-13">{{ row.name || autoName(row) }}</span>
+          <template v-else>
+            <el-input v-model="row.name" size="small" placeholder="留空自动生成" />
+            <div v-if="!row.name" class="text-12 text-gray-400 mt-2">
+              -> {{ autoName(row) }}
+            </div>
+          </template>
         </template>
       </el-table-column>
       <el-table-column label="字段" min-width="340">
         <template #default="{ row, $index }">
-          <div
-            v-for="(f, fi) in row.fields"
-            :key="fi"
-            class="flex items-center gap-2 mb-4"
-          >
-            <el-select
-              v-model="f.code"
-              :disabled="store.readOnly"
-              size="small"
-              filterable
-              placeholder="字段"
-              style="width: 140px"
+          <span v-if="store.readOnly" class="text-13">{{ indexFieldsText(row) }}</span>
+          <template v-else>
+            <div
+              v-for="(f, fi) in row.fields"
+              :key="fi"
+              class="flex items-center gap-2 mb-4"
             >
-              <el-option v-for="c in fieldCodes()" :key="c" :label="c" :value="c" />
-            </el-select>
-            <el-select v-model="f.direction" size="small" style="width: 90px" :disabled="store.readOnly">
-              <el-option label="ASC" value="ASC" />
-              <el-option label="DESC" value="DESC" />
-            </el-select>
-            <el-button size="small" link :disabled="fi === 0 || store.readOnly" @click="moveField($index, fi, -1)">↑</el-button>
-            <el-button size="small" link :disabled="fi === row.fields.length - 1 || store.readOnly" @click="moveField($index, fi, 1)">↓</el-button>
-            <el-button size="small" link type="danger" :disabled="store.readOnly" @click="removeField($index, fi)">删</el-button>
-          </div>
-          <el-button size="small" :disabled="store.readOnly" @click="addField($index)">+ 字段</el-button>
+              <el-select
+                v-model="f.code"
+                size="small"
+                filterable
+                placeholder="字段"
+                style="width: 140px"
+              >
+                <el-option v-for="c in fieldCodes()" :key="c" :label="c" :value="c" />
+              </el-select>
+              <el-select v-model="f.direction" size="small" style="width: 90px">
+                <el-option label="ASC" value="ASC" />
+                <el-option label="DESC" value="DESC" />
+              </el-select>
+              <el-button size="small" link :disabled="fi === 0" @click="moveField($index, fi, -1)">↑</el-button>
+              <el-button size="small" link :disabled="fi === row.fields.length - 1" @click="moveField($index, fi, 1)">↓</el-button>
+              <el-button size="small" link type="danger" @click="removeField($index, fi)">删</el-button>
+            </div>
+            <el-button size="small" @click="addField($index)">+ 字段</el-button>
+          </template>
         </template>
       </el-table-column>
       <el-table-column label="唯一" width="60" align="center">
         <template #default="{ row }">
-          <el-checkbox v-model="row.unique" :disabled="store.readOnly" />
+          <span v-if="store.readOnly">{{ row.unique ? "✓" : "" }}</span>
+          <el-checkbox v-else v-model="row.unique" />
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="70" align="center">
+      <el-table-column v-if="!store.readOnly" label="操作" width="70" align="center">
         <template #default="{ $index }">
-          <el-button size="small" link type="danger" :disabled="store.readOnly" @click="removeIndex($index)">
+          <el-button size="small" link type="danger" @click="removeIndex($index)">
             删
           </el-button>
         </template>
