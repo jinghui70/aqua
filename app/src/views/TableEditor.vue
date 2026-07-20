@@ -74,7 +74,9 @@ watchEffect(() => {
 }
 .table-tabs :deep(.el-tab-pane) {
   height: 100%;
-  margin-top: 8px;
+  /* padding-top 替代 margin-top:margin 不在 height 内,height:100%+margin 会溢出父容器,
+     底部被 overflow:hidden 裁掉(编辑框底边框消失的根因)。padding 在 border-box 下含于 height。 */
+  padding-top: 8px;
   overflow: hidden;
 }
 </style>

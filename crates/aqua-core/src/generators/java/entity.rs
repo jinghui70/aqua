@@ -36,10 +36,8 @@ pub fn generate_entity_class(
         output.push(String::new());
     }
 
-    // 类注解
-    if options.include_comment {
-        output.push(javadoc(&table.name, &table.comment, ""));
-    }
+    // 类注解(Javadoc 注释始终生成:表名/备注作为文档)
+    output.push(javadoc(&table.name, &table.comment, ""));
     output.push(format!("@Table(name = \"{}\")", table.code));
     if options.use_lombok {
         output.push("@Data".to_string());
@@ -51,7 +49,7 @@ pub fn generate_entity_class(
 
     // 字段定义
     for field in &table.fields {
-        output.extend(generate_field(field, options));
+        output.extend(generate_field(field));
     }
 
     // getter/setter (非 Lombok 时)
@@ -110,13 +108,11 @@ fn collect_imports(table: &Table, options: &JavaOptions) -> Vec<String> {
 }
 
 /// 生成字段定义。
-fn generate_field(field: &Field, options: &JavaOptions) -> Vec<String> {
+fn generate_field(field: &Field) -> Vec<String> {
     let mut lines = Vec::new();
 
-    // Javadoc 注释(中文名 + 备注)
-    if options.include_comment {
-        lines.push(javadoc(&field.name, &field.comment, "    "));
-    }
+    // Javadoc 注释(中文名 + 备注,始终生成)
+    lines.push(javadoc(&field.name, &field.comment, "    "));
 
     // 字段注解(顺序: @Id -> @GeneratedValue -> @Column,对齐 legacy)
     if field.is_key.unwrap_or(false) {

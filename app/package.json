@@ -21,6 +21,7 @@
     "@types/sortablejs": "^1.15.9",
     "@unocss/preset-rem-to-px": "^66.7.5",
     "@unocss/preset-uno": "^66.7.5",
+    "@unocss/reset": "^66.7.5",
     "@vitejs/plugin-vue": "^5.2",
     "playwright": "^1.61.1",
     "typescript": "^5.6",

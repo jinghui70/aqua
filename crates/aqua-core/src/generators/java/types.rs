@@ -7,8 +7,6 @@ use crate::schema::DataType;
 pub struct JavaOptions {
     /// 是否使用 Lombok @Data 注解(默认 true)。
     pub use_lombok: bool,
-    /// 是否生成 Javadoc 注释(表/字段的中文名或备注,默认 true)。
-    pub include_comment: bool,
     /// 自定义包名(为空则用默认规则: {basePackage}.{group}.entity)。
     pub package: Option<String>,
     /// 自定义类名(为空则从 table.code 派生 PascalCase)。
@@ -19,7 +17,6 @@ impl Default for JavaOptions {
     fn default() -> Self {
         Self {
             use_lombok: true,
-            include_comment: true,
             package: None,
             class_name: None,
         }

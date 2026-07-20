@@ -1,10 +1,8 @@
-/* 全局重置:窗口固定满高,无默认边距,禁止整页滚动。 */
+/* 满高链 + 禁整页滚动。box-sizing 等基础重置由 @unocss/reset/tailwind.css 提供。 */
 html,
 body,
 #app {
   height: 100%;
-  margin: 0;
-  padding: 0;
 }
 
 body {

@@ -41,13 +41,14 @@ function autoName(idx: Index): string {
 </script>
 
 <template>
-  <div class="h-full overflow-auto">
-    <div class="mb-12">
+  <div class="h-full flex flex-col">
+    <div class="mb-12 flex-shrink-0">
       <el-button size="small" type="primary" @click="addIndex">
         + 新增索引
       </el-button>
     </div>
-    <el-table :data="indexes ?? []" border size="small" style="width: 100%">
+    <div class="flex-1 min-h-0">
+      <el-table :data="indexes ?? []" border size="small" height="100%" style="width: 100%">
       <el-table-column label="索引名" width="220">
         <template #default="{ row }">
           <el-input v-model="row.name" size="small" placeholder="留空自动生成" />
@@ -96,5 +97,6 @@ function autoName(idx: Index): string {
         </template>
       </el-table-column>
     </el-table>
+    </div>
   </div>
 </template>

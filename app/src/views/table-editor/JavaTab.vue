@@ -12,7 +12,6 @@ const tauri = useTauri();
 const store = useProjectStore();
 
 const useLombok = ref(true);
-const includeComment = ref(true);
 const packageName = ref("");
 const className = ref("");
 const preview = ref("");
@@ -25,7 +24,6 @@ async function refresh() {
       props.tableCode,
       {
         useLombok: useLombok.value,
-        includeComment: includeComment.value,
         package: packageName.value || undefined,
         className: className.value || undefined,
       }
@@ -36,7 +34,7 @@ async function refresh() {
 }
 
 // 配置变化实时刷新
-watch([useLombok, includeComment, packageName, className, () => props.tableCode], refresh, {
+watch([useLombok, packageName, className, () => props.tableCode], refresh, {
   immediate: true,
 });
 // 切回本 tab 时重新生成,同步字段/索引的改动
@@ -54,8 +52,8 @@ function download() {
 </script>
 
 <template>
-  <div class="h-full overflow-auto flex flex-col gap-12">
-    <div class="flex items-center gap-16 flex-wrap">
+  <div class="h-full flex flex-col gap-12">
+    <div class="flex items-center gap-16 flex-wrap flex-shrink-0">
       <span class="text-13">
         包名
         <el-input
@@ -74,18 +72,20 @@ function download() {
           style="width: 140px"
         />
       </span>
-      <el-checkbox v-model="useLombok">Lombok @Data</el-checkbox>
-      <el-checkbox v-model="includeComment">注释</el-checkbox>
+      <el-checkbox v-model="useLombok">Lombok</el-checkbox>
       <div class="flex-1" />
       <el-button size="small" @click="copy">复制</el-button>
       <el-button size="small" type="primary" @click="download">下载</el-button>
     </div>
-    <el-input
-      v-model="preview"
-      type="textarea"
-      :rows="22"
-      readonly
-      class="font-mono"
-    />
+    <div class="flex-1 min-h-0">
+      <el-input
+        v-model="preview"
+        type="textarea"
+        resize="none"
+        readonly
+        class="font-mono h-full"
+        :input-style="{ height: '100%' }"
+      />
+    </div>
   </div>
 </template>

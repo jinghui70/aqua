@@ -73,19 +73,17 @@ pub async fn generate_ddl_command(
     ))
 }
 
-/// Tauri command: 生成 Java 实体类(支持配置: 包名/类名/Lombok/注释)。
+/// Tauri command: 生成 Java 实体类(支持配置: 包名/类名/Lombok,注释始终生成)。
 #[tauri::command]
 pub async fn generate_java_command(
     project: Project,
     table: String,
     use_lombok: Option<bool>,
-    include_comment: Option<bool>,
     package: Option<String>,
     class_name: Option<String>,
 ) -> Result<String, String> {
     let options = JavaOptions {
         use_lombok: use_lombok.unwrap_or(true),
-        include_comment: include_comment.unwrap_or(true),
         package,
         class_name,
     };

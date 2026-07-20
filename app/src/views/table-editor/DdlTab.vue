@@ -43,8 +43,8 @@ function download() {
 </script>
 
 <template>
-  <div class="h-full overflow-auto flex flex-col gap-12">
-    <div class="flex items-center gap-16 flex-wrap">
+  <div class="h-full flex flex-col gap-12">
+    <div class="flex items-center gap-16 flex-wrap flex-shrink-0">
       <span class="text-13">
         方言
         <el-select v-model="dialect" size="small" style="width: 130px">
@@ -55,12 +55,15 @@ function download() {
       <el-button size="small" @click="copy">复制</el-button>
       <el-button size="small" type="primary" @click="download">下载</el-button>
     </div>
-    <el-input
-      v-model="preview"
-      type="textarea"
-      :rows="22"
-      readonly
-      class="font-mono"
-    />
+    <div class="flex-1 min-h-0">
+      <el-input
+        v-model="preview"
+        type="textarea"
+        resize="none"
+        readonly
+        class="font-mono h-full"
+        :input-style="{ height: '100%' }"
+      />
+    </div>
   </div>
 </template>

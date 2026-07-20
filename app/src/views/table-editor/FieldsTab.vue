@@ -144,7 +144,7 @@ function copyField(idx: number) {
 
 <template>
   <div class="h-full flex flex-col">
-    <div class="mb-12 flex gap-8 flex-shrink-0">
+    <div class="mb-12 flex-shrink-0">
       <el-button size="small" type="primary" @click="addField">
         + 新增字段
       </el-button>
