@@ -48,10 +48,14 @@ async fn import_table(driver: &dyn Driver, table: &TableInfo) -> Result<Table, D
     let indexes_meta = driver.list_indexes(&table.name).await?;
     let indexes: Vec<Index> = indexes_meta.into_iter().map(index_meta_to_index).collect();
 
-    // 3. 构造 Table(注释从 listTables 复用)
+    // 3. 构造 Table(表注释作为中文名 name;无注释时回退表名)
     Ok(Table {
         code: table.name.to_uppercase(),
-        name: table.name.clone(),
+        name: table
+            .comment
+            .clone()
+            .filter(|c| !c.is_empty())
+            .unwrap_or_else(|| table.name.clone()),
         group: "default".to_string(),
         fields,
         indexes: if indexes.is_empty() {
@@ -59,7 +63,7 @@ async fn import_table(driver: &dyn Driver, table: &TableInfo) -> Result<Table, D
         } else {
             Some(indexes)
         },
-        comment: table.comment.clone(),
+        comment: None,
     })
 }
 

@@ -32,10 +32,13 @@ pub enum FieldEnum {
 }
 
 /// §3.2 字段模型 Field（对齐 json-ui DataFieldSchema + 工具扩展）。
+///
+/// 字段声明顺序即 JSON 序列化顺序:code/prop/name 靠前(标识优先),
+/// bizType/bizTypeData 靠后(业务扩展,阅读时不干扰主信息)。
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Field {
-    pub prop: String,
     pub code: String,
+    pub prop: String,
     pub name: String,
     #[serde(rename = "dataType")]
     pub data_type: DataType,
@@ -47,15 +50,6 @@ pub struct Field {
     pub precision: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scale: Option<u32>,
-
-    // 业务类型（对齐 json-ui）
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "bizType")]
-    pub biz_type: Option<String>,
-    /// 单 field 存值、多 field 存对象（§3.4），此处保留任意 JSON (对齐 legacy z.unknown())。
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "bizTypeData")]
-    pub biz_type_data: Option<Value>,
 
     // 约束（对齐 json-ui）
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -79,6 +73,15 @@ pub struct Field {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "enum")]
     pub enum_ref: Option<FieldEnum>,
+
+    // 业务类型（对齐 json-ui，靠后放置）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "bizType")]
+    pub biz_type: Option<String>,
+    /// 单 field 存值、多 field 存对象（§3.4），此处保留任意 JSON (对齐 legacy z.unknown())。
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "bizTypeData")]
+    pub biz_type_data: Option<Value>,
 
     // 文档（不进 DDL）
     #[serde(skip_serializing_if = "Option::is_none")]

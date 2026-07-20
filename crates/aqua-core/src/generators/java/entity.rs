@@ -118,9 +118,25 @@ fn generate_field(field: &Field, options: &JavaOptions) -> Vec<String> {
         lines.push(javadoc(&field.name, &field.comment, "    "));
     }
 
-    // 字段注解
+    // 字段注解(顺序: @Id -> @GeneratedValue -> @Column,对齐 legacy)
     if field.is_key.unwrap_or(false) {
         lines.push("    @Id".to_string());
+    }
+
+    // @GeneratedValue(自动生成字段,enabled=false 不输出)
+    if let Some(ag) = &field.auto_generate {
+        if ag.enabled {
+            let mut parts = vec![format!("strategy = \"{}\"", ag.strategy)];
+            if let Some(param) = &ag.param {
+                parts.push(format!("param = \"{}\"", param));
+            }
+            let timing = match ag.timing {
+                crate::schema::GenerateTiming::Insert => "INSERT",
+                crate::schema::GenerateTiming::InsertUpdate => "INSERT_UPDATE",
+            };
+            parts.push(format!("timing = \"{}\"", timing));
+            lines.push(format!("    @GeneratedValue({})", parts.join(", ")));
+        }
     }
 
     // @Column (非标准命名时)

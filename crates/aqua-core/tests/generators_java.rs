@@ -113,3 +113,59 @@ fn test_table_not_found() {
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Table not found"));
 }
+
+#[test]
+fn test_generate_field_with_auto_generate() {
+    // autoGenerate 字段应生成 @GeneratedValue(strategy/param/timing)
+    let value = serde_json::json!({
+        "version": "1.0.0",
+        "basePackage": "com.example",
+        "enums": [],
+        "bizTypes": [],
+        "groups": [{ "code": "core", "name": "核心" }],
+        "tables": [{
+            "code": "SYS_LOG",
+            "name": "日志",
+            "group": "core",
+            "fields": [{
+                "code": "ID",
+                "prop": "id",
+                "name": "主键",
+                "dataType": "LONG",
+                "isKey": true,
+                "autoGenerate": { "enabled": true, "strategy": "snowflake", "timing": "INSERT" }
+            }, {
+                "code": "GMT_MODIFIED",
+                "prop": "gmtModified",
+                "name": "修改时间",
+                "dataType": "DATETIME",
+                "autoGenerate": { "enabled": true, "strategy": "now", "param": "yyyy", "timing": "INSERT_UPDATE" }
+            }, {
+                "code": "NAME",
+                "prop": "name",
+                "name": "名称",
+                "dataType": "VARCHAR",
+                "length": 64,
+                "autoGenerate": { "enabled": false, "strategy": "snowflake", "timing": "INSERT" }
+            }]
+        }]
+    });
+    let project = parse_project(value).expect("Project 校验失败");
+    let java_code = generate_java_entity(&project, "SYS_LOG", &JavaOptions::default()).expect("生成失败");
+
+    // 无 param:strategy + timing
+    assert!(
+        java_code.contains("@GeneratedValue(strategy = \"snowflake\", timing = \"INSERT\")"),
+        "snowflake 字段应有 @GeneratedValue(无 param):\n{}", java_code
+    );
+    // 有 param:strategy + param + timing
+    assert!(
+        java_code.contains("@GeneratedValue(strategy = \"now\", param = \"yyyy\", timing = \"INSERT_UPDATE\")"),
+        "now 字段应有 @GeneratedValue(含 param):\n{}", java_code
+    );
+    // enabled=false 不输出
+    assert!(
+        !java_code.contains("param = \"snowflake\"") && java_code.matches("@GeneratedValue").count() == 2,
+        "enabled=false 字段不应输出 @GeneratedValue:\n{}", java_code
+    );
+}
