@@ -134,12 +134,15 @@ function bindSortable(refEl: any, arr: () => any[] | undefined): Sortable | null
     fallbackOnBody: true,
     disabled: isReadonly.value,
     onEnd({ oldIndex, newIndex }) {
+      console.log("[sortable] onEnd", oldIndex, newIndex);
       if (oldIndex == null || newIndex == null || oldIndex === newIndex) return;
       nextTick(() => {
         const a = arr();
+        console.log("[sortable] arr", a?.length, JSON.stringify(a?.map((x: any) => x.dataType ?? x.name)));
         if (!a) return;
         const [moved] = a.splice(oldIndex, 1);
         a.splice(newIndex, 0, moved);
+        console.log("[sortable] after", JSON.stringify(a?.map((x: any) => x.dataType ?? x.name)));
       });
     },
   });
