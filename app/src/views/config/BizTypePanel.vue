@@ -208,17 +208,18 @@ watch(isReadonly, (ro) => {
           :closable="false"
           class="mb-12"
         />
-        <el-form label-width="100px" class="max-w-3xl">
-          <el-form-item label="code">
-            <el-tag>{{ current.bizType }}</el-tag>
-          </el-form-item>
-          <el-form-item label="名称">
-            <el-input v-model="current.name" :readonly="isReadonly" />
-          </el-form-item>
-          <el-form-item label="描述">
-            <el-input v-model="current.description" type="textarea" :rows="2" :readonly="isReadonly" />
-          </el-form-item>
-        </el-form>
+        <!-- code 醒目文字 -->
+        <div class="text-20 font-bold mb-12">{{ current.bizType }}</div>
+        <!-- 只读:名称 + 描述文本 -->
+        <template v-if="isReadonly">
+          <div class="mb-8 text-14"><span class="text-gray-500">名称:</span>{{ current.name }}</div>
+          <div class="mb-12 text-14"><span class="text-gray-500">描述:</span>{{ current.description || "-" }}</div>
+        </template>
+        <!-- 编辑:名称 + 描述一行,填充满(描述 flex-1)-->
+        <div v-else class="flex gap-12 mb-12">
+          <el-input v-model="current.name" placeholder="名称" style="width: 200px" />
+          <el-input v-model="current.description" placeholder="描述" class="flex-1" />
+        </div>
 
         <!-- supportedDataTypes -->
         <div class="mt-16 mb-8 font-bold text-14 flex items-center gap-12">
