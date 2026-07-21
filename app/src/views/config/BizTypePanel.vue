@@ -148,8 +148,8 @@ function bindSortable(refEl: any, arr: () => any[] | undefined): Sortable | null
 watch(current, (c) => {
   if (!c) return;
   nextTick(() => {
-    if (!supportedSortable) supportedSortable = bindSortable(supportedTableRef, () => current.value?.supportedDataTypes);
-    if (!dataFieldSortable) dataFieldSortable = bindSortable(dataFieldTableRef, () => current.value?.bizTypeData?.fields);
+    if (!supportedSortable) supportedSortable = bindSortable(supportedTableRef.value, () => current.value?.supportedDataTypes);
+    if (!dataFieldSortable) dataFieldSortable = bindSortable(dataFieldTableRef.value, () => current.value?.bizTypeData?.fields);
   });
 }, { immediate: true });
 watch(isReadonly, (ro) => {
@@ -221,7 +221,7 @@ watch(isReadonly, (ro) => {
           支持的数据类型
           <el-button v-if="!isReadonly" size="small" type="primary" link @click="addSupported">+ 添加</el-button>
         </div>
-        <el-table ref="supportedTableRef" :data="current.supportedDataTypes" border size="small">
+        <el-table ref="supportedTableRef" :data="current.supportedDataTypes" border size="small" class="select-none">
           <el-table-column v-if="!isReadonly" label="" width="36" align="center" key="drag">
             <template #default><span class="drag-handle cursor-move text-gray-400">⣿</span></template>
           </el-table-column>
@@ -263,7 +263,7 @@ watch(isReadonly, (ro) => {
           参数配置
           <el-button v-if="!isReadonly" size="small" type="primary" link @click="addDataField">+ 添加</el-button>
         </div>
-        <el-table v-show="current.bizTypeData?.fields.length" ref="dataFieldTableRef" :data="current.bizTypeData?.fields ?? []" border size="small">
+        <el-table v-show="current.bizTypeData?.fields.length" ref="dataFieldTableRef" :data="current.bizTypeData?.fields ?? []" border size="small" class="select-none">
             <el-table-column v-if="!isReadonly" label="" width="36" align="center" key="drag">
               <template #default><span class="drag-handle cursor-move text-gray-400">⣿</span></template>
             </el-table-column>
