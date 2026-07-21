@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // 业务类型管理(§6.5):左列表 + 右编辑。常驻配置中心面板。
-import { computed, ref } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
+import Sortable from "sortablejs";
 import { useProjectStore } from "@/stores/project";
 import { useBuiltinStore } from "@/stores/builtin";
 import { collectRelatedTables, buildCascadePrompt } from "@/utils/cascade";
@@ -24,44 +25,49 @@ const current = computed(() =>
 const isCurrentBuiltin = computed(() =>
   selectedCode.value ? builtin.isBuiltin(selectedCode.value) : false
 );
+// 两个只读来源:预置内置 + 全局只读。任一 -> 只读(name/描述用 readonly,表格用 span)
+const isReadonly = computed(() => isCurrentBuiltin.value || store.readOnly);
 
 function select(code: string) {
   selectedCode.value = code;
 }
 
-async function addBizType() {
+// ===== 新建:ElDialog 录 code + name =====
+const newBizVisible = ref(false);
+const newCode = ref("");
+const newName = ref("");
+function addBizType() {
   if (!store.currentProject) {
     ElMessage.warning("请先打开项目");
     return;
   }
-  try {
-    const { value } = await ElMessageBox.prompt("业务类型 code", "新建业务类型", {
-      confirmButtonText: "创建",
-      cancelButtonText: "取消",
-      inputPlaceholder: "Date8",
-    });
-    if (!value) return;
-    const code = value.trim();
-    // 重名校验含内置
-    if (bizTypes.value.some((b) => b.bizType === code)) {
-      ElMessage.error(`${code} 已存在`);
-      return;
-    }
-    const biz: BizTypeDefine = {
-      bizType: code,
-      name: code,
-      supportedDataTypes: [],
-    };
-    store.currentProject.bizTypes.push(biz);
-    selectedCode.value = code;
-    ElMessage.success("已创建");
-  } catch {
-    /* 取消 */
+  newCode.value = "";
+  newName.value = "";
+  newBizVisible.value = true;
+}
+function confirmNewBiz() {
+  const code = newCode.value.trim();
+  if (!code) {
+    ElMessage.warning("code 不能为空");
+    return;
   }
+  if (bizTypes.value.some((b) => b.bizType === code)) {
+    ElMessage.error(`${code} 已存在`);
+    return;
+  }
+  const biz: BizTypeDefine = {
+    bizType: code,
+    name: newName.value.trim() || code,
+    supportedDataTypes: [],
+  };
+  store.currentProject!.bizTypes.push(biz);
+  selectedCode.value = code;
+  newBizVisible.value = false;
+  ElMessage.success("已创建");
 }
 
 async function removeBizType(code: string) {
-  if (builtin.isBuiltin(code)) return; // 内置不可删(UI 已禁,防御)
+  if (builtin.isBuiltin(code)) return;
   const related = collectRelatedTables(store.currentProject, (f) => f.bizType === code);
   const msg = buildCascadePrompt("业务类型", code, related);
   try {
@@ -71,7 +77,6 @@ async function removeBizType(code: string) {
       cancelButtonText: "取消",
       dangerouslyUseHTMLString: true,
     });
-    // 级联清除关联字段的 bizType / bizTypeData
     for (const t of store.currentProject!.tables) {
       for (const f of t.fields) {
         if (f.bizType === code) {
@@ -113,6 +118,44 @@ function addDataField() {
 function removeDataField(idx: number) {
   current.value?.bizTypeData?.fields.splice(idx, 1);
 }
+
+// ===== 拖拽排序(数据类型 + 参数)=====
+const supportedTableRef = ref();
+const dataFieldTableRef = ref();
+let supportedSortable: Sortable | null = null;
+let dataFieldSortable: Sortable | null = null;
+function bindSortable(refEl: any, arr: () => any[] | undefined): Sortable | null {
+  const tbody = refEl?.$el?.querySelector(".el-table__body-wrapper tbody");
+  if (!tbody) return null;
+  return Sortable.create(tbody, {
+    handle: ".drag-handle",
+    animation: 150,
+    forceFallback: true,
+    fallbackOnBody: true,
+    disabled: isReadonly.value,
+    onEnd({ oldIndex, newIndex }) {
+      if (oldIndex == null || newIndex == null || oldIndex === newIndex) return;
+      nextTick(() => {
+        const a = arr();
+        if (!a) return;
+        const [moved] = a.splice(oldIndex, 1);
+        a.splice(newIndex, 0, moved);
+      });
+    },
+  });
+}
+// current 有值后(表格渲染)绑定 Sortable
+watch(current, (c) => {
+  if (!c) return;
+  nextTick(() => {
+    if (!supportedSortable) supportedSortable = bindSortable(supportedTableRef, () => current.value?.supportedDataTypes);
+    if (!dataFieldSortable) dataFieldSortable = bindSortable(dataFieldTableRef, () => current.value?.bizTypeData?.fields);
+  });
+}, { immediate: true });
+watch(isReadonly, (ro) => {
+  supportedSortable?.option("disabled", ro);
+  dataFieldSortable?.option("disabled", ro);
+});
 </script>
 
 <template>
@@ -144,11 +187,10 @@ function removeDataField(idx: number) {
             {{ b.name }} ({{ b.bizType }})
           </span>
           <el-button
-            v-if="!builtin.isBuiltin(b.bizType)"
+            v-if="!builtin.isBuiltin(b.bizType) && !store.readOnly"
             size="small"
             link
             type="danger"
-            :disabled="store.readOnly"
             @click.stop="removeBizType(b.bizType)"
           >删</el-button>
         </div>
@@ -166,108 +208,135 @@ function removeDataField(idx: number) {
           :closable="false"
           class="mb-12"
         />
-        <el-form label-width="130px" class="max-w-3xl">
-          <el-form-item label="bizType (code)">
-            <el-input :model-value="current.bizType" disabled />
+        <el-form label-width="100px" class="max-w-3xl">
+          <el-form-item label="code">
+            <el-tag>{{ current.bizType }}</el-tag>
           </el-form-item>
           <el-form-item label="名称">
-            <el-input v-model="current.name" :disabled="isCurrentBuiltin || store.readOnly" />
+            <el-input v-model="current.name" :readonly="isReadonly" />
           </el-form-item>
           <el-form-item label="描述">
-            <el-input v-model="current.description" :disabled="isCurrentBuiltin || store.readOnly" />
+            <el-input v-model="current.description" type="textarea" :rows="2" :readonly="isReadonly" />
           </el-form-item>
         </el-form>
 
         <!-- supportedDataTypes -->
         <div class="mt-16 mb-8 font-bold text-14 flex items-center gap-12">
           支持的数据类型
-          <el-button v-if="!isCurrentBuiltin && !store.readOnly" size="small" type="primary" link @click="addSupported">+ 添加</el-button>
+          <el-button v-if="!isReadonly" size="small" type="primary" link @click="addSupported">+ 添加</el-button>
         </div>
-        <el-table :data="current.supportedDataTypes" border size="small">
-          <el-table-column label="逻辑类型" width="140">
+        <el-table ref="supportedTableRef" :data="current.supportedDataTypes" border size="small">
+          <el-table-column v-if="!isReadonly" label="" width="36" align="center" key="drag">
+            <template #default><span class="drag-handle cursor-move text-gray-400">⣿</span></template>
+          </el-table-column>
+          <el-table-column label="逻辑类型" width="160">
             <template #default="{ row }">
-              <el-select v-model="row.dataType" size="small" :disabled="isCurrentBuiltin || store.readOnly">
+              <span v-if="isReadonly" class="text-13">{{ row.dataType }}</span>
+              <el-select v-else v-model="row.dataType" size="small">
                 <el-option v-for="dt in dataTypes" :key="dt" :label="dt" :value="dt" />
               </el-select>
             </template>
           </el-table-column>
-          <el-table-column label="默认长度" width="120">
+          <el-table-column label="默认长度" width="140">
             <template #default="{ row }">
-              <el-input-number v-model="row.defaultLength" size="small" :controls="false" :min="1" :disabled="isCurrentBuiltin || store.readOnly" />
+              <span v-if="isReadonly" class="text-13">{{ row.defaultLength ?? "-" }}</span>
+              <el-input-number v-else v-model="row.defaultLength" size="small" :controls="false" :min="1" />
             </template>
           </el-table-column>
-          <el-table-column label="默认精度" width="120">
+          <el-table-column label="默认精度" width="140">
             <template #default="{ row }">
-              <el-input-number v-model="row.defaultPrecision" size="small" :controls="false" :min="1" :disabled="isCurrentBuiltin || store.readOnly" />
+              <span v-if="isReadonly" class="text-13">{{ row.defaultPrecision ?? "-" }}</span>
+              <el-input-number v-else v-model="row.defaultPrecision" size="small" :controls="false" :min="1" />
             </template>
           </el-table-column>
-          <el-table-column label="默认小数位" width="120">
+          <el-table-column label="默认小数位" width="140">
             <template #default="{ row }">
-              <el-input-number v-model="row.defaultScale" size="small" :controls="false" :min="0" :disabled="isCurrentBuiltin || store.readOnly" />
+              <span v-if="isReadonly" class="text-13">{{ row.defaultScale ?? "-" }}</span>
+              <el-input-number v-else v-model="row.defaultScale" size="small" :controls="false" :min="0" />
             </template>
           </el-table-column>
-          <el-table-column v-if="!isCurrentBuiltin" label="操作" width="70" align="center">
+          <el-table-column v-if="!isReadonly" label="操作" width="70" align="center">
             <template #default="{ $index }">
-              <el-button size="small" link type="danger" :disabled="store.readOnly" @click="removeSupported($index)">删</el-button>
+              <el-button size="small" link type="danger" @click="removeSupported($index)">删</el-button>
             </template>
           </el-table-column>
         </el-table>
 
-        <!-- bizTypeData.fields -->
-        <div class="mt-16 mb-8 font-bold text-14 flex items-center gap-12">
-          参数配置 (bizTypeData.fields)
-          <el-button v-if="!isCurrentBuiltin && !store.readOnly" size="small" type="primary" link @click="addDataField">+ 添加</el-button>
+        <!-- bizTypeData.fields(无参数则隐藏;v-show 保留 DOM 供 Sortable 绑定)-->
+        <div v-if="current.bizTypeData?.fields.length" class="mt-16 mb-8 font-bold text-14 flex items-center gap-12">
+          参数配置
+          <el-button v-if="!isReadonly" size="small" type="primary" link @click="addDataField">+ 添加</el-button>
         </div>
-        <el-table :data="current.bizTypeData?.fields ?? []" border size="small">
-          <el-table-column label="参数名" width="150">
-            <template #default="{ row }">
-              <el-input v-model="row.name" size="small" :disabled="isCurrentBuiltin || store.readOnly" />
-            </template>
-          </el-table-column>
-          <el-table-column label="类型" width="120">
-            <template #default="{ row }">
-              <el-select v-model="row.type" size="small" :disabled="isCurrentBuiltin || store.readOnly">
-                <el-option label="string" value="string" />
-                <el-option label="number" value="number" />
-              </el-select>
-            </template>
-          </el-table-column>
-          <el-table-column label="默认值" width="140">
-            <template #default="{ row }">
-              <el-input-number
-                v-if="row.type === 'number'"
-                v-model="row.default"
-                size="small"
-                :controls="false"
-                :disabled="isCurrentBuiltin || store.readOnly"
-              />
-              <el-input
-                v-else
-                v-model="row.default"
-                size="small"
-                :disabled="isCurrentBuiltin || store.readOnly"
-              />
-            </template>
-          </el-table-column>
-          <el-table-column label="描述" min-width="150">
-            <template #default="{ row }">
-              <el-input v-model="row.description" size="small" :disabled="isCurrentBuiltin || store.readOnly" />
-            </template>
-          </el-table-column>
-          <el-table-column label="必填" width="60" align="center">
-            <template #default="{ row }">
-              <el-checkbox v-model="row.required" :disabled="isCurrentBuiltin || store.readOnly" />
-            </template>
-          </el-table-column>
-          <el-table-column v-if="!isCurrentBuiltin" label="操作" width="70" align="center">
-            <template #default="{ $index }">
-              <el-button size="small" link type="danger" :disabled="store.readOnly" @click="removeDataField($index)">删</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+        <el-table v-show="current.bizTypeData?.fields.length" ref="dataFieldTableRef" :data="current.bizTypeData?.fields ?? []" border size="small">
+            <el-table-column v-if="!isReadonly" label="" width="36" align="center" key="drag">
+              <template #default><span class="drag-handle cursor-move text-gray-400">⣿</span></template>
+            </el-table-column>
+            <el-table-column label="参数名" width="150">
+              <template #default="{ row }">
+                <span v-if="isReadonly" class="text-13">{{ row.name || "-" }}</span>
+                <el-input v-else v-model="row.name" size="small" />
+              </template>
+            </el-table-column>
+            <el-table-column label="类型" width="120">
+              <template #default="{ row }">
+                <span v-if="isReadonly" class="text-13">{{ row.type }}</span>
+                <el-select v-else v-model="row.type" size="small">
+                  <el-option label="string" value="string" />
+                  <el-option label="number" value="number" />
+                </el-select>
+              </template>
+            </el-table-column>
+            <el-table-column label="默认值" width="140">
+              <template #default="{ row }">
+                <span v-if="isReadonly" class="text-13">{{ row.default ?? "-" }}</span>
+                <template v-else>
+                  <el-input-number
+                    v-if="row.type === 'number'"
+                    v-model="row.default"
+                    size="small"
+                    :controls="false"
+                  />
+                  <el-input v-else v-model="row.default" size="small" />
+                </template>
+              </template>
+            </el-table-column>
+            <el-table-column label="描述" min-width="150">
+              <template #default="{ row }">
+                <span v-if="isReadonly" class="text-13">{{ row.description || "-" }}</span>
+                <el-input v-else v-model="row.description" size="small" />
+              </template>
+            </el-table-column>
+            <el-table-column label="必填" width="60" align="center">
+              <template #default="{ row }">
+                <span v-if="isReadonly">{{ row.required ? "✓" : "" }}</span>
+                <el-checkbox v-else v-model="row.required" />
+              </template>
+            </el-table-column>
+            <el-table-column v-if="!isReadonly" label="操作" width="70" align="center">
+              <template #default="{ $index }">
+                <el-button size="small" link type="danger" @click="removeDataField($index)">删</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
       </template>
       <el-empty v-else description="选择或新建业务类型" />
     </div>
+
+    <!-- 新建业务类型弹窗:录 code + name -->
+    <el-dialog v-model="newBizVisible" title="新建业务类型" width="420px" :close-on-click-modal="false">
+      <el-form label-width="80px">
+        <el-form-item label="code">
+          <el-input v-model="newCode" placeholder="如 Date8" />
+        </el-form-item>
+        <el-form-item label="名称">
+          <el-input v-model="newName" placeholder="如 日期8位" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="newBizVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmNewBiz">创建</el-button>
+      </template>
+    </el-dialog>
   </div>
   <el-empty v-else description="未打开项目" class="h-full" />
 </template>
