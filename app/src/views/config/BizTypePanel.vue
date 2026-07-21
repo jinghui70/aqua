@@ -194,8 +194,8 @@ watch(isReadonly, (ro) => {
           @click="select(b.bizType)"
         >
           <span class="flex items-center gap-6">
-            <el-tag v-if="builtin.isBuiltin(b.bizType)" size="small" type="info" effect="plain">内置</el-tag>
             {{ b.bizType }} ({{ b.name }})
+            <el-tag v-if="builtin.isBuiltin(b.bizType)" size="small" type="info" effect="plain">内置</el-tag>
           </span>
           <el-button
             v-if="!builtin.isBuiltin(b.bizType) && !store.readOnly"
