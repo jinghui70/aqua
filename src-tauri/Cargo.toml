@@ -18,6 +18,7 @@ aqua-core = { path = "../crates/aqua-core" }
 clap = { version = "4.5", features = ["derive"] }
 tauri-plugin-dialog = "2"
 log = { version = "0.4", features = ["std", "max_level_info", "release_max_level_info"] }
+tauri-plugin-process = "2.3.1"
 
 [features]
 # 默认自定义协议

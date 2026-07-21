@@ -10,7 +10,7 @@ pub mod commands;
 
 use std::fs::{File, OpenOptions};
 use std::io::Write;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use commands::{builtin, database, dataset, datasource, generate, import, project};
 use tauri::menu::{MenuBuilder, SubmenuBuilder};
@@ -99,8 +99,11 @@ fn init_logger<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 
 /// 启动 GUI 模式,注册原生菜单 + Tauri commands。
 pub fn run() {
+    let confirmed = Arc::new(Mutex::new(false));
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_process::init())
+        .manage(confirmed)
         .menu(build_menu)
         .on_menu_event(|app, event| {
             // 菜单项 id 发到前端,由 useMenuActions 分发
@@ -127,13 +130,31 @@ pub fn run() {
             database::install_driver,
             database::uninstall_driver,
             builtin::builtin_biztypes_load,
+            set_exit_confirmed,
         ])
         .setup(|app| {
             init_logger(app.handle());
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("aqua 启动失败");
+        .build(tauri::generate_context!())
+        .expect("aqua 启动失败")
+        .run(|app, event| {
+            // Command+Q/菜单 quit 触发 ExitRequested;未确认时拦截,emit 前端 confirm dirty
+            if let tauri::RunEvent::ExitRequested { api, .. } = event {
+                let c = app.state::<Arc<Mutex<bool>>>();
+                let confirmed = c.lock().unwrap();
+                if !*confirmed {
+                    api.prevent_exit();
+                    drop(confirmed);
+                    let _ = app.emit("confirm-exit", ());
+                }
+            }
+        });
+}
+
+#[tauri::command]
+fn set_exit_confirmed(confirmed: tauri::State<Arc<Mutex<bool>>>) {
+    *confirmed.lock().unwrap() = true;
 }
 
 #[cfg(test)]

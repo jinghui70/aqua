@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from "vue";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { exit } from "@tauri-apps/plugin-process";
 import AppLayout from "@/layout/AppLayout.vue";
 import { useMenuActions } from "@/composables/useMenuActions";
 import { useBuiltinStore } from "@/stores/builtin";
@@ -12,25 +15,38 @@ const builtin = useBuiltinStore();
 const database = useDatabaseStore();
 const store = useProjectStore();
 let unlistenClose: (() => void) | null = null;
+let unlistenExit: (() => void) | null = null;
+
+// 退出确认:dirty 时弹保存/不保存/取消;保存/不保存 -> 标记已确认 + exit;取消 -> 不退
+async function doConfirmExit() {
+  if (!store.dirty) {
+    await invoke("set_exit_confirmed");
+    await exit(0);
+    return;
+  }
+  const ok = await store.confirmIfDirty();
+  if (ok) {
+    await invoke("set_exit_confirmed");
+    await exit(0);
+  }
+}
 
 onMounted(async () => {
   void builtin.load();
   void database.load();
   menu.mount();
-  // 关闭应用前检查 dirty:有未保存改动时提示保存/不保存/取消
+  // 窗口 X 关闭:拦截 + 确认
   unlistenClose = await getCurrentWindow().onCloseRequested(async (event) => {
-    if (!store.dirty) return; // 无未保存改动,正常关闭
     event.preventDefault();
-    const ok = await store.confirmIfDirty();
-    if (ok) {
-      await getCurrentWindow().destroy(); // 保存/不保存,继续关闭
-    }
-    // 取消则保持打开
+    await doConfirmExit();
   });
+  // Command+Q/菜单 quit:Rust ExitRequested 拦截后 emit,前端确认
+  unlistenExit = await listen("confirm-exit", doConfirmExit);
 });
 onUnmounted(() => {
   menu.unmount();
   unlistenClose?.();
+  unlistenExit?.();
 });
 </script>
 
