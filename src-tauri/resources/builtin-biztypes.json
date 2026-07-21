@@ -19,7 +19,7 @@
           },
           {
             "name": "trueColor",
-            "type": "color",
+            "type": "string",
             "default": "primary",
             "description": "True值颜色"
           },

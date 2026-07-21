@@ -14,12 +14,6 @@ export const useUiStore = defineStore("ui", () => {
     exportVisible.value = true;
   }
 
-  // 数据源配置弹窗
-  const dataSourceVisible = ref(false);
-  function openDataSource() {
-    dataSourceVisible.value = true;
-  }
-
   // 数据库配置弹窗(驱动安装/显隐)
   const databaseConfigVisible = ref(false);
   function openDatabaseConfig() {
@@ -38,12 +32,6 @@ export const useUiStore = defineStore("ui", () => {
     recentVisible.value = true;
   }
 
-  // 项目设置弹窗(中文名/basePackage)
-  const projectSettingsVisible = ref(false);
-  function openProjectSettings() {
-    projectSettingsVisible.value = true;
-  }
-
   // 新建项目弹窗(中文名 + basePackage)
   const newProjectVisible = ref(false);
   function openNewProject() {
@@ -54,11 +42,9 @@ export const useUiStore = defineStore("ui", () => {
   const anyDialogOpen = computed(
     () =>
       exportVisible.value ||
-      dataSourceVisible.value ||
       databaseConfigVisible.value ||
       importVisible.value ||
       recentVisible.value ||
-      projectSettingsVisible.value ||
       newProjectVisible.value
   );
 
@@ -66,16 +52,12 @@ export const useUiStore = defineStore("ui", () => {
     exportVisible,
     exportKind,
     openExport,
-    dataSourceVisible,
-    openDataSource,
     databaseConfigVisible,
     openDatabaseConfig,
     importVisible,
     openImport,
     recentVisible,
     openRecent,
-    projectSettingsVisible,
-    openProjectSettings,
     newProjectVisible,
     openNewProject,
     anyDialogOpen,
