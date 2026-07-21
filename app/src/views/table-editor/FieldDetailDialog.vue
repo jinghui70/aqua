@@ -49,14 +49,17 @@ function getBizTypeDataValue(fieldName: string): unknown {
   if (data && typeof data === "object") return (data as Record<string, unknown>)[fieldName];
   return undefined;
 }
-function setBizTypeDataValue(fieldName: string, value: unknown) {
+function setBizTypeDataValue(field: { name: string; default?: unknown }, value: unknown) {
   if (!draft.value) return;
+  // 空值或等于默认值 -> 不存(输出 JSON 也不输出)
+  const skip = value === "" || value === null || value === undefined || value === field.default;
   if (bizTypeDataFields.value.length === 1) {
-    draft.value.bizTypeData = value;
+    draft.value.bizTypeData = skip ? undefined : value;
   } else {
-    const obj = (draft.value.bizTypeData as Record<string, unknown>) ?? {};
-    obj[fieldName] = value;
-    draft.value.bizTypeData = obj;
+    const obj = { ...((draft.value.bizTypeData as Record<string, unknown>) ?? {}) };
+    if (skip) delete obj[field.name];
+    else obj[field.name] = value;
+    draft.value.bizTypeData = Object.keys(obj).length ? obj : undefined;
   }
 }
 
@@ -275,10 +278,10 @@ function save() {
         </div>
       </el-form>
 
-      <!-- autoGenerate -->
-      <el-divider content-position="left">自动生成</el-divider>
+      <!-- 自动生成 -->
+      <div class="font-bold text-14 mt-16 mb-8">自动生成</div>
       <el-form label-width="90px" class="pr-12" :disabled="store.readOnly">
-        <el-form-item label="启用">
+        <el-form-item label="自动生成">
           <el-switch
             :model-value="!!draft.autoGenerate"
             @change="(v: any) => draft && (draft.autoGenerate = v ? { enabled: true, strategy: 'default', timing: 'INSERT' } : undefined)"
@@ -306,10 +309,10 @@ function save() {
         </template>
       </el-form>
 
-      <!-- 业务类型(Enum 是特殊 bizType,§3.5)-->
-      <el-divider content-position="left">业务类型</el-divider>
+      <!-- 业务类型(Enum 是特殊 bizType)-->
+      <div class="font-bold text-14 mt-16 mb-8">业务类型</div>
       <el-form label-width="90px" class="pr-12" :disabled="store.readOnly">
-        <el-form-item label="bizType">
+        <el-form-item label="业务类型">
           <el-select
             :model-value="draft.bizType"
             clearable
@@ -324,14 +327,8 @@ function save() {
 
         <!-- bizType=Enum: 枚举特殊配置(无/内联)-->
         <template v-if="isEnumBizType">
-          <el-form-item label="枚举来源">
-            <el-radio-group v-model="enumMode" @change="(m: any) => onEnumModeChange(m)">
-              <el-radio value="none">无</el-radio>
-              <el-radio value="inline">内联</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <!-- 内联 -->
-          <template v-if="enumMode === 'inline' && inlineEnum">
+          <!-- 选 Enum 自动内联枚举 -->
+          <template v-if="inlineEnum">
             <el-form-item label="枚举名">
               <el-input v-model="inlineEnum.name" style="width: 200px" />
               <el-checkbox v-model="inlineEnum.hasCode" class="ml-12">hasCode</el-checkbox>
@@ -374,26 +371,27 @@ function save() {
           <el-form-item
             v-for="bf in bizTypeDataFields"
             :key="bf.name"
-            :label="bf.name"
+            :label="bf.description || bf.name"
           >
             <el-input
               v-if="bf.type === 'string'"
               :model-value="getBizTypeDataValue(bf.name) as string"
-              :placeholder="bf.description"
-              @update:model-value="(v: string) => setBizTypeDataValue(bf.name, v)"
+              :placeholder="bf.default != null ? String(bf.default) : ''"
+              @update:model-value="(v: string) => setBizTypeDataValue(bf, v)"
             />
             <el-input-number
               v-else
               :model-value="getBizTypeDataValue(bf.name) as number"
               :controls="false"
-              @update:model-value="(v: number | undefined) => setBizTypeDataValue(bf.name, v)"
+              :placeholder="bf.default != null ? String(bf.default) : ''"
+              @update:model-value="(v: number | undefined) => setBizTypeDataValue(bf, v)"
             />
           </el-form-item>
         </template>
       </el-form>
 
-      <!-- 备注(后置)-->
-      <el-divider content-position="left">备注</el-divider>
+      <!-- 备注 -->
+      <div class="font-bold text-14 mt-16 mb-8">备注</div>
       <el-form label-width="90px" class="pr-12" :disabled="store.readOnly">
         <el-form-item label="备注">
           <el-input v-model="draft.comment" type="textarea" :rows="2" />
