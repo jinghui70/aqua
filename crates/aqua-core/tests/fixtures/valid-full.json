@@ -14,28 +14,6 @@
       }
     }
   ],
-  "enums": [
-    {
-      "code": "EnumGender",
-      "name": "性别",
-      "package": "enum",
-      "hasCode": true,
-      "values": [
-        { "id": "MALE", "name": "男", "code": "M", "color": "blue" },
-        { "id": "FEMALE", "name": "女", "code": "F", "color": "red" }
-      ]
-    },
-    {
-      "code": "EnumStatus",
-      "name": "状态",
-      "package": "enum",
-      "hasCode": false,
-      "values": [
-        { "id": "ACTIVE", "name": "启用", "color": "success" },
-        { "id": "DISABLED", "name": "禁用", "color": "grey" }
-      ]
-    }
-  ],
   "groups": [{ "code": "core", "name": "核心模块" }],
   "tables": [
     {
@@ -66,7 +44,14 @@
           "name": "性别",
           "dataType": "VARCHAR",
           "length": 2,
-          "enum": "EnumGender"
+          "enum": {
+            "name": "性别",
+            "hasCode": true,
+            "values": [
+              { "id": "MALE", "name": "男", "code": "M", "color": "blue" },
+              { "id": "FEMALE", "name": "女", "code": "F", "color": "red" }
+            ]
+          }
         },
         {
           "prop": "status",

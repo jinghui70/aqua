@@ -40,29 +40,6 @@ pub enum ParseError {
 pub fn validate_project(project: &Project) -> Result<(), Vec<ValidationError>> {
     let mut errors = Vec::new();
 
-    // 校验全局枚举
-    for (enum_idx, enum_def) in project.enums.iter().enumerate() {
-        // values 非空
-        if enum_def.values.is_empty() {
-            errors.push(ValidationError::new(
-                format!("enums[{}].values", enum_idx),
-                "values 数组不能为空",
-            ));
-        }
-
-        // hasCode=true 时每个 value 必须有 code
-        if enum_def.has_code.unwrap_or(false) {
-            for (value_idx, value) in enum_def.values.iter().enumerate() {
-                if value.code.is_none() || value.code.as_ref().unwrap().is_empty() {
-                    errors.push(ValidationError::new(
-                        format!("enums[{}].values[{}].code", enum_idx, value_idx),
-                        "hasCode=true 时每个 value 必须有 code",
-                    ));
-                }
-            }
-        }
-    }
-
     // 校验表
     for (table_idx, table) in project.tables.iter().enumerate() {
         // 校验字段
@@ -76,7 +53,7 @@ pub fn validate_project(project: &Project) -> Result<(), Vec<ValidationError>> {
             }
 
             // 校验内联枚举
-            if let Some(crate::schema::field::FieldEnum::Inline(inline_enum)) = &field.enum_ref {
+            if let Some(inline_enum) = &field.enum_ref {
                 // values 非空
                 if inline_enum.values.is_empty() {
                     errors.push(ValidationError::new(

@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "basePackage": "com.example",
   "bizTypes": [],
-  "enums": [],
   "groups": [{ "code": "core", "name": "核心" }],
   "tables": [
     {
@@ -15,7 +14,11 @@
           "code": "STATUS",
           "name": "状态",
           "dataType": "INT",
-          "enum": "EnumStatus"
+          "enum": {
+            "name": "状态",
+            "hasCode": false,
+            "values": [{ "id": "ACTIVE", "name": "启用" }]
+          }
         }
       ]
     }

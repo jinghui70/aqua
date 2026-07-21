@@ -1,4 +1,4 @@
-//! §3.5 枚举定义(EnumDefine) 与内联枚举(InlineEnum)。
+//! §3.5 内联枚举(InlineEnum) - 字段级枚举定义(无全局枚举)。
 
 use serde::{Deserialize, Serialize};
 
@@ -33,22 +33,10 @@ pub struct EnumValue {
     pub color: Option<EnumColor>,
 }
 
-/// §3.5 InlineEnum - field.enum 为对象时的内联枚举（无 code/package）。
+/// §3.5 InlineEnum - field.enum 内联枚举（无 code/package）。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InlineEnum {
     pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "hasCode")]
-    pub has_code: Option<bool>,
-    pub values: Vec<EnumValue>,
-}
-
-/// §3.5 EnumDefine - 全局枚举（schema.json 顶层 enums 数组）。
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EnumDefine {
-    pub code: String,
-    pub name: String,
-    pub package: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "hasCode")]
     pub has_code: Option<bool>,

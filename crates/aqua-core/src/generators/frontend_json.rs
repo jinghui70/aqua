@@ -206,7 +206,6 @@ mod tests {
                 indexes: None,
                 comment: None,
             }],
-            enums: vec![],
             biz_types: vec![],
             groups: vec![],
         };

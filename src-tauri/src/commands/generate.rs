@@ -103,18 +103,6 @@ pub async fn generate_frontend_json_command(
     ))
 }
 
-/// Tauri command: 生成全局枚举 Java 类。
-#[tauri::command]
-pub async fn generate_enum_command(project: Project, enum_code: String) -> Result<String, String> {
-    use aqua_core::generators::java::enum_class::generate_global_enum_class;
-    let def = project
-        .enums
-        .iter()
-        .find(|e| e.code == enum_code)
-        .ok_or_else(|| format!("枚举不存在: {}", enum_code))?;
-    Ok(generate_global_enum_class(&project, def))
-}
-
 /// Tauri command: 生成 StrConst 常量类(范围过滤 + 包名/类名)。
 #[tauri::command]
 pub async fn generate_strconst_command(

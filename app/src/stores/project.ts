@@ -57,7 +57,6 @@ export const useProjectStore = defineStore("project", () => {
       basePackage: basePackage.trim() || "com.example",
       name: name.trim() || undefined,
       bizTypes: [],
-      enums: [],
       groups: [{ code: "default", name: "默认分组" }],
       tables: [],
     };

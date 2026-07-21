@@ -72,8 +72,6 @@ export function useTauri() {
       }),
     generateFrontendJson: (project: Project, table: string) =>
       invoke<string>("generate_frontend_json_command", { project, table }),
-    generateEnum: (project: Project, enumCode: string) =>
-      invoke<string>("generate_enum_command", { project, enumCode }),
     generateStrConst: (
       project: Project,
       opts?: { group?: string; packageSuffix?: string; className?: string }

@@ -8,8 +8,6 @@ pub struct DiffResult {
     pub tables: TableDiff,
     /// bizType code 变更(added + removed)
     pub biz_types: Vec<String>,
-    /// enum code 变更(added + removed)
-    pub enums: Vec<String>,
 }
 
 /// 表级 diff。

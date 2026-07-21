@@ -2,25 +2,30 @@
   "version": "1.0.0",
   "basePackage": "com.example",
   "bizTypes": [],
-  "enums": [
-    {
-      "code": "EnumGender",
-      "name": "性别",
-      "package": "enum",
-      "hasCode": true,
-      "values": [
-        { "id": "MALE", "name": "男", "code": "M" },
-        { "id": "FEMALE", "name": "女" }
-      ]
-    }
-  ],
   "groups": [{ "code": "core", "name": "核心" }],
   "tables": [
     {
       "code": "T",
       "name": "T",
       "group": "core",
-      "fields": [{ "prop": "id", "code": "ID", "name": "主键", "dataType": "LONG" }]
+      "fields": [
+        { "prop": "id", "code": "ID", "name": "主键", "dataType": "LONG" },
+        {
+          "prop": "gender",
+          "code": "GENDER",
+          "name": "性别",
+          "dataType": "VARCHAR",
+          "length": 2,
+          "enum": {
+            "name": "性别",
+            "hasCode": true,
+            "values": [
+              { "id": "MALE", "name": "男", "code": "M" },
+              { "id": "FEMALE", "name": "女" }
+            ]
+          }
+        }
+      ]
     }
   ]
 }

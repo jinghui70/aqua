@@ -114,7 +114,6 @@ pub fn run() {
             generate::generate_ddl_command,
             generate::generate_java_command,
             generate::generate_frontend_json_command,
-            generate::generate_enum_command,
             generate::generate_strconst_command,
             generate::generate_alter_command,
             import::test_connection_command,

@@ -60,17 +60,14 @@ function setBizTypeDataValue(fieldName: string, value: unknown) {
   }
 }
 
-// ===== enum(无/引用/内联)=====
-type EnumMode = "none" | "ref" | "inline";
+// ===== enum(无/内联,统一 InlineEnum)=====
+type EnumMode = "none" | "inline";
 const enumMode = ref<EnumMode>("none");
-const globalEnums = computed(() => store.currentProject?.enums ?? []);
 const isVarchar = computed(() => draft.value?.dataType === DataType.Varchar);
 
 function syncEnumMode() {
   const e = draft.value?.enum;
-  if (!e) enumMode.value = "none";
-  else if (typeof e === "string") enumMode.value = "ref";
-  else enumMode.value = "inline";
+  enumMode.value = e ? "inline" : "none";
 }
 
 // ===== 类型 ↔ bizType 联动(§3.4)=====
@@ -130,14 +127,14 @@ function onDataTypeChange(dt: DataType) {
   }
 }
 
-// bizType 切换:选 Enum 默认引用模式并强制 VARCHAR;选普通 bizType 校正 dataType + 填默认值;离开清空
+// bizType 切换:选 Enum 默认内联枚举并强制 VARCHAR;选普通 bizType 校正 dataType + 填默认值;离开清空
 function onBizTypeChange(bizType: string | undefined) {
   if (!draft.value) return;
   draft.value.bizType = bizType;
   if (bizType === "Enum") {
     if (!draft.value.enum) {
-      draft.value.enum = "";
-      enumMode.value = "ref";
+      draft.value.enum = { name: "", hasCode: false, values: [] } as InlineEnum;
+      enumMode.value = "inline";
     }
     draft.value.bizTypeData = undefined;
     draft.value.dataType = DataType.Varchar;
@@ -173,24 +170,10 @@ watch(
 function onEnumModeChange(mode: EnumMode) {
   if (!draft.value) return;
   if (mode === "none") draft.value.enum = undefined;
-  else if (mode === "ref") draft.value.enum = "";
-  else
-    draft.value.enum = { name: "", hasCode: false, values: [] } as InlineEnum;
+  else draft.value.enum = { name: "", hasCode: false, values: [] } as InlineEnum;
 }
 
-const inlineEnum = computed(() =>
-  draft.value && typeof draft.value.enum === "object"
-    ? (draft.value.enum as InlineEnum)
-    : null
-);
-
-// 引用全局枚举的可写绑定(v-model 不能绑类型断言表达式)
-const refEnumCode = computed<string>({
-  get: () => (typeof draft.value?.enum === "string" ? draft.value.enum : ""),
-  set: (v) => {
-    if (draft.value) draft.value.enum = v;
-  },
-});
+const inlineEnum = computed(() => draft.value?.enum ?? null);
 
 function addInlineValue() {
   inlineEnum.value?.values.push({ id: "", name: "" });
@@ -227,7 +210,7 @@ function save() {
   }
   // 内联 enum: hasCode=true 时每个枚举值 code 必填
   const e = draft.value.enum;
-  if (e && typeof e === "object" && e.hasCode) {
+  if (e && e.hasCode) {
     if (e.values.some((v) => !v.code || !v.code.trim())) {
       ElMessage.error("hasCode 为 true 时,每个枚举值的 code 必填");
       return;
@@ -339,19 +322,13 @@ function save() {
           </el-select>
         </el-form-item>
 
-        <!-- bizType=Enum: 枚举特殊配置(引用/内联)-->
+        <!-- bizType=Enum: 枚举特殊配置(无/内联)-->
         <template v-if="isEnumBizType">
           <el-form-item label="枚举来源">
             <el-radio-group v-model="enumMode" @change="(m: any) => onEnumModeChange(m)">
-              <el-radio value="ref">引用全局</el-radio>
+              <el-radio value="none">无</el-radio>
               <el-radio value="inline">内联</el-radio>
             </el-radio-group>
-          </el-form-item>
-          <!-- 引用全局 -->
-          <el-form-item v-if="enumMode === 'ref'" label="选择枚举">
-            <el-select v-model="refEnumCode" placeholder="选全局枚举" style="width: 220px">
-              <el-option v-for="e in globalEnums" :key="e.code" :label="`${e.name} (${e.code})`" :value="e.code" />
-            </el-select>
           </el-form-item>
           <!-- 内联 -->
           <template v-if="enumMode === 'inline' && inlineEnum">

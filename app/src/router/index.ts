@@ -24,11 +24,6 @@ const routes = [
     component: () => import("@/views/BizTypeManage.vue"),
   },
   {
-    path: "/enum",
-    name: "enum",
-    component: () => import("@/views/EnumManage.vue"),
-  },
-  {
     path: "/dataset",
     name: "dataset",
     component: () => import("@/views/DatasetManage.vue"),

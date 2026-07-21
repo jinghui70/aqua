@@ -47,7 +47,7 @@ export interface Field {
   notNull?: boolean;
   defaultValue?: string;
   autoGenerate?: AutoGenerate;
-  enum?: string | InlineEnum;
+  enum?: InlineEnum;
   comment?: string;
 }
 
@@ -91,21 +91,12 @@ export interface BizTypeDefine {
   bizTypeData?: { fields: Array<{ name: string; type: "string" | "number"; description?: string; required?: boolean; default?: string | number }> };
 }
 
-export interface EnumDefine {
-  code: string;
-  name: string;
-  package: string;
-  hasCode?: boolean;
-  values: InlineEnumValue[];
-}
-
 export interface Project {
   version: string;
   /** 项目中文名(可选,旧 schema 兼容) */
   name?: string;
   basePackage: string;
   bizTypes: BizTypeDefine[];
-  enums: EnumDefine[];
   groups: GroupDefine[];
   tables: Table[];
 }

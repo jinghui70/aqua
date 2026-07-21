@@ -1,19 +1,54 @@
 {
   "bizTypes": [
     {
+      "bizType": "Bool",
+      "name": "布尔",
+      "description": "布尔型数据",
+      "supportedDataTypes": [
+        { "dataType": "VARCHAR", "defaultLength": 1 },
+        { "dataType": "TINYINT" },
+        { "dataType": "INT" }
+      ],
+      "bizTypeData": {
+        "fields": [
+          {
+            "name": "trueText",
+            "type": "string",
+            "default": "是",
+            "description": "True值文字"
+          },
+          {
+            "name": "trueColor",
+            "type": "color",
+            "default": "primary",
+            "description": "True值颜色"
+          },
+          {
+            "name": "falseText",
+            "type": "string",
+            "default": "否",
+            "description": "False值文字"
+          },
+          {
+            "name": "falseColor",
+            "type": "string",
+            "default": "danger",
+            "description": "False值颜色"
+          }
+        ]
+      }
+    },
+    {
       "bizType": "Date",
       "name": "日期",
       "description": "格式化日期字符串",
-      "supportedDataTypes": [
-        { "dataType": "VARCHAR", "defaultLength": 8 }
-      ],
+      "supportedDataTypes": [{ "dataType": "VARCHAR", "defaultLength": 8 }],
       "bizTypeData": {
         "fields": [
           {
             "name": "format",
             "type": "string",
             "default": "YYYYMMDD",
-            "required": true,
             "description": "日期格式"
           }
         ]

@@ -120,7 +120,6 @@ fn test_generate_field_with_auto_generate() {
     let value = serde_json::json!({
         "version": "1.0.0",
         "basePackage": "com.example",
-        "enums": [],
         "bizTypes": [],
         "groups": [{ "code": "core", "name": "核心" }],
         "tables": [{

@@ -17,10 +17,6 @@ pub fn diff_project(old: &Project, new: &Project) -> DiffResult {
             old.biz_types.iter().map(|b| b.biz_type.as_str()),
             new.biz_types.iter().map(|b| b.biz_type.as_str()),
         ),
-        enums: diff_codes(
-            old.enums.iter().map(|e| e.code.as_str()),
-            new.enums.iter().map(|e| e.code.as_str()),
-        ),
     }
 }
 
@@ -181,7 +177,7 @@ pub(crate) fn index_key(idx: &Index) -> String {
     })
 }
 
-/// 简单 code 列表 diff(用于 bizTypes/enums)。
+/// 简单 code 列表 diff(用于 bizTypes)。
 fn diff_codes<'a>(
     old: impl Iterator<Item = &'a str>,
     new: impl Iterator<Item = &'a str>,

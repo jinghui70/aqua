@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "basePackage": "com.example",
   "bizTypes": [],
-  "enums": [],
   "groups": [],
   "tables": [
     {

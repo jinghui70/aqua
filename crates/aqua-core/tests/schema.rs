@@ -32,7 +32,6 @@ fn test_accepts_complete_valid_project() {
     assert_eq!(project.base_package, "com.example");
     assert_eq!(project.tables[0].code, "SYS_USER");
     assert_eq!(project.tables[0].fields.len(), 7);
-    assert_eq!(project.enums.len(), 2);
 }
 
 #[test]
@@ -106,19 +105,29 @@ fn test_parse_project_throws_on_invalid_input() {
 
 #[test]
 fn test_rejects_empty_values_array() {
-    // 手写 project: enums[0].values = []
+    // 手写 project: tables[0].fields[0].enum.values = []
     let project_json = serde_json::json!({
         "version": "1.0.0",
         "basePackage": "com.example",
         "bizTypes": [],
-        "enums": [{
-            "code": "E",
-            "name": "E",
-            "package": "enum",
-            "values": []
-        }],
         "groups": [],
-        "tables": []
+        "tables": [{
+            "code": "T",
+            "name": "T",
+            "group": "core",
+            "fields": [{
+                "prop": "status",
+                "code": "STATUS",
+                "name": "状态",
+                "dataType": "VARCHAR",
+                "length": 16,
+                "enum": {
+                    "name": "状态",
+                    "hasCode": false,
+                    "values": []
+                }
+            }]
+        }]
     });
 
     let result = validate_project_result(project_json);

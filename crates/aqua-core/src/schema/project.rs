@@ -1,7 +1,6 @@
 //! §3.6 项目模型(Project)与分组(GroupDefine)。
 
 use crate::schema::biz_type::BizTypeDefine;
-use crate::schema::enum_def::EnumDefine;
 use crate::schema::table::Table;
 use serde::{Deserialize, Serialize};
 
@@ -23,7 +22,6 @@ pub struct Project {
     pub base_package: String,
     #[serde(rename = "bizTypes")]
     pub biz_types: Vec<BizTypeDefine>,
-    pub enums: Vec<EnumDefine>,
     pub groups: Vec<GroupDefine>,
     pub tables: Vec<Table>,
 }

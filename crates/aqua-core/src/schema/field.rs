@@ -22,15 +22,6 @@ pub enum GenerateTiming {
     InsertUpdate,
 }
 
-/// §3.2 Field.enum 联合类型: string(引用全局枚举 code) | object(内联枚举)。
-/// #[serde(untagged)] 按顺序尝试: 先 String, 失败再 InlineEnum。
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum FieldEnum {
-    Ref(String),
-    Inline(InlineEnum),
-}
-
 /// §3.2 字段模型 Field（对齐 json-ui DataFieldSchema + 工具扩展）。
 ///
 /// 字段声明顺序即 JSON 序列化顺序:code/prop/name 靠前(标识优先),
@@ -69,10 +60,10 @@ pub struct Field {
     #[serde(rename = "autoGenerate")]
     pub auto_generate: Option<AutoGenerate>,
 
-    // Enum：string=引用全局枚举 code，object=内联枚举
+    // Enum：字段内联枚举（无全局引用，统一 InlineEnum）
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "enum")]
-    pub enum_ref: Option<FieldEnum>,
+    pub enum_ref: Option<InlineEnum>,
 
     // 业务类型（对齐 json-ui，靠后放置）
     #[serde(skip_serializing_if = "Option::is_none")]

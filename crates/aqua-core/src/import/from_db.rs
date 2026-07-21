@@ -32,7 +32,6 @@ pub async fn import_from_db(
         name: None,
         base_package: base_package.unwrap_or_else(|| "com.example".to_string()),
         tables: result,
-        enums: vec![],
         biz_types: vec![],
         groups: vec![],
     })
