@@ -8,6 +8,11 @@ const routes = [
     component: () => import("@/views/WorkspaceHome.vue"),
   },
   {
+    path: "/welcome",
+    name: "welcome",
+    component: () => import("@/views/Welcome.vue"),
+  },
+  {
     path: "/table/:id",
     name: "table",
     component: () => import("@/views/TableEditor.vue"),
@@ -27,6 +32,11 @@ const routes = [
     path: "/dataset",
     name: "dataset",
     component: () => import("@/views/DatasetManage.vue"),
+  },
+  {
+    path: "/config",
+    name: "config",
+    component: () => import("@/views/ConfigCenter.vue"),
   },
 ];
 

@@ -24,27 +24,11 @@ fn build_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<tau
         .text("file.recent", "最近项目")
         .text("file.save", "保存")
         .text("file.saveAs", "另存为")
-        .text("file.close", "关闭项目")
-        .separator()
-        .text("file.import", "从数据库导入");
+        .text("file.close", "关闭项目");
     // 非 macOS: 文件菜单末尾加退出(macOS 的退出在应用菜单)
     #[cfg(not(target_os = "macos"))]
     let file_builder = file_builder.separator().quit();
     let file = file_builder.build()?;
-    let config = SubmenuBuilder::new(app, "配置")
-        .text("config.project", "项目设置")
-        .separator()
-        .text("config.biztype", "业务类型管理")
-        .text("config.enum", "枚举管理")
-        .text("config.dataset", "数据集管理")
-        .text("config.datasource", "数据源配置")
-        .text("config.database", "数据库配置")
-        .build()?;
-    let export = SubmenuBuilder::new(app, "导出")
-        .text("export.ddl", "DDL")
-        .text("export.diff", "diff")
-        .text("export.strconst", "StrConst")
-        .build()?;
     let help = SubmenuBuilder::new(app, "帮助")
         .text("help.guide", "用户指南")
         .text("help.about", "关于")
@@ -64,7 +48,7 @@ fn build_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<tau
         builder.item(&app_menu)
     };
 
-    builder.items(&[&file, &config, &export, &help]).build()
+    builder.items(&[&file, &help]).build()
 }
 
 /// 落文件日志(GUI 无 console,Windows 上 spawn connector 的现场靠此定位)。

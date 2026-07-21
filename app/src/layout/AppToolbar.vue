@@ -31,9 +31,8 @@ const ui = useUiStore();
     <el-divider direction="vertical" />
 
     <!-- 管理组 -->
-    <el-button size="small" @click="ui.openDataSource">数据源</el-button>
-    <el-button size="small" @click="ui.openDatabaseConfig">驱动管理</el-button>
-    <el-button size="small" @click="router.push('/biztype')">业务类型</el-button>
+    <el-button size="small" @click="router.push('/config')">配置</el-button>
     <el-button size="small" @click="router.push('/dataset')">数据集</el-button>
+    <el-button size="small" @click="ui.openDatabaseConfig">驱动管理</el-button>
   </div>
 </template>

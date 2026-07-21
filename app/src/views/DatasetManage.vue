@@ -2,12 +2,14 @@
 // 数据集管理(§6.4):打开/新建/保存数据集文件 + 表树(真实行数) + 可编辑数据网格。
 // 行数据前端持有(内存),编辑后整体存回;后端 dataset_load/save 无状态。
 import { computed, ref } from "vue";
+import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useProjectStore } from "@/stores/project";
 import { useTauri } from "@/composables/useTauri";
 import { pickDatasetOpen, pickDatasetSave } from "@/composables/useFileDialog";
 import { DataType, type DatasetEntry, type Field } from "@/types/schema";
 
+const router = useRouter();
 const store = useProjectStore();
 const tauri = useTauri();
 
@@ -189,6 +191,7 @@ async function clearTable() {
   <div v-if="store.currentProject" class="h-full flex flex-col">
     <!-- 顶部:数据集文件操作 -->
     <div class="flex items-center gap-12 px-16 h-48 border-b border-gray-200 flex-shrink-0">
+      <el-button size="small" link @click="router.push('/')">← 返回</el-button>
       <span class="text-13">数据集</span>
       <span class="text-13 text-gray-500 font-mono">{{ fileName(currentPath) }}</span>
       <el-button size="small" @click="newDataset">新建</el-button>

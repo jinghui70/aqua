@@ -16,12 +16,6 @@ export function useMenuActions() {
   const ui = useUiStore();
   let unlisten: UnlistenFn | null = null;
 
-  /** 打开配置类路由标签(单例)。 */
-  function openConfigTab(key: string, title: string, path: string) {
-    store.openTab({ key, title, path });
-    router.push(path);
-  }
-
   async function handle(id: string) {
     // 对话框打开时忽略菜单事件(模态:原生菜单栏无法灰显,但操作不执行,避免打断)
     if (ui.anyDialogOpen) return;
@@ -45,48 +39,6 @@ export function useMenuActions() {
         break;
       case "file.close":
         if (await store.closeProject()) router.push("/");
-        break;
-      case "file.import":
-        if (!store.currentProject) {
-          ElMessage.warning("请先新建或打开项目");
-          break;
-        }
-        ui.openImport();
-        break;
-      // 配置(弹窗)
-      case "config.project":
-        if (!store.currentProject) {
-          ElMessage.warning("请先新建或打开项目");
-          break;
-        }
-        ui.openProjectSettings();
-        break;
-      // 配置(路由标签)
-      case "config.biztype":
-        openConfigTab("biztype", "业务类型", "/biztype");
-        break;
-      case "config.enum":
-        openConfigTab("enum", "枚举", "/enum");
-        break;
-      case "config.dataset":
-        openConfigTab("dataset", "数据集", "/dataset");
-        break;
-      // 配置(弹窗)
-      case "config.datasource":
-        ui.openDataSource();
-        break;
-      case "config.database":
-        ui.openDatabaseConfig();
-        break;
-      // 导出(弹窗)
-      case "export.ddl":
-        ui.openExport("ddl");
-        break;
-      case "export.diff":
-        ui.openExport("diff");
-        break;
-      case "export.strconst":
-        ui.openExport("strconst");
         break;
       case "help.guide":
         ElMessageBox.alert(
