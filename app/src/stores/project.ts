@@ -2,7 +2,7 @@
 
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { nextTick, ref, watch } from "vue";
-import { ElMessageBox } from "element-plus";
+import { useUiStore } from "@/stores/ui";
 import type { Project, Table } from "@/types/schema";
 import { useTauri } from "@/composables/useTauri";
 import { useRecentProjects } from "@/composables/useRecentProjects";
@@ -115,20 +115,11 @@ export const useProjectStore = defineStore("project", () => {
    */
   async function confirmIfDirty(): Promise<boolean> {
     if (!dirty.value) return true;
-    let action: "save" | "discard" | "cancel";
-    try {
-      await ElMessageBox.confirm("有未保存改动,是否保存?", "提示", {
-        distinguishCancelAndClose: true,
-        confirmButtonText: "保存",
-        cancelButtonText: "不保存",
-        type: "warning",
-      });
-      action = "save";
-    } catch (e) {
-      action = e === "cancel" ? "discard" : "cancel";
-    }
+    const ui = useUiStore();
+    const action = await ui.openExitConfirm();
     if (action === "cancel") return false;
     if (action === "discard") return true;
+    // save
     let target = currentPath.value;
     if (!target) {
       target = (await pickSaveFile()) ?? "";

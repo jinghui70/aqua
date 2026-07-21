@@ -15,6 +15,7 @@ import DatabaseConfigDialog from "@/components/DatabaseConfigDialog.vue";
 import ImportWizard from "@/components/ImportWizard.vue";
 import RecentProjectsDialog from "@/components/RecentProjectsDialog.vue";
 import NewProjectDialog from "@/components/NewProjectDialog.vue";
+import ExitConfirmDialog from "@/components/ExitConfirmDialog.vue";
 
 const store = useProjectStore();
 const route = useRoute();
@@ -58,5 +59,6 @@ watch(
     <ImportWizard />
     <RecentProjectsDialog />
     <NewProjectDialog />
+    <ExitConfirmDialog />
   </div>
 </template>

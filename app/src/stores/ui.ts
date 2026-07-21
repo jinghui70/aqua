@@ -38,6 +38,21 @@ export const useUiStore = defineStore("ui", () => {
     newProjectVisible.value = true;
   }
 
+  // 退出/关闭确认(保存/不保存/取消,三按钮 ElDialog)
+  const exitConfirmVisible = ref(false);
+  let exitConfirmResolve: ((v: "save" | "discard" | "cancel") => void) | null = null;
+  function openExitConfirm(): Promise<"save" | "discard" | "cancel"> {
+    return new Promise((resolve) => {
+      exitConfirmResolve = resolve;
+      exitConfirmVisible.value = true;
+    });
+  }
+  function resolveExitConfirm(v: "save" | "discard" | "cancel") {
+    exitConfirmVisible.value = false;
+    exitConfirmResolve?.(v);
+    exitConfirmResolve = null;
+  }
+
   // 是否有对话框打开(菜单事件据此忽略,避免操作被打断;原生菜单栏无法灰显)
   const anyDialogOpen = computed(
     () =>
@@ -45,7 +60,8 @@ export const useUiStore = defineStore("ui", () => {
       databaseConfigVisible.value ||
       importVisible.value ||
       recentVisible.value ||
-      newProjectVisible.value
+      newProjectVisible.value ||
+      exitConfirmVisible.value
   );
 
   return {
@@ -60,6 +76,9 @@ export const useUiStore = defineStore("ui", () => {
     openRecent,
     newProjectVisible,
     openNewProject,
+    exitConfirmVisible,
+    openExitConfirm,
+    resolveExitConfirm,
     anyDialogOpen,
   };
 });
