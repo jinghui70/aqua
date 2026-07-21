@@ -5,6 +5,7 @@ import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { useUiStore } from "@/stores/ui";
 import { useProjectStore } from "@/stores/project";
+import { pickSaveFile } from "@/composables/useFileDialog";
 
 const ui = useUiStore();
 const store = useProjectStore();
@@ -23,16 +24,24 @@ watch(
   }
 );
 
-function confirm() {
+async function confirm() {
   const pkg = basePackage.value.trim();
   if (!pkg) {
     ElMessage.warning("basePackage 不能为空");
     return;
   }
+  // 新建项目直接保存为文件,否则 currentPath 为空,数据集/数据源无根
+  const path = await pickSaveFile();
+  if (!path) return; // 用户取消选保存位置
   store.newProject(name.value, pkg);
-  ui.newProjectVisible = false;
-  router.push("/");
-  ElMessage.success("已新建项目");
+  try {
+    await store.saveProject(path);
+    ui.newProjectVisible = false;
+    router.push("/");
+    ElMessage.success("已新建项目");
+  } catch (e) {
+    ElMessage.error(`保存失败: ${e}`);
+  }
 }
 </script>
 
