@@ -2,7 +2,7 @@
 
 use super::naming::{snake_to_camel, snake_to_pascal};
 use super::types::{get_java_import, map_java_type, JavaOptions};
-use crate::schema::{Field, Project, Table};
+use crate::schema::{DataType, Field, Project, Table};
 use std::collections::HashSet;
 
 /// 生成 Java 实体类。
@@ -100,11 +100,24 @@ fn collect_imports(table: &Table, options: &JavaOptions) -> Vec<String> {
         if let Some(import) = get_java_import(field.data_type) {
             imports.insert(import.to_string());
         }
+        // Clob/Blob 字段需 @Column(sqlType=Types.BLOB)
+        if matches!(field.data_type, DataType::Clob | DataType::Blob) {
+            imports.insert("java.sql.Types".to_string());
+        }
     }
 
     let mut sorted: Vec<_> = imports.into_iter().collect();
     sorted.sort();
     sorted
+}
+
+/// 字段 Java 类型:bizType=Bool -> boolean(基本类型),否则按 data_type 映射
+fn java_type_for(field: &Field) -> &'static str {
+    if field.biz_type.as_deref() == Some("Bool") {
+        "boolean"
+    } else {
+        map_java_type(field.data_type)
+    }
 }
 
 /// 生成字段定义。
@@ -144,15 +157,23 @@ fn generate_field(field: &Field) -> Vec<String> {
         }
     }
 
-    // @Column (非标准命名时)
+    // @Column (非标准命名 or Clob/Blob 加 sqlType=Types.BLOB)
     let prop = &field.prop;
     let expected_prop = snake_to_camel(&field.code);
+    let is_lob = matches!(field.data_type, DataType::Clob | DataType::Blob);
+    let mut column_parts: Vec<String> = Vec::new();
     if prop != &expected_prop {
-        lines.push(format!("    @Column(name = \"{}\")", field.code));
+        column_parts.push(format!("name = \"{}\"", field.code));
+    }
+    if is_lob {
+        column_parts.push("sqlType = Types.BLOB".to_string());
+    }
+    if !column_parts.is_empty() {
+        lines.push(format!("    @Column({})", column_parts.join(", ")));
     }
 
     // 字段声明
-    let java_type = map_java_type(field.data_type);
+    let java_type = java_type_for(field);
     lines.push(format!("    private {} {};", java_type, prop));
     lines.push(String::new());
 
@@ -164,7 +185,7 @@ fn generate_getter_setter(field: &Field) -> Vec<String> {
     let mut lines = Vec::new();
 
     let prop = &field.prop;
-    let java_type = map_java_type(field.data_type);
+    let java_type = java_type_for(field);
     let capitalized = if prop.is_empty() {
         String::new()
     } else {
