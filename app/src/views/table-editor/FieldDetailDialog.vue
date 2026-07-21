@@ -90,8 +90,9 @@ const availableDataTypes = computed<DataType[]>(() => {
 // 选 dataType 后 bizType 下拉只显示支持该类型的业务类型
 const availableBizTypes = computed<BizTypeDefine[]>(() => {
   const dt = draft.value?.dataType;
-  if (!dt) return bizTypes.value;
-  return bizTypes.value.filter((b) => bizTypeSupports(b, dt));
+  const all = !dt ? bizTypes.value : bizTypes.value.filter((b) => bizTypeSupports(b, dt));
+  console.log("[bizType] available dt=", dt, "count=", all.length, all.map((b) => b.bizType));
+  return all;
 });
 
 // 填充该 bizType 对指定 dataType 定义的默认 length/precision/scale
