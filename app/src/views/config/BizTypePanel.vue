@@ -120,6 +120,17 @@ function removeDataField(idx: number) {
 }
 
 // ===== 拖拽排序(数据类型 + 参数)=====
+// row-key:给行对象分配稳定 id(WeakMap),el-table diff + Sortable 拖拽所需
+let rowIdCounter = 0;
+const rowIdMap = new WeakMap();
+function rowKey(row: any): string {
+  let id = rowIdMap.get(row);
+  if (id == null) {
+    id = String(++rowIdCounter);
+    rowIdMap.set(row, id);
+  }
+  return id;
+}
 const supportedTableRef = ref();
 const dataFieldTableRef = ref();
 let supportedSortable: Sortable | null = null;
@@ -134,15 +145,12 @@ function bindSortable(refEl: any, arr: () => any[] | undefined): Sortable | null
     fallbackOnBody: true,
     disabled: isReadonly.value,
     onEnd({ oldIndex, newIndex }) {
-      console.log("[sortable] onEnd", oldIndex, newIndex);
       if (oldIndex == null || newIndex == null || oldIndex === newIndex) return;
       nextTick(() => {
         const a = arr();
-        console.log("[sortable] arr", a?.length, JSON.stringify(a?.map((x: any) => x.dataType ?? x.name)));
         if (!a) return;
         const [moved] = a.splice(oldIndex, 1);
         a.splice(newIndex, 0, moved);
-        console.log("[sortable] after", JSON.stringify(a?.map((x: any) => x.dataType ?? x.name)));
       });
     },
   });
@@ -224,7 +232,7 @@ watch(isReadonly, (ro) => {
           支持的数据类型
           <el-button v-if="!isReadonly" size="small" type="primary" link @click="addSupported">+ 添加</el-button>
         </div>
-        <el-table ref="supportedTableRef" :data="current.supportedDataTypes" border size="small" class="select-none">
+        <el-table ref="supportedTableRef" :data="current.supportedDataTypes" :row-key="rowKey" border size="small" class="select-none">
           <el-table-column v-if="!isReadonly" label="" width="36" align="center" key="drag">
             <template #default><span class="drag-handle cursor-move text-gray-400">⣿</span></template>
           </el-table-column>
@@ -266,7 +274,7 @@ watch(isReadonly, (ro) => {
           参数配置
           <el-button v-if="!isReadonly" size="small" type="primary" link @click="addDataField">+ 添加</el-button>
         </div>
-        <el-table v-show="current.bizTypeData?.fields.length" ref="dataFieldTableRef" :data="current.bizTypeData?.fields ?? []" border size="small" class="select-none">
+        <el-table v-show="current.bizTypeData?.fields.length" ref="dataFieldTableRef" :data="current.bizTypeData?.fields ?? []" :row-key="rowKey" border size="small" class="select-none">
             <el-table-column v-if="!isReadonly" label="" width="36" align="center" key="drag">
               <template #default><span class="drag-handle cursor-move text-gray-400">⣿</span></template>
             </el-table-column>
