@@ -263,8 +263,8 @@ watch(isReadonly, (ro) => {
           </el-table-column>
         </el-table>
 
-        <!-- bizTypeData.fields(无参数则隐藏;v-show 保留 DOM 供 Sortable 绑定)-->
-        <div v-if="current.bizTypeData?.fields.length" class="mt-16 mb-8 font-bold text-14 flex items-center gap-12">
+        <!-- bizTypeData.fields(无参数隐藏表格;标题+添加按钮始终显示)-->
+        <div class="mt-16 mb-8 font-bold text-14 flex items-center gap-12">
           参数配置
           <el-button v-if="!isReadonly" size="small" type="primary" link @click="addDataField">+ 添加</el-button>
         </div>
