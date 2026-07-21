@@ -830,3 +830,39 @@ Windows 发版后测试连接报"连接失败 + 乱码 + jar 路径 + 乱码"。
 
 - 用户发版后复现一次测试连接,回收 `aqua.log`,据 `connector exit`/`stdout(gbk)`/`argv` 定位"手动成功 vs 应用失败"差异。
 - 黑窗口本轮保留(证据),根因定位后另开 task 用 CREATE_NO_WINDOW 消除。
+
+## Session: 配置体系重组 + 工作流优化
+
+**Date**: 2026-07-21
+**Task**: 07-20-config-restructure
+**Branch**: `main`
+
+### Summary
+
+重组配置交互:主界面工具栏(替代 macOS 菜单远)+ 配置/数据集独立页(全屏覆盖工作区)+ 项目只读/加解锁 + 关闭应用 dirty 拦截(窗口 X + Command+Q)+ 全局枚举删 + 菜单精简 + Welcome 路由化。
+
+### Main Changes
+
+- **工具栏** AppToolbar:有项目时常驻 AppLayout 顶部(导入/导出/加解锁/配置/数据集/驱动管理)
+- **配置 /config**:ConfigCenter(左侧返回+导航+动态面板)+ ProjectSettingsPanel/DataSourcePanel/BizTypePanel(迁移现有,含只读传播);全屏覆盖工作区(isFullPage router-view 替代 splitter)
+- **数据集 /dataset**:左侧返回;**Welcome 路由化**(/welcome + watch currentProject 同步)
+- **项目只读**:store.readOnly,打开默认只读/新建可编辑/加解锁切换;传播到表格(v-if 只读 span / v-else 编辑,非 disabled 灰框)、树(:draggable=!readOnly + hover 操作栏 v-if)、FieldDetailDialog(el-form :disabled)、增删按钮 v-if 不可见
+- **关闭应用 dirty**:Rust ExitRequested 拦截(prevent_exit + emit confirm-exit)+ plugin-process exit + set_exit_confirmed command(防 exit 循环);前端 doConfirmExit(onCloseRequested + listen confirm-exit);自定义 ExitConfirmDialog 三按钮(保存/不保存/取消)
+- **全局枚举删**:EnumDefine/Project.enums/FieldEnum 全删,字段枚举统一 InlineEnum;EnumManage/enum_class 删;diff/validate/generator 同步
+- **菜单精简**:lib.rs 删配置/导出/导入(只留文件+帮助)+ useMenuActions 删 case
+- **Dialog 清理**:DataSourceDialog/ProjectSettingsDialog 无入口删
+
+### Verification
+
+- cargo test/clippy/build + vue-tsc 全过
+- box-sizing reset(@unocss/reset/tailwind.css)修布局根因
+- el-tab-pane margin->padding 修编辑框底边框被裁
+
+### Status
+
+[OK] **完成,待用户统一测**
+
+### Next Steps
+
+- Command+Q 直接关(Tauri macOS 不触发 ExitRequested)未修,用户接受
+- 后续测反馈
