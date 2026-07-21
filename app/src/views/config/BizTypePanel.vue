@@ -184,7 +184,7 @@ watch(isReadonly, (ro) => {
         >
           <span class="flex items-center gap-6">
             <el-tag v-if="builtin.isBuiltin(b.bizType)" size="small" type="info" effect="plain">内置</el-tag>
-            {{ b.name }} ({{ b.bizType }})
+            {{ b.bizType }} ({{ b.name }})
           </span>
           <el-button
             v-if="!builtin.isBuiltin(b.bizType) && !store.readOnly"
@@ -210,15 +210,10 @@ watch(isReadonly, (ro) => {
         />
         <!-- code 醒目文字 -->
         <div class="text-20 font-bold mb-12">{{ current.bizType }}</div>
-        <!-- 只读:名称 + 描述文本 -->
-        <template v-if="isReadonly">
-          <div class="mb-8 text-14"><span class="text-gray-500">名称:</span>{{ current.name }}</div>
-          <div class="mb-12 text-14"><span class="text-gray-500">描述:</span>{{ current.description || "-" }}</div>
-        </template>
-        <!-- 编辑:名称 + 描述一行,填充满(描述 flex-1)-->
-        <div v-else class="flex gap-12 mb-12">
-          <el-input v-model="current.name" placeholder="名称" style="width: 200px" />
-          <el-input v-model="current.description" placeholder="描述" class="flex-1" />
+        <!-- 名称 + 描述:都是编辑框,只读 readonly -->
+        <div class="flex gap-12 mb-12">
+          <el-input v-model="current.name" placeholder="名称" style="width: 200px" :readonly="isReadonly" />
+          <el-input v-model="current.description" placeholder="描述" class="flex-1" :readonly="isReadonly" />
         </div>
 
         <!-- supportedDataTypes -->
