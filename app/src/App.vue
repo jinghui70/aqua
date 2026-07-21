@@ -19,21 +19,15 @@ let unlistenExit: (() => void) | null = null;
 
 // 退出确认:dirty 时弹保存/不保存/取消;保存/不保存 -> 标记已确认 + exit;取消 -> 不退
 async function doConfirmExit() {
-  console.log("[exit] doConfirmExit dirty=", store.dirty);
   if (!store.dirty) {
     await invoke("set_exit_confirmed");
-    console.log("[exit] no dirty -> exit(0)");
     await exit(0);
     return;
   }
   const ok = await store.confirmIfDirty();
-  console.log("[exit] confirmIfDirty ok=", ok);
   if (ok) {
     await invoke("set_exit_confirmed");
-    console.log("[exit] confirmed -> exit(0)");
     await exit(0);
-  } else {
-    console.log("[exit] cancelled");
   }
 }
 

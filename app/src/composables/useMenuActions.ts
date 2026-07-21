@@ -38,7 +38,7 @@ export function useMenuActions() {
         await doSave(true);
         break;
       case "file.close":
-        if (await store.closeProject()) router.push("/");
+        if (await store.closeProject()) router.push("/welcome");
         break;
       case "help.guide":
         ElMessageBox.alert(
