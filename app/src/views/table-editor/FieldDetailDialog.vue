@@ -51,14 +51,31 @@ function getBizTypeDataValue(fieldName: string): unknown {
 }
 function setBizTypeDataValue(field: { name: string; default?: unknown }, value: unknown) {
   if (!draft.value) return;
-  // 空值或等于默认值 -> 不存(输出 JSON 也不输出)
-  const skip = value === "" || value === null || value === undefined || value === field.default;
+  // 输入时正常存(不跳过默认值,避免阻断输入如默认"是"想输"是啊");空/默认在 save 时清理
   if (bizTypeDataFields.value.length === 1) {
-    draft.value.bizTypeData = skip ? undefined : value;
+    draft.value.bizTypeData = value;
   } else {
     const obj = { ...((draft.value.bizTypeData as Record<string, unknown>) ?? {}) };
-    if (skip) delete obj[field.name];
-    else obj[field.name] = value;
+    obj[field.name] = value;
+    draft.value.bizTypeData = obj;
+  }
+}
+
+// 保存前清理:空值或等于默认值的字段不输出(单属性 -> undefined,多属性 -> 删字段,空对象 -> undefined)
+function cleanBizTypeData() {
+  if (!draft.value?.bizTypeData) return;
+  const fields = bizTypeDataFields.value;
+  const isSkip = (v: unknown, def: unknown) =>
+    v === "" || v === null || v === undefined || v === def;
+  if (fields.length === 1) {
+    if (isSkip(draft.value.bizTypeData, fields[0].default)) {
+      draft.value.bizTypeData = undefined;
+    }
+  } else {
+    const obj = { ...(draft.value.bizTypeData as Record<string, unknown>) };
+    for (const f of fields) {
+      if (isSkip(obj[f.name], f.default)) delete obj[f.name];
+    }
     draft.value.bizTypeData = Object.keys(obj).length ? obj : undefined;
   }
 }
@@ -201,6 +218,8 @@ function save() {
       return;
     }
   }
+  // 保存前清理 bizTypeData(空/默认值不输出)
+  cleanBizTypeData();
   // 写回原字段(保持引用,Object.assign);code 改名级联索引
   const oldCode = props.field.code;
   Object.keys(props.field).forEach((k) => delete (props.field as any)[k]);
