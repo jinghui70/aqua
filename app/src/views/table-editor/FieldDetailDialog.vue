@@ -99,14 +99,9 @@ function applyDefaults(def: BizTypeDefine, dt: DataType) {
   if (s.defaultScale != null) draft.value.scale = s.defaultScale;
 }
 
-// 按 bizType 定义初始化 bizTypeData(单 field 存值,多 field 存对象;无 default 则不预填)
-function initBizTypeData(def: BizTypeDefine): unknown {
-  const fields = def.bizTypeData?.fields ?? [];
-  if (!fields.length) return undefined;
-  if (fields.length === 1) return fields[0].default;
-  const obj: Record<string, unknown> = {};
-  for (const f of fields) if (f.default !== undefined) obj[f.name] = f.default;
-  return obj;
+// 按 bizType 定义初始化 bizTypeData:不预填默认值(默认值作 placeholder,用户输入才存;空/默认不保存)
+function initBizTypeData(_def: BizTypeDefine): unknown {
+  return undefined;
 }
 
 // dataType 切换:选了 bizType 时 dataType 下拉已过滤为支持的,这里只填默认值
@@ -364,14 +359,14 @@ function save() {
               <el-input
                 v-if="bf.type === 'string'"
                 :model-value="getBizTypeDataValue(bf.name) as string"
-                :placeholder="bf.default != null ? String(bf.default) : ''"
+                :placeholder="bf.default != null ? `默认:${bf.default}` : ''"
                 @update:model-value="(v: string) => setBizTypeDataValue(bf, v)"
               />
               <el-input-number
                 v-else
                 :model-value="getBizTypeDataValue(bf.name) as number"
                 :controls="false"
-                :placeholder="bf.default != null ? String(bf.default) : ''"
+                :placeholder="bf.default != null ? `默认:${bf.default}` : ''"
                 @update:model-value="(v: number | undefined) => setBizTypeDataValue(bf, v)"
               />
             </el-form-item>
