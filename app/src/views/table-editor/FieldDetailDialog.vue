@@ -293,24 +293,24 @@ function save() {
         <el-form-item label="自动生成">
           <el-switch
             :model-value="!!draft.autoGenerate"
-            @change="(v: any) => draft && (draft.autoGenerate = v ? { enabled: true, strategy: 'default', timing: 'INSERT' } : undefined)"
+            @change="(v: any) => draft && (draft.autoGenerate = v ? { strategy: 'default', timing: 'INSERT' } : undefined)"
           />
         </el-form-item>
         <template v-if="draft.autoGenerate">
           <div class="grid grid-cols-2 gap-x-24">
-            <el-form-item label="策略">
+            <el-form-item label="生成策略">
               <el-select v-model="draft.autoGenerate.strategy">
                 <el-option v-for="s in autoGenStrategies" :key="s.code" :label="s.name" :value="s.code" />
               </el-select>
             </el-form-item>
-            <el-form-item label="时机">
+            <el-form-item label="生成时机">
               <el-select v-model="draft.autoGenerate.timing">
                 <el-option label="INSERT" value="INSERT" />
                 <el-option label="INSERT_UPDATE" value="INSERT_UPDATE" />
               </el-select>
             </el-form-item>
           </div>
-          <el-form-item v-if="currentStrategy?.paramDesc != null" label="参数">
+          <el-form-item v-if="currentStrategy?.paramDesc != null" label="策略参数">
             <el-input
               v-model="draft.autoGenerate.param"
               :placeholder="currentStrategy.paramDesc"

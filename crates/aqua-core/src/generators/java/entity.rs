@@ -132,28 +132,24 @@ fn generate_field(field: &Field) -> Vec<String> {
         lines.push("    @Id".to_string());
     }
 
-    // @GeneratedValue(自动生成字段,enabled=false 不输出)
-    // 参数等于默认值即省略:strategy="default"、timing=INSERT、param=空
+    // @GeneratedValue(autoGenerate Some 即启用;参数等于默认值省略)
     if let Some(ag) = &field.auto_generate {
-        if ag.enabled {
-            let mut parts = Vec::new();
-            if ag.strategy != "default" {
-                parts.push(format!("strategy = \"{}\"", ag.strategy));
+        let mut parts = Vec::new();
+        if ag.strategy != "default" {
+            parts.push(format!("strategy = \"{}\"", ag.strategy));
+        }
+        if let Some(param) = &ag.param {
+            if !param.is_empty() {
+                parts.push(format!("param = \"{}\"", param));
             }
-            if let Some(param) = &ag.param {
-                if !param.is_empty() {
-                    parts.push(format!("param = \"{}\"", param));
-                }
-            }
-            if ag.timing == crate::schema::GenerateTiming::InsertUpdate {
-                parts.push("timing = \"INSERT_UPDATE\"".to_string());
-            }
-            // 全默认(parts 空)时不带括号
-            if parts.is_empty() {
-                lines.push("    @GeneratedValue".to_string());
-            } else {
-                lines.push(format!("    @GeneratedValue({})", parts.join(", ")));
-            }
+        }
+        if ag.timing == crate::schema::GenerateTiming::InsertUpdate {
+            parts.push("timing = \"INSERT_UPDATE\"".to_string());
+        }
+        if parts.is_empty() {
+            lines.push("    @GeneratedValue".to_string());
+        } else {
+            lines.push(format!("    @GeneratedValue({})", parts.join(", ")));
         }
     }
 

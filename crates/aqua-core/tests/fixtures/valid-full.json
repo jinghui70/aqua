@@ -85,7 +85,6 @@
           "name": "创建时间",
           "dataType": "DATETIME",
           "autoGenerate": {
-            "enabled": true,
             "strategy": "now",
             "param": "yyyy-MM-dd HH:mm:ss",
             "timing": "INSERT"

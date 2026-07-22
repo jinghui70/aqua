@@ -6,8 +6,8 @@ import { useTauri } from "@/composables/useTauri";
 
 /** 内置自动生成策略(写死代码,非外置 JSON) */
 const BUILTIN_AUTO_GEN_STRATEGIES: AutoGenStrategyDefine[] = [
-  { code: "default", name: "雪花id" },
-  { code: "now", name: "当前时间", paramDesc: "yyyy-MM-dd HH:mm:ss 格式" },
+  { code: "default", name: "雪花id", paramDesc: "前缀" },
+  { code: "now", name: "当前时间" },
 ];
 
 export const useBuiltinStore = defineStore("builtin", () => {

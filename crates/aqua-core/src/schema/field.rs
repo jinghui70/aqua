@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// §3.2 autoGenerate - 应用层生成（对齐 @GeneratedValue），不进 DDL。
+/// autoGenerate Some = 启用,None = 未启用（enabled 是界面辅助值,不存 JSON）。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AutoGenerate {
-    pub enabled: bool,
     pub strategy: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub param: Option<String>,

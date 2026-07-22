@@ -132,26 +132,26 @@ fn test_generate_field_with_auto_generate() {
                 "name": "主键",
                 "dataType": "LONG",
                 "isKey": true,
-                "autoGenerate": { "enabled": true, "strategy": "snowflake", "timing": "INSERT" }
+                "autoGenerate": { "strategy": "snowflake", "timing": "INSERT" }
             }, {
                 "code": "GMT_MODIFIED",
                 "prop": "gmtModified",
                 "name": "修改时间",
                 "dataType": "DATETIME",
-                "autoGenerate": { "enabled": true, "strategy": "now", "param": "yyyy", "timing": "INSERT_UPDATE" }
+                "autoGenerate": { "strategy": "now", "param": "yyyy", "timing": "INSERT_UPDATE" }
             }, {
                 "code": "GMT_CREATE",
                 "prop": "gmtCreate",
                 "name": "创建时间",
                 "dataType": "DATETIME",
-                "autoGenerate": { "enabled": true, "strategy": "default", "timing": "INSERT" }
+                "autoGenerate": { "strategy": "default", "timing": "INSERT" }
             }, {
                 "code": "NAME",
                 "prop": "name",
                 "name": "名称",
                 "dataType": "VARCHAR",
                 "length": 64,
-                "autoGenerate": { "enabled": false, "strategy": "snowflake", "timing": "INSERT" }
+                "autoGenerate": null
             }]
         }]
     });

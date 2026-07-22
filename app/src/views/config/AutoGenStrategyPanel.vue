@@ -147,15 +147,8 @@ async function removeStrategy(code: string) {
     <!-- 右只读展示 -->
     <div class="flex-1 overflow-y-auto p-16">
       <template v-if="current">
-        <el-alert
-          v-if="isCurrentBuiltin"
-          title="内置策略,只读"
-          type="info"
-          :closable="false"
-          class="mb-12"
-        />
-        <div class="flex items-center gap-12 mb-16">
-          <div class="text-20 font-bold">{{ current.code }}</div>
+        <div class="flex items-center mb-16">
+          <div class="text-20 font-bold mr-20">{{ current.code }}</div>
           <el-button v-if="canEdit" size="small" type="primary" link @click="openEdit">修改</el-button>
           <el-button v-if="canEdit" size="small" link type="danger" @click="removeStrategy(current.code)">删除</el-button>
         </div>

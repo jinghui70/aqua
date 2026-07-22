@@ -14,7 +14,6 @@ export enum DataType {
 }
 
 export interface AutoGenerate {
-  enabled: boolean;
   strategy: string;
   param?: string;
   timing: "INSERT" | "INSERT_UPDATE";
