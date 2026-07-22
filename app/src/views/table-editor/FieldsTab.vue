@@ -78,7 +78,8 @@ function bizTypeLabel(field: Field): string {
 function autoGenLabel(field: Field): string {
   const ag = field.autoGenerate;
   if (!ag) return "-";
-  return ag.strategy === "now" ? "当前时间" : "雪花id";
+  const strategies = [...builtin.autoGenStrategies, ...(store.currentProject?.autoGenStrategies ?? [])];
+  return strategies.find((s) => s.code === ag.strategy)?.name ?? ag.strategy;
 }
 
 // 主键必然非空:选中主键时自动勾非空
