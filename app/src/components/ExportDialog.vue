@@ -120,6 +120,12 @@ watch(
     if (ui.exportVisible) preview.value = "";
   }
 );
+// 切到"按分组"时默认选第一个分组
+watch(scope, (s) => {
+  if (s === "group" && !selectedGroup.value && groups.value.length) {
+    selectedGroup.value = groups.value[0].code;
+  }
+});
 watch(
   () => ui.exportKind === "strconst" && ui.exportVisible ? [scope.value, selectedGroup.value] : null,
   () => {
