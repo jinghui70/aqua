@@ -90,9 +90,8 @@ const availableDataTypes = computed<DataType[]>(() => {
 // 选 dataType 后 bizType 下拉只显示支持该类型的业务类型
 const availableBizTypes = computed<BizTypeDefine[]>(() => {
   const dt = draft.value?.dataType;
-  const all = !dt ? bizTypes.value : bizTypes.value.filter((b) => bizTypeSupports(b, dt));
-  console.log("[bizType] available dt=", dt, "count=", all.length, all.map((b) => b.bizType));
-  return all;
+  if (!dt) return bizTypes.value;
+  return bizTypes.value.filter((b) => bizTypeSupports(b, dt));
 });
 
 // 填充该 bizType 对指定 dataType 定义的默认 length/precision/scale
@@ -250,7 +249,7 @@ function save() {
           <el-form-item label="默认值">
             <el-input v-model="draft.defaultValue" placeholder="DDL DEFAULT 子句" />
           </el-form-item>
-          <el-form-item label="类型" class="col-span-2">
+          <el-form-item label="类型">
             <el-select
               :model-value="draft.dataType"
               style="width: 160px"
@@ -280,7 +279,6 @@ function save() {
       </el-form>
 
       <!-- 自动生成 -->
-      <div class="font-bold text-14 mt-16 mb-8">自动生成</div>
       <el-form label-width="90px" class="pr-12" :disabled="store.readOnly">
         <el-form-item label="自动生成">
           <el-switch
@@ -311,7 +309,6 @@ function save() {
       </el-form>
 
       <!-- 业务类型(Enum 是特殊 bizType)-->
-      <div class="font-bold text-14 mt-16 mb-8">业务类型</div>
       <el-form label-width="90px" class="pr-12" :disabled="store.readOnly">
         <el-form-item label="业务类型">
           <el-select
@@ -392,7 +389,6 @@ function save() {
       </el-form>
 
       <!-- 备注 -->
-      <div class="font-bold text-14 mt-16 mb-8">备注</div>
       <el-form label-width="90px" class="pr-12" :disabled="store.readOnly">
         <el-form-item label="备注">
           <el-input v-model="draft.comment" type="textarea" :rows="2" />
