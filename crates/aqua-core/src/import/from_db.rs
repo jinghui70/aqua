@@ -33,6 +33,7 @@ pub async fn import_from_db(
         base_package: base_package.unwrap_or_else(|| "com.example".to_string()),
         tables: result,
         biz_types: vec![],
+        auto_gen_strategies: vec![],
         groups: vec![],
     })
 }

@@ -24,7 +24,7 @@ export function collectRelatedTables(
 
 /** 生成删除确认提示 HTML(表级聚合)。kind 为"业务类型"或"枚举"。 */
 export function buildCascadePrompt(
-  kind: "业务类型" | "枚举",
+  kind: string,
   code: string,
   related: RelatedTable[]
 ): string {
@@ -32,10 +32,9 @@ export function buildCascadePrompt(
   const total = related.reduce((s, r) => s + r.count, 0);
   const tables = related.map((r) => r.table);
   const shown = tables.slice(0, 8).join("、") + (tables.length > 8 ? " …" : "");
-  const setting = kind === "业务类型" ? "业务类型" : "枚举";
   return [
     `${kind} <b>${code}</b> 被以下 <b>${tables.length}</b> 张表使用:`,
     shown,
-    `共 <b>${total}</b> 个字段引用,删除将清除这些字段的${setting}设置。确认删除?`,
+    `共 <b>${total}</b> 个字段引用,删除将清除这些字段的${kind}设置。确认删除?`,
   ].join("<br/>");
 }

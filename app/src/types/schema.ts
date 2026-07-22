@@ -91,12 +91,21 @@ export interface BizTypeDefine {
   bizTypeData?: { fields: Array<{ name: string; type: "string" | "number"; description?: string; required?: boolean; default?: string | number }> };
 }
 
+export interface AutoGenStrategyDefine {
+  code: string;
+  name: string;
+  /** 参数说明(有参数时作 placeholder)。无参数则 undefined */
+  paramDesc?: string;
+}
+
 export interface Project {
   version: string;
   /** 项目中文名(可选,旧 schema 兼容) */
   name?: string;
   basePackage: string;
   bizTypes: BizTypeDefine[];
+  /** 自定义自动生成策略(内置 default/now 不存项目) */
+  autoGenStrategies?: AutoGenStrategyDefine[];
   groups: GroupDefine[];
   tables: Table[];
 }

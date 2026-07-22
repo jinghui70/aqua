@@ -207,6 +207,7 @@ mod tests {
                 comment: None,
             }],
             biz_types: vec![],
+        auto_gen_strategies: vec![],
             groups: vec![],
         };
         let json = generate_frontend_json(&project, &FrontendJsonOptions::default());

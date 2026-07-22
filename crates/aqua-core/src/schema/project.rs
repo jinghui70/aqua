@@ -1,5 +1,6 @@
 //! §3.6 项目模型(Project)与分组(GroupDefine)。
 
+use crate::schema::auto_gen_strategy::AutoGenStrategyDefine;
 use crate::schema::biz_type::BizTypeDefine;
 use crate::schema::table::Table;
 use serde::{Deserialize, Serialize};
@@ -22,6 +23,9 @@ pub struct Project {
     pub base_package: String,
     #[serde(rename = "bizTypes")]
     pub biz_types: Vec<BizTypeDefine>,
+    /// 自动生成策略(自定义;内置 default/now 在前端硬编码,不存项目)
+    #[serde(rename = "autoGenStrategies", default, skip_serializing_if = "Vec::is_empty")]
+    pub auto_gen_strategies: Vec<AutoGenStrategyDefine>,
     pub groups: Vec<GroupDefine>,
     pub tables: Vec<Table>,
 }

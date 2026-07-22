@@ -22,7 +22,7 @@ const current = computed(() =>
   bizTypes.value.find((b) => b.bizType === selectedCode.value)
 );
 const isCurrentBuiltin = computed(() =>
-  selectedCode.value ? builtin.isBuiltin(selectedCode.value) : false
+  selectedCode.value ? builtin.isBuiltinBizType(selectedCode.value) : false
 );
 
 function select(code: string) {
@@ -61,7 +61,7 @@ async function addBizType() {
 }
 
 async function removeBizType(code: string) {
-  if (builtin.isBuiltin(code)) return; // 内置不可删(UI 已禁,防御)
+  if (builtin.isBuiltinBizType(code)) return; // 内置不可删(UI 已禁,防御)
   const related = collectRelatedTables(store.currentProject, (f) => f.bizType === code);
   const msg = buildCascadePrompt("业务类型", code, related);
   try {
@@ -134,11 +134,11 @@ function removeDataField(idx: number) {
           @click="select(b.bizType)"
         >
           <span class="flex items-center gap-6">
-            <el-tag v-if="builtin.isBuiltin(b.bizType)" size="small" type="info" effect="plain">内置</el-tag>
+            <el-tag v-if="builtin.isBuiltinBizType(b.bizType)" size="small" type="info" effect="plain">内置</el-tag>
             {{ b.name }} ({{ b.bizType }})
           </span>
           <el-button
-            v-if="!builtin.isBuiltin(b.bizType)"
+            v-if="!builtin.isBuiltinBizType(b.bizType)"
             size="small"
             link
             type="danger"

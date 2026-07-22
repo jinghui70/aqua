@@ -2,7 +2,7 @@
 // 字段完整编辑弹窗:补齐行内表格放不下的属性(autoGenerate.param / bizTypeData / enum)。
 import { computed, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { DataType, type Field, type InlineEnum, type BizTypeDefine } from "@/types/schema";
+import { DataType, type Field, type InlineEnum, type BizTypeDefine, type AutoGenStrategyDefine } from "@/types/schema";
 import { useProjectStore } from "@/stores/project";
 import { useBuiltinStore } from "@/stores/builtin";
 
@@ -12,6 +12,15 @@ const emit = defineEmits<{ "update:modelValue": [boolean] }>();
 const store = useProjectStore();
 const builtin = useBuiltinStore();
 const dataTypes = Object.values(DataType);
+
+// 自动生成策略(内置 + 自定义),策略下拉 + param 条件显示
+const autoGenStrategies = computed<AutoGenStrategyDefine[]>(() => [
+  ...builtin.autoGenStrategies,
+  ...(store.currentProject?.autoGenStrategies ?? []),
+]);
+const currentStrategy = computed(() =>
+  autoGenStrategies.value.find((s) => s.code === draft.value?.autoGenerate?.strategy)
+);
 
 const COLORS = [
   "success", "error", "warning", "info", "primary", "danger",
@@ -291,8 +300,7 @@ function save() {
           <div class="grid grid-cols-2 gap-x-24">
             <el-form-item label="策略">
               <el-select v-model="draft.autoGenerate.strategy">
-                <el-option label="雪花id (default)" value="default" />
-                <el-option label="当前时间 (now)" value="now" />
+                <el-option v-for="s in autoGenStrategies" :key="s.code" :label="s.name" :value="s.code" />
               </el-select>
             </el-form-item>
             <el-form-item label="时机">
@@ -302,10 +310,10 @@ function save() {
               </el-select>
             </el-form-item>
           </div>
-          <el-form-item label="参数">
+          <el-form-item v-if="currentStrategy?.paramDesc != null" label="参数">
             <el-input
               v-model="draft.autoGenerate.param"
-              :placeholder="draft.autoGenerate.strategy === 'now' ? 'yyyy-MM-dd HH:mm:ss' : '前缀'"
+              :placeholder="currentStrategy.paramDesc"
             />
           </el-form-item>
         </template>

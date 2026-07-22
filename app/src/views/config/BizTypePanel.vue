@@ -23,7 +23,7 @@ const current = computed(() =>
   bizTypes.value.find((b) => b.bizType === selectedCode.value)
 );
 const isCurrentBuiltin = computed(() =>
-  selectedCode.value ? builtin.isBuiltin(selectedCode.value) : false
+  selectedCode.value ? builtin.isBuiltinBizType(selectedCode.value) : false
 );
 // 两个只读来源:预置内置 + 全局只读。任一 -> 只读(name/描述用 readonly,表格用 span)
 const isReadonly = computed(() => isCurrentBuiltin.value || store.readOnly);
@@ -67,7 +67,7 @@ function confirmNewBiz() {
 }
 
 async function removeBizType(code: string) {
-  if (builtin.isBuiltin(code)) return;
+  if (builtin.isBuiltinBizType(code)) return;
   const related = collectRelatedTables(store.currentProject, (f) => f.bizType === code);
   const msg = buildCascadePrompt("业务类型", code, related);
   try {
@@ -195,10 +195,10 @@ watch(isReadonly, (ro) => {
         >
           <span class="flex items-center gap-6">
             {{ b.bizType }} ({{ b.name }})
-            <el-tag v-if="builtin.isBuiltin(b.bizType)" size="small" type="info" effect="plain">内置</el-tag>
+            <el-tag v-if="builtin.isBuiltinBizType(b.bizType)" size="small" type="info" effect="plain">内置</el-tag>
           </span>
           <el-button
-            v-if="!builtin.isBuiltin(b.bizType) && !store.readOnly"
+            v-if="!builtin.isBuiltinBizType(b.bizType) && !store.readOnly"
             size="small"
             link
             type="danger"

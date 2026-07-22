@@ -102,6 +102,7 @@ mod tests {
             name: None,
             base_package: "com.example".to_string(),
             biz_types: vec![],
+        auto_gen_strategies: vec![],
             groups: vec![],
             tables: vec![
                 Table {

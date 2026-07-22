@@ -1,27 +1,36 @@
-// 内置业务类型(打包资源文件加载,只读)。与项目自定义 bizType 分离存储。
+// 内置业务类型(打包资源文件加载,只读)+ 内置自动生成策略(硬编码)。
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
-import type { BizTypeDefine } from "@/types/schema";
+import type { BizTypeDefine, AutoGenStrategyDefine } from "@/types/schema";
 import { useTauri } from "@/composables/useTauri";
+
+/** 内置自动生成策略(写死代码,非外置 JSON) */
+const BUILTIN_AUTO_GEN_STRATEGIES: AutoGenStrategyDefine[] = [
+  { code: "default", name: "雪花id" },
+  { code: "now", name: "当前时间", paramDesc: "yyyy-MM-dd HH:mm:ss 格式" },
+];
 
 export const useBuiltinStore = defineStore("builtin", () => {
   const tauri = useTauri();
   const bizTypes = ref<BizTypeDefine[]>([]);
+  const autoGenStrategies = ref<AutoGenStrategyDefine[]>(BUILTIN_AUTO_GEN_STRATEGIES);
   const loaded = ref(false);
 
-  /** 加载内置清单(App 启动调一次,失败由 useTauri 统一提示)。 */
   async function load() {
     if (loaded.value) return;
     bizTypes.value = await tauri.builtinBiztypesLoad();
     loaded.value = true;
   }
 
-  /** 判断 code 是否为内置(用于禁删改/重名校验)。 */
-  function isBuiltin(code: string): boolean {
+  function isBuiltinBizType(code: string): boolean {
     return bizTypes.value.some((b) => b.bizType === code);
   }
 
-  return { bizTypes, loaded, load, isBuiltin };
+  function isBuiltinStrategy(code: string): boolean {
+    return autoGenStrategies.value.some((s) => s.code === code);
+  }
+
+  return { bizTypes, autoGenStrategies, loaded, load, isBuiltinBizType, isBuiltinStrategy };
 });
 
 if (import.meta.hot) {
