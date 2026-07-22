@@ -149,15 +149,13 @@ function onBizTypeChange(bizType: string | undefined) {
   }
 }
 
-// props.field 变化时重建 draft(声明在 enumMode 之后,避免 immediate watch 提前访问)
-watch(
-  () => props.field,
-  (f) => {
-    draft.value = f ? JSON.parse(JSON.stringify(f)) : null;
+// 打开时重建 draft(深拷贝,取消不污染原对象;同字段再打开也重置为原始数据)
+watch(visible, (v) => {
+  if (v && props.field) {
+    draft.value = JSON.parse(JSON.stringify(props.field));
     syncEnumMode();
-  },
-  { immediate: true }
-);
+  }
+});
 
 function onEnumModeChange(mode: EnumMode) {
   if (!draft.value) return;
