@@ -15,7 +15,16 @@ const ui = useUiStore();
     <el-button size="small" type="primary" :disabled="store.readOnly" @click="ui.openImport">
       导入
     </el-button>
-    <el-button size="small" @click="ui.openExport('ddl')">导出</el-button>
+    <el-dropdown trigger="click" @command="(k: string) => ui.openExport(k as any)">
+      <el-button size="small">导出</el-button>
+      <template #dropdown>
+        <el-dropdown-menu>
+          <el-dropdown-item command="ddl">DDL</el-dropdown-item>
+          <el-dropdown-item command="diff">diff (ALTER)</el-dropdown-item>
+          <el-dropdown-item command="strconst">StrConst</el-dropdown-item>
+        </el-dropdown-menu>
+      </template>
+    </el-dropdown>
 
     <el-divider direction="vertical" />
 
