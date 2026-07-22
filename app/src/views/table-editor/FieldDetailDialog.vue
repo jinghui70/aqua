@@ -66,7 +66,6 @@ function setBizTypeDataValue(field: { name: string; default?: unknown }, value: 
 // ===== enum(无/内联,统一 InlineEnum)=====
 type EnumMode = "none" | "inline";
 const enumMode = ref<EnumMode>("none");
-const isVarchar = computed(() => draft.value?.dataType === DataType.Varchar);
 
 function syncEnumMode() {
   const e = draft.value?.enum;
@@ -87,12 +86,8 @@ const availableDataTypes = computed<DataType[]>(() => {
   return def ? def.supportedDataTypes.map((s) => s.dataType) : dataTypes;
 });
 
-// 选 dataType 后 bizType 下拉只显示支持该类型的业务类型
-const availableBizTypes = computed<BizTypeDefine[]>(() => {
-  const dt = draft.value?.dataType;
-  if (!dt) return bizTypes.value;
-  return bizTypes.value.filter((b) => bizTypeSupports(b, dt));
-});
+// bizType 下拉显示所有(不过滤 dataType);选 bizType 后 dataType 须在支持范围
+const availableBizTypes = computed<BizTypeDefine[]>(() => bizTypes.value);
 
 // 填充该 bizType 对指定 dataType 定义的默认 length/precision/scale
 function applyDefaults(def: BizTypeDefine, dt: DataType) {
@@ -114,20 +109,14 @@ function initBizTypeData(def: BizTypeDefine): unknown {
   return obj;
 }
 
-// dataType 切换:若当前 bizType 不支持新类型则清空,支持则填默认值
+// dataType 切换:选了 bizType 时 dataType 下拉已过滤为支持的,这里只填默认值
 function onDataTypeChange(dt: DataType) {
   if (!draft.value) return;
   draft.value.dataType = dt;
   const bt = draft.value.bizType;
-  if (bt === "Enum") {
-    if (dt !== DataType.Varchar) onBizTypeChange(undefined); // Enum 只支持 VARCHAR
-    return;
-  }
-  if (bt) {
-    const def = bizTypes.value.find((b) => b.bizType === bt);
-    if (def && !bizTypeSupports(def, dt)) onBizTypeChange(undefined);
-    else if (def) applyDefaults(def, dt);
-  }
+  if (!bt) return;
+  const def = bizTypes.value.find((b) => b.bizType === bt);
+  if (def) applyDefaults(def, dt);
 }
 
 // bizType 切换:选 Enum 默认内联枚举并强制 VARCHAR;选普通 bizType 校正 dataType + 填默认值;离开清空
@@ -320,7 +309,7 @@ function save() {
             style="width: 200px"
             @update:model-value="(v: string | undefined) => onBizTypeChange(v)"
           >
-            <el-option v-if="isVarchar" label="Enum(枚举)" value="Enum" />
+            <el-option label="Enum(枚举)" value="Enum" />
             <el-option v-for="b in availableBizTypes" :key="b.bizType" :label="b.name" :value="b.bizType" />
           </el-select>
         </el-form-item>
