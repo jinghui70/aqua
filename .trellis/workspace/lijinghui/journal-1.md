@@ -866,3 +866,25 @@ Windows 发版后测试连接报"连接失败 + 乱码 + jar 路径 + 乱码"。
 
 - Command+Q 直接关(Tauri macOS 不触发 ExitRequested)未修,用户接受
 - 后续测反馈
+
+## Session: 业务类型编辑优化 + 自动生成策略全局定义
+
+**Date**: 2026-07-22
+**Tasks**: 07-21-biztype-edit-optimize, 07-22-autogen-strategy-define
+**Branch**: `main`
+
+### 07-21 业务类型编辑优化(20 条需求)
+
+定义端(BizTypePanel):新建弹窗录 code+name / code 醒目文字 / 描述 textarea / 两只读(readonly+span) / 无参数隐藏 / 数据类型+参数拖拽(Sortable) / 列表删 v-if / 列宽 / 列表 Code(name)格式 / 内置 tag 后置。
+
+使用端(FieldDetailDialog):bizTypeData 两列(label=description,placeholder=default) / 空默认 save 时清理(不阻断输入) / 删枚举来源 radio / 删 divider / 约束移类型同排 / 策略时机一排 / switch 文字"自动生成" / bizType label"业务类型" / bizType 列表去 dataType 过滤(反向约束) / draft 打开时重建(取消不污染)。
+
+Java 生成:Bool->boolean / Clob/Blob->@Column(sqlType=Types.BLOB)。
+
+### 07-22 自动生成策略全局定义
+
+AutoGenStrategyDefine(code/name/paramDesc) + Project.autoGenStrategies。内置 default(雪花id,无参数)/now(当前时间,paramDesc)写死代码。配置中心 AutoGenStrategyPanel(左列表+右只读+新建/编辑共用弹窗+删除级联)。FieldDetail 策略下拉全局策略 + param 条件显示(paramDesc placeholder)。AutoGenerate 去 enabled(Some=启用)。
+
+### Status
+
+[OK] **完成**
