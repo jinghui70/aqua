@@ -103,22 +103,21 @@ pub async fn generate_frontend_json_command(
     ))
 }
 
-/// Tauri command: 生成 StrConst 常量类(范围过滤 + 包名/类名)。
+/// Tauri command: 生成 StrConst 常量类(全部表或按分组;类名固定 DatabaseConstants)。
 #[tauri::command]
 pub async fn generate_strconst_command(
     project: Project,
     group: Option<String>,
-    package_suffix: Option<String>,
-    class_name: Option<String>,
 ) -> Result<String, String> {
     use aqua_core::generators::strconst::{generate_strconst, StrConstOptions};
-    let default = StrConstOptions::default();
-    let options = StrConstOptions {
-        package_suffix: package_suffix.unwrap_or(default.package_suffix),
-        class_name: class_name.unwrap_or(default.class_name),
-        group,
-    };
+    let options = StrConstOptions { group };
     Ok(generate_strconst(&project, &options))
+}
+
+/// Tauri command: 写文本文件(导出保存用)。
+#[tauri::command]
+pub async fn write_text_file(path: String, content: String) -> Result<(), String> {
+    tokio::fs::write(&path, &content).await.map_err(|e| format!("写文件失败: {}", e))
 }
 
 /// Tauri command: 生成 ALTER DDL(旧版 vs 当前 project 的 diff)。

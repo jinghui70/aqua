@@ -5,8 +5,9 @@ import { ElMessage } from "element-plus";
 import { useUiStore } from "@/stores/ui";
 import { useProjectStore } from "@/stores/project";
 import { useTauri } from "@/composables/useTauri";
+import { invoke } from "@tauri-apps/api/core";
 import { downloadText } from "@/composables/useDownload";
-import { pickOpenFile } from "@/composables/useFileDialog";
+import { pickOpenFile, pickSaveFile } from "@/composables/useFileDialog";
 import type { Project } from "@/types/schema";
 import { useDatabaseStore } from "@/stores/database";
 
@@ -22,9 +23,7 @@ const selectedGroup = ref("");
 const selectedTables = ref<string[]>([]);
 const preview = ref("");
 
-// StrConst
-const packageSuffix = ref("const");
-const className = ref("DatabaseConstants");
+// StrConst:无 packageSuffix/className(类名固定 DatabaseConstants,包名按 group)
 
 // diff
 const oldProjectPath = ref("");
@@ -33,7 +32,7 @@ const title = computed(() => {
   switch (ui.exportKind) {
     case "ddl": return "导出 DDL";
     case "diff": return "导出 diff (ALTER)";
-    case "strconst": return "导出 StrConst";
+    case "strconst": return "导出字符串变量";
   }
   return "导出";
 });
@@ -62,8 +61,6 @@ async function doPreview() {
     } else if (ui.exportKind === "strconst") {
       preview.value = await tauri.generateStrConst(store.currentProject, {
         group: scope.value === "group" ? selectedGroup.value : undefined,
-        packageSuffix: packageSuffix.value,
-        className: className.value,
       });
     } else if (ui.exportKind === "diff") {
       if (!oldProjectPath.value) {
@@ -96,19 +93,39 @@ function download() {
   const ext = ui.exportKind === "strconst" ? "java" : ui.exportKind === "diff" ? "sql" : "sql";
   const base =
     ui.exportKind === "strconst"
-      ? className.value
+      ? "DatabaseConstants"
       : ui.exportKind === "diff"
         ? "alter"
         : "schema";
   downloadText(`${base}.${ext}`, preview.value);
 }
 
-// 切换导出类型或打开时清空预览
+// StrConst 保存:打开文件对话框保存
+async function saveStrConst() {
+  const path = await pickSaveFile();
+  if (!path) return;
+  try {
+    // 用 Tauri 写文件(downloadText 是 web 下载,桌面用 invoke 写文件)
+    await invoke<void>("write_text_file", { path, content: preview.value });
+    ElMessage.success("已保存");
+  } catch (e) {
+    ElMessage.error(`保存失败: ${e}`);
+  }
+}
+
+// 切换导出类型或打开时清空预览;strconst 即时预览(无预览按钮)
 watch(
   () => [ui.exportVisible, ui.exportKind],
   () => {
     if (ui.exportVisible) preview.value = "";
   }
+);
+watch(
+  () => ui.exportKind === "strconst" && ui.exportVisible ? [scope.value, selectedGroup.value] : null,
+  () => {
+    if (ui.exportKind === "strconst" && ui.exportVisible) doPreview();
+  },
+  { immediate: true }
 );
 </script>
 
@@ -162,23 +179,14 @@ watch(
         </template>
       </div>
 
-      <!-- StrConst 包名/类名 -->
-      <div v-if="ui.exportKind === 'strconst'" class="flex items-center gap-16 text-13">
-        <span class="flex items-center gap-6">
-          包名后缀
-          <el-input v-model="packageSuffix" size="small" style="width: 140px" />
-        </span>
-        <span class="flex items-center gap-6">
-          类名
-          <el-input v-model="className" size="small" style="width: 180px" />
-        </span>
-      </div>
+      <!-- StrConst:无包名/类名输入(类名固定,包名按 group) -->
 
-      <!-- 操作 -->
+      <!-- 操作:strconst 即时预览(无预览按钮)+ 复制/保存;其它 预览/复制/下载 -->
       <div class="flex gap-8">
-        <el-button size="small" type="primary" @click="doPreview">预览</el-button>
+        <el-button v-if="ui.exportKind !== 'strconst'" size="small" type="primary" @click="doPreview">预览</el-button>
         <el-button size="small" @click="copy" :disabled="!preview">复制</el-button>
-        <el-button size="small" @click="download" :disabled="!preview">下载</el-button>
+        <el-button v-if="ui.exportKind === 'strconst'" size="small" type="primary" @click="saveStrConst" :disabled="!preview">保存</el-button>
+        <el-button v-if="ui.exportKind !== 'strconst'" size="small" @click="download" :disabled="!preview">下载</el-button>
       </div>
 
       <!-- 预览 -->

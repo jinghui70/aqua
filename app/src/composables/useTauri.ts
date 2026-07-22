@@ -74,13 +74,11 @@ export function useTauri() {
       invoke<string>("generate_frontend_json_command", { project, table }),
     generateStrConst: (
       project: Project,
-      opts?: { group?: string; packageSuffix?: string; className?: string }
+      opts?: { group?: string }
     ) =>
       invoke<string>("generate_strconst_command", {
         project,
         group: opts?.group,
-        packageSuffix: opts?.packageSuffix,
-        className: opts?.className,
       }),
     generateAlter: (oldProject: Project, newProject: Project, dialect: string) =>
       invoke<string>("generate_alter_command", { oldProject, newProject, dialect }),

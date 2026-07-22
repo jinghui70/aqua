@@ -7,24 +7,10 @@ use crate::schema::Project;
 use std::collections::HashSet;
 
 /// StrConst 生成选项。
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct StrConstOptions {
-    /// 包名后缀(默认 "const"),完整包 = {basePackage}.{suffix}
-    pub package_suffix: String,
-    /// 类名(默认 "StrConst")
-    pub class_name: String,
-    /// 分组过滤(为空则全部表)
+    /// 分组过滤(为空则全部表)。有分组 -> 包名 = {basePackage}.{group},类名 DatabaseConstants
     pub group: Option<String>,
-}
-
-impl Default for StrConstOptions {
-    fn default() -> Self {
-        Self {
-            package_suffix: "const".to_string(),
-            class_name: "DatabaseConstants".to_string(),
-            group: None,
-        }
-    }
 }
 
 /// 生成 StrConst Java 常量类。
@@ -33,16 +19,27 @@ impl Default for StrConstOptions {
 /// - 表名 + 字段名都导出
 /// - 字段名跨表去重
 /// - 范围: 全部表或指定分组
+/// - 类名固定 DatabaseConstants;全部表包名 = basePackage,按分组 = basePackage.group
 pub fn generate_strconst(project: &Project, options: &StrConstOptions) -> String {
-    let full_package = format!("{}.{}", project.base_package, options.package_suffix);
+    let full_package = if let Some(g) = &options.group {
+        format!("{}.{}", project.base_package, g)
+    } else {
+        project.base_package.clone()
+    };
+    let class_name = "DatabaseConstants";
     let mut lines = Vec::new();
+
+    // Javadoc(工具生成,请勿手动修改)
+    lines.push("/**".to_string());
+    lines.push(" * 工具生成,请勿手动修改".to_string());
+    lines.push(" */".to_string());
 
     // Package 声明
     lines.push(format!("package {};", full_package));
     lines.push(String::new());
 
     // 类声明
-    lines.push(format!("public class {} {{", options.class_name));
+    lines.push(format!("public class {} {{", class_name));
 
     // 过滤表
     let tables: Vec<_> = project
@@ -200,8 +197,9 @@ mod tests {
         let project = make_project();
         let result = generate_strconst(&project, &StrConstOptions::default());
 
-        assert!(result.contains("package com.example.const;"));
+        assert!(result.contains("package com.example;"));
         assert!(result.contains("public class DatabaseConstants {"));
+        assert!(result.contains("工具生成,请勿手动修改"));
         // 表名
         assert!(result.contains("public static final String SYS_USER = \"SYS_USER\";"));
         assert!(result.contains("public static final String SYS_ROLE = \"SYS_ROLE\";"));
@@ -222,20 +220,8 @@ mod tests {
             ..Default::default()
         };
         let result = generate_strconst(&project, &options);
+        assert!(result.contains("package com.example.core;"));
         assert!(result.contains("SYS_USER"));
         assert!(result.contains("SYS_ROLE"));
-    }
-
-    #[test]
-    fn test_custom_class_name() {
-        let project = make_project();
-        let options = StrConstOptions {
-            class_name: "DbConst".to_string(),
-            package_suffix: "constants".to_string(),
-            ..Default::default()
-        };
-        let result = generate_strconst(&project, &options);
-        assert!(result.contains("package com.example.constants;"));
-        assert!(result.contains("public class DbConst {"));
     }
 }
