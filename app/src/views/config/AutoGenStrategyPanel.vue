@@ -139,13 +139,6 @@ async function removeStrategy(code: string) {
             {{ s.code }} ({{ s.name }})
             <el-tag v-if="builtin.isBuiltinStrategy(s.code)" size="small" type="info" effect="plain">内置</el-tag>
           </span>
-          <el-button
-            v-if="!builtin.isBuiltinStrategy(s.code) && !store.readOnly"
-            size="small"
-            link
-            type="danger"
-            @click.stop="removeStrategy(s.code)"
-          >删</el-button>
         </div>
         <el-empty v-if="!strategies.length" description="暂无" :image-size="50" />
       </div>
@@ -164,6 +157,7 @@ async function removeStrategy(code: string) {
         <div class="flex items-center gap-12 mb-16">
           <div class="text-20 font-bold">{{ current.code }}</div>
           <el-button v-if="canEdit" size="small" type="primary" link @click="openEdit">修改</el-button>
+          <el-button v-if="canEdit" size="small" link type="danger" @click="removeStrategy(current.code)">删除</el-button>
         </div>
         <div class="flex flex-col gap-8 text-14">
           <div><span class="text-gray-500 inline-block w-80">策略代码:</span>{{ current.code }}</div>
