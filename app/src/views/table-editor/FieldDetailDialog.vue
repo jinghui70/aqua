@@ -287,23 +287,25 @@ function save() {
           />
         </el-form-item>
         <template v-if="draft.autoGenerate">
-          <el-form-item label="策略">
-            <el-select v-model="draft.autoGenerate.strategy" style="width: 160px">
-              <el-option label="雪花id (default)" value="default" />
-              <el-option label="当前时间 (now)" value="now" />
-            </el-select>
-          </el-form-item>
+          <div class="grid grid-cols-2 gap-x-24">
+            <el-form-item label="策略">
+              <el-select v-model="draft.autoGenerate.strategy">
+                <el-option label="雪花id (default)" value="default" />
+                <el-option label="当前时间 (now)" value="now" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="时机">
+              <el-select v-model="draft.autoGenerate.timing">
+                <el-option label="INSERT" value="INSERT" />
+                <el-option label="INSERT_UPDATE" value="INSERT_UPDATE" />
+              </el-select>
+            </el-form-item>
+          </div>
           <el-form-item label="参数">
             <el-input
               v-model="draft.autoGenerate.param"
-              :placeholder="draft.autoGenerate.strategy === 'now' ? 'yyyy-MM-dd HH:mm:ss' : '如 USR_ 前缀'"
+              :placeholder="draft.autoGenerate.strategy === 'now' ? 'yyyy-MM-dd HH:mm:ss' : '前缀'"
             />
-          </el-form-item>
-          <el-form-item label="时机">
-            <el-select v-model="draft.autoGenerate.timing" style="width: 160px">
-              <el-option label="INSERT" value="INSERT" />
-              <el-option label="INSERT_UPDATE" value="INSERT_UPDATE" />
-            </el-select>
           </el-form-item>
         </template>
       </el-form>
@@ -364,27 +366,29 @@ function save() {
           </template>
         </template>
 
-        <!-- 其他 bizType: bizTypeData.fields 表单 -->
+        <!-- 其他 bizType: bizTypeData.fields 表单(两列)-->
         <template v-else>
-          <el-form-item
-            v-for="bf in bizTypeDataFields"
-            :key="bf.name"
-            :label="bf.description || bf.name"
-          >
-            <el-input
-              v-if="bf.type === 'string'"
-              :model-value="getBizTypeDataValue(bf.name) as string"
-              :placeholder="bf.default != null ? String(bf.default) : ''"
-              @update:model-value="(v: string) => setBizTypeDataValue(bf, v)"
-            />
-            <el-input-number
-              v-else
-              :model-value="getBizTypeDataValue(bf.name) as number"
-              :controls="false"
-              :placeholder="bf.default != null ? String(bf.default) : ''"
-              @update:model-value="(v: number | undefined) => setBizTypeDataValue(bf, v)"
-            />
-          </el-form-item>
+          <div class="grid grid-cols-2 gap-x-24">
+            <el-form-item
+              v-for="bf in bizTypeDataFields"
+              :key="bf.name"
+              :label="bf.description || bf.name"
+            >
+              <el-input
+                v-if="bf.type === 'string'"
+                :model-value="getBizTypeDataValue(bf.name) as string"
+                :placeholder="bf.default != null ? String(bf.default) : ''"
+                @update:model-value="(v: string) => setBizTypeDataValue(bf, v)"
+              />
+              <el-input-number
+                v-else
+                :model-value="getBizTypeDataValue(bf.name) as number"
+                :controls="false"
+                :placeholder="bf.default != null ? String(bf.default) : ''"
+                @update:model-value="(v: number | undefined) => setBizTypeDataValue(bf, v)"
+              />
+            </el-form-item>
+          </div>
         </template>
       </el-form>
 
