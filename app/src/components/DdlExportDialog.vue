@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// DDL 导出:方言 + 范围 + 预览/复制/下载。
+// DDL 导出:方言 + 选表(对话框树多选)+ 预览/复制/下载。
 import { computed, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { useUiStore } from "@/stores/ui";
@@ -7,6 +7,7 @@ import { useProjectStore } from "@/stores/project";
 import { useTauri } from "@/composables/useTauri";
 import { useDatabaseStore } from "@/stores/database";
 import { downloadText } from "@/composables/useDownload";
+import TableSelectDialog from "./TableSelectDialog.vue";
 
 const ui = useUiStore();
 const store = useProjectStore();
@@ -14,24 +15,20 @@ const tauri = useTauri();
 const dbStore = useDatabaseStore();
 
 const dialect = ref("mysql");
-const scope = ref<"all" | "group" | "tables">("group");
-const selectedGroup = ref("");
 const selectedTables = ref<string[]>([]);
+const tableSelectVisible = ref(false);
 const preview = ref("");
 
-const groups = computed(() => store.currentProject?.groups ?? []);
 const tables = computed(() => store.currentProject?.tables ?? []);
-
-function scopeOpts() {
-  if (scope.value === "group") return { group: selectedGroup.value };
-  if (scope.value === "tables") return { tables: selectedTables.value };
-  return {};
-}
 
 async function doPreview() {
   if (!store.currentProject) return;
+  if (!selectedTables.value.length) {
+    ElMessage.warning("请先选择表");
+    return;
+  }
   try {
-    preview.value = await tauri.generateDdl(store.currentProject, dialect.value, scopeOpts());
+    preview.value = await tauri.generateDdl(store.currentProject, dialect.value, { tables: selectedTables.value });
   } catch { /* 已提示 */ }
 }
 
@@ -44,11 +41,13 @@ function download() {
   downloadText("schema.sql", preview.value);
 }
 
+function onTableConfirm(tables: string[]) {
+  selectedTables.value = tables;
+}
+
 watch(() => ui.ddlExportVisible, (v) => {
   if (v) {
     preview.value = "";
-    scope.value = "group";
-    selectedGroup.value = groups.value[0]?.code ?? "";
     selectedTables.value = [];
   }
 });
@@ -62,23 +61,19 @@ watch(() => ui.ddlExportVisible, (v) => {
         <el-select v-model="dialect" size="small" style="width: 130px; margin-left: 4px">
           <el-option v-for="d in dbStore.generatable" :key="d.name" :label="d.label" :value="d.name" />
         </el-select>
-        <el-radio-group v-model="scope" size="small" style="margin-left: 16px">
-          <el-radio-button value="all">全部表</el-radio-button>
-          <el-radio-button value="group">按分组</el-radio-button>
-          <el-radio-button value="tables">指定表</el-radio-button>
-        </el-radio-group>
-        <el-select v-if="scope === 'group'" v-model="selectedGroup" size="small" placeholder="选分组" style="width: 140px; margin-left: 8px">
-          <el-option v-for="g in groups" :key="g.code" :label="g.name" :value="g.code" />
-        </el-select>
-        <el-select v-if="scope === 'tables'" v-model="selectedTables" multiple size="small" placeholder="选表" style="width: 240px; margin-left: 8px">
-          <el-option v-for="t in tables" :key="t.code" :label="t.code" :value="t.code" />
-        </el-select>
+        <el-button size="small" style="margin-left: 16px" @click="tableSelectVisible = true">
+          选表{{ selectedTables.length ? ` (${selectedTables.length})` : "" }}
+        </el-button>
         <div class="flex-1" />
         <el-button size="small" type="primary" @click="doPreview" style="margin-right: 8px">预览</el-button>
         <el-button size="small" @click="copy" :disabled="!preview" style="margin-right: 8px">复制</el-button>
         <el-button size="small" @click="download" :disabled="!preview">下载</el-button>
       </div>
-      <el-input v-model="preview" type="textarea" :rows="20" readonly class="font-mono" placeholder="点击预览生成" />
+      <div v-if="selectedTables.length" class="text-12 text-gray-500">
+        已选:{{ selectedTables.join(", ") }}
+      </div>
+      <el-input v-model="preview" type="textarea" :rows="20" readonly class="font-mono" placeholder="选表后点击预览" />
     </div>
+    <TableSelectDialog v-model="tableSelectVisible" :selected="selectedTables" @confirm="onTableConfirm" />
   </el-dialog>
 </template>
