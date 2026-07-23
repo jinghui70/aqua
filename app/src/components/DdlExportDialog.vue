@@ -81,7 +81,7 @@ watch([selectedTables, dropIfExist, dialect], () => {
         <el-button size="small" style="margin-left: 16px" @click="tableSelectVisible = true">
           选表{{ selectedTables.length ? ` (${selectedTables.length})` : "" }}
         </el-button>
-        <el-checkbox v-model="dropIfExist" style="margin-left: 16px">删除已存在表</el-checkbox>
+        <el-checkbox v-model="dropIfExist" style="margin-left: 16px">删表重建</el-checkbox>
         <div class="flex-1" />
         <el-button size="small" @click="copy" :disabled="!preview" style="margin-right: 8px">复制</el-button>
         <el-button size="small" type="primary" @click="saveFile" :disabled="!preview">保存</el-button>
