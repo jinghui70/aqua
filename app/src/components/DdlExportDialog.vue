@@ -64,7 +64,7 @@ watch(() => ui.ddlExportVisible, (v) => {
   }
 });
 // 即时预览(selectedTables 或 dropIfExist 变化)
-watch([selectedTables, dropIfExist], () => {
+watch([selectedTables, dropIfExist, dialect], () => {
   if (selectedTables.value.length) doPreview();
   else preview.value = "";
 });
@@ -81,15 +81,12 @@ watch([selectedTables, dropIfExist], () => {
         <el-button size="small" style="margin-left: 16px" @click="tableSelectVisible = true">
           选表{{ selectedTables.length ? ` (${selectedTables.length})` : "" }}
         </el-button>
-        <el-checkbox v-model="dropIfExist" style="margin-left: 16px">DROP TABLE IF EXISTS</el-checkbox>
+        <el-checkbox v-model="dropIfExist" style="margin-left: 16px">删除已存在表</el-checkbox>
         <div class="flex-1" />
         <el-button size="small" @click="copy" :disabled="!preview" style="margin-right: 8px">复制</el-button>
         <el-button size="small" type="primary" @click="saveFile" :disabled="!preview">保存</el-button>
       </div>
-      <div v-if="selectedTables.length" class="text-12 text-gray-500">
-        已选:{{ selectedTables.join(", ") }}
-      </div>
-      <el-input v-model="preview" type="textarea" :rows="20" readonly class="font-mono" placeholder="选表后点击预览" />
+      <el-input v-model="preview" type="textarea" :rows="20" readonly class="font-mono" placeholder="选表后即时预览" />
     </div>
     <TableSelectDialog v-model="tableSelectVisible" :selected="selectedTables" @confirm="onTableConfirm" />
   </el-dialog>

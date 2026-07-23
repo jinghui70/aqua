@@ -23,7 +23,15 @@ pub fn generate_ddl(project: &Project, options: &DdlOptions) -> String {
 
     for table in tables {
         if options.drop_if_exist {
-            output.push(format!("DROP TABLE IF EXISTS {};", table.code));
+            let is_oracle = matches!(options.dialect, Dialect::Jdbc { ref name } if name == "oracle");
+            if is_oracle {
+                output.push(format!(
+                    "BEGIN\n   EXECUTE IMMEDIATE 'DROP TABLE {} PURGE';\nEXCEPTION\n   WHEN OTHERS THEN\n      IF SQLCODE != -942 THEN\n         RAISE;\n      END IF;\nEND;",
+                    table.code
+                ));
+            } else {
+                output.push(format!("DROP TABLE IF EXISTS {};", table.code));
+            }
         }
         // CREATE TABLE + COMMENT
         output.push(table::generate_table(table, dialect));
