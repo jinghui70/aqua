@@ -10,16 +10,19 @@ const store = useProjectStore();
 const treeRef = ref();
 const filterText = ref("");
 
-const treeData = computed(() =>
-  (store.currentProject?.groups ?? []).map((g) => ({
-    code: `g:${g.code}`,
-    name: g.name,
-    disabled: true,
-    children: (store.currentProject?.tables ?? [])
-      .filter((t) => t.group === g.code)
-      .map((t) => ({ code: t.code, name: `${t.code} (${t.name})` })),
-  }))
-);
+const treeData = computed(() => [
+  {
+    code: "root",
+    name: "全部表",
+    children: (store.currentProject?.groups ?? []).map((g) => ({
+      code: `g:${g.code}`,
+      name: g.name,
+      children: (store.currentProject?.tables ?? [])
+        .filter((t) => t.group === g.code)
+        .map((t) => ({ code: t.code, name: `${t.code} (${t.name})` })),
+    })),
+  },
+]);
 
 watch(
   () => props.modelValue,
@@ -41,7 +44,7 @@ function filterNode(value: string, data: any) {
 function confirm() {
   const checked = treeRef.value?.getCheckedKeys() ?? [];
   // 只取表 code(非 g: 前缀的分组节点)
-  const tables = checked.filter((k: string) => !k.startsWith("g:"));
+  const tables = checked.filter((k: string) => k !== "root" && !k.startsWith("g:"));
   emit("confirm", tables);
   emit("update:modelValue", false);
 }
@@ -58,7 +61,7 @@ function cancel() {
       <el-tree
         ref="treeRef"
         :data="treeData"
-        :props="{ label: 'name', children: 'children', disabled: 'disabled' }"
+        :props="{ label: 'name', children: 'children' }"
         node-key="code"
         show-checkbox
         :filter-node-method="filterNode"

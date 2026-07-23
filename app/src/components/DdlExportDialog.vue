@@ -6,7 +6,8 @@ import { useUiStore } from "@/stores/ui";
 import { useProjectStore } from "@/stores/project";
 import { useTauri } from "@/composables/useTauri";
 import { useDatabaseStore } from "@/stores/database";
-import { downloadText } from "@/composables/useDownload";
+import { invoke } from "@tauri-apps/api/core";
+import { save } from "@tauri-apps/plugin-dialog";
 import TableSelectDialog from "./TableSelectDialog.vue";
 
 const ui = useUiStore();
@@ -37,8 +38,18 @@ async function copy() {
   ElMessage.success("已复制");
 }
 
-function download() {
-  downloadText("schema.sql", preview.value);
+async function saveFile() {
+  const path = await save({
+    filters: [{ name: "SQL", extensions: ["sql"] }],
+    defaultPath: "schema.sql",
+  });
+  if (!path) return;
+  try {
+    await invoke<void>("write_text_file", { path, content: preview.value });
+    ElMessage.success("已保存");
+  } catch (e) {
+    ElMessage.error(`保存失败: ${e}`);
+  }
 }
 
 function onTableConfirm(tables: string[]) {
@@ -50,6 +61,11 @@ watch(() => ui.ddlExportVisible, (v) => {
     preview.value = "";
     selectedTables.value = [];
   }
+});
+// 即时预览(selectedTables 变化)
+watch(selectedTables, () => {
+  if (selectedTables.value.length) doPreview();
+  else preview.value = "";
 });
 </script>
 
@@ -65,9 +81,8 @@ watch(() => ui.ddlExportVisible, (v) => {
           选表{{ selectedTables.length ? ` (${selectedTables.length})` : "" }}
         </el-button>
         <div class="flex-1" />
-        <el-button size="small" type="primary" @click="doPreview" style="margin-right: 8px">预览</el-button>
         <el-button size="small" @click="copy" :disabled="!preview" style="margin-right: 8px">复制</el-button>
-        <el-button size="small" @click="download" :disabled="!preview">下载</el-button>
+        <el-button size="small" type="primary" @click="saveFile" :disabled="!preview">保存</el-button>
       </div>
       <div v-if="selectedTables.length" class="text-12 text-gray-500">
         已选:{{ selectedTables.join(", ") }}
