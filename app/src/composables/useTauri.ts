@@ -36,6 +36,10 @@ export function useTauri() {
       invoke<DatasetEntry[]>("dataset_load", { path, project }),
     datasetSave: (path: string, project: Project, entries: DatasetEntry[]) =>
       invoke<void>("dataset_save", { path, project, entries }),
+    scanDatasets: (projectPath: string) =>
+      invoke<{ name: string }[]>("scan_datasets", { projectPath }),
+    createDataset: (projectPath: string, name: string) =>
+      invoke<string>("create_dataset", { projectPath, name }),
 
     // 数据源持久化(密码 AES 加密)
     datasourceLoad: (projectPath: string) =>

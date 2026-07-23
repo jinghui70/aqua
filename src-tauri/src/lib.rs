@@ -125,6 +125,8 @@ pub fn run() {
             import::list_tables_command,
             dataset::dataset_load,
             dataset::dataset_save,
+            dataset::scan_datasets,
+            dataset::create_dataset,
             datasource::datasource_load,
             datasource::datasource_save,
             database::list_databases,
