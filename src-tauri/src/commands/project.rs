@@ -43,7 +43,8 @@ pub async fn project_validate(project: Project) -> Result<String, String> {
     }
 }
 
-/// 更新项目目录下的 .gitignore，确保包含 *.aqua.conf 和 *.aqua.db
+/// 更新项目目录下的 .gitignore，确保包含 *.aqua.conf(数据源配置,不入 Git)
+/// 数据集 .data 是 JSONL 文本,入 Git(不排除);原 *.aqua.db 已放弃 SQLite,移除
 #[tauri::command]
 pub async fn update_gitignore(project_path: String) -> Result<(), String> {
     use std::path::Path;
@@ -52,7 +53,7 @@ pub async fn update_gitignore(project_path: String) -> Result<(), String> {
     let dir = path.parent().ok_or("无效项目路径")?;
     let gitignore_path = dir.join(".gitignore");
 
-    let patterns = vec!["*.aqua.conf", "*.aqua.db"];
+    let patterns = vec!["*.aqua.conf"];
 
     // 读取现有内容
     let mut content = if gitignore_path.exists() {
