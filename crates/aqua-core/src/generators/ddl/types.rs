@@ -48,6 +48,8 @@ pub struct DdlOptions {
     pub tables: Option<Vec<String>>,
     /// 分组过滤(与 tables 互斥)。
     pub group: Option<String>,
+    /// 是否包含 DROP TABLE IF EXISTS(默认 true)
+    pub drop_if_exist: bool,
 }
 
 impl Default for DdlOptions {
@@ -56,6 +58,7 @@ impl Default for DdlOptions {
             dialect: Dialect::Mysql,
             tables: None,
             group: None,
+            drop_if_exist: true,
         }
     }
 }

@@ -22,6 +22,9 @@ pub fn generate_ddl(project: &Project, options: &DdlOptions) -> String {
     let mut output = Vec::new();
 
     for table in tables {
+        if options.drop_if_exist {
+            output.push(format!("DROP TABLE IF EXISTS {};", table.code));
+        }
         // CREATE TABLE + COMMENT
         output.push(table::generate_table(table, dialect));
 

@@ -60,6 +60,7 @@ pub async fn generate_ddl_command(
     dialect: String,
     tables: Option<Vec<String>>,
     group: Option<String>,
+    drop_if_exist: Option<bool>,
 ) -> Result<String, String> {
     let dialect = Dialect::parse(&dialect).ok_or_else(|| format!("不支持的方言: {}", dialect))?;
 
@@ -69,6 +70,7 @@ pub async fn generate_ddl_command(
             dialect,
             tables,
             group,
+            drop_if_exist: drop_if_exist.unwrap_or(true),
         },
     ))
 }

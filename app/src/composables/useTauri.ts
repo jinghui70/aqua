@@ -50,13 +50,14 @@ export function useTauri() {
     generateDdl: (
       project: Project,
       dialect: string,
-      opts?: { tables?: string[]; group?: string }
+      opts?: { tables?: string[]; group?: string; dropIfExist?: boolean }
     ) =>
       invoke<string>("generate_ddl_command", {
         project,
         dialect,
         tables: opts?.tables,
         group: opts?.group,
+        dropIfExist: opts?.dropIfExist,
       }),
     generateJava: (
       project: Project,
