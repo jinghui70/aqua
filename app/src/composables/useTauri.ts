@@ -37,7 +37,7 @@ export function useTauri() {
     datasetSave: (path: string, project: Project, entries: DatasetEntry[]) =>
       invoke<void>("dataset_save", { path, project, entries }),
     scanDatasets: (projectPath: string) =>
-      invoke<{ name: string }[]>("scan_datasets", { projectPath }),
+      invoke<{ name: string; path: string }[]>("scan_datasets", { projectPath }),
     createDataset: (projectPath: string, name: string) =>
       invoke<string>("create_dataset", { projectPath, name }),
 

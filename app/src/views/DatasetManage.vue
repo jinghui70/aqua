@@ -1,80 +1,135 @@
 <script setup lang="ts">
-// 数据集管理(§6.4):打开/新建/保存数据集文件 + 表树(真实行数) + 可编辑数据网格。
-// 行数据前端持有(内存),编辑后整体存回;后端 dataset_load/save 无状态。
-import { computed, ref } from "vue";
+// 数据集管理:目录扫描下拉 + DBeaver 式编辑(dirty 保存/取消)+ 表头中文名。
+// .data JSONL 文件,不存表结构(用主项目)。
+import { computed, ref, watch } from "vue";
 import { useRouter } from "vue-router";
+import { nextTick } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useProjectStore } from "@/stores/project";
 import { useTauri } from "@/composables/useTauri";
-import { pickDatasetOpen, pickDatasetSave } from "@/composables/useFileDialog";
-import { DataType, type DatasetEntry, type Field } from "@/types/schema";
+import { type DatasetEntry, type Field } from "@/types/schema";
 
 const router = useRouter();
 const store = useProjectStore();
 const tauri = useTauri();
 
-// 内存态:tableCode(大写) -> 行数组(单元格值统一以字符串显示,保存时按类型规范化)
 type Row = Record<string, string>;
-const rowsMap = ref<Record<string, Row[]>>({});
-const currentPath = ref("");
+const intTypes = ["TINYINT", "INT", "LONG"];
+
+// 数据集列表 + 选中
+const datasets = ref<{ name: string; path: string }[]>([]);
+const selectedPath = ref("");
 const hideEmpty = ref(false);
 const selectedTable = ref("");
 
-const intTypes = [DataType.Tinyint, DataType.Int, DataType.Long];
+// 行数据
+const rowsMap = ref<Record<string, Row[]>>({});
+const dirty = ref(false);
+let suppressDirty = false;
+const originalRowsMap = ref<Record<string, Row[]>>({});
 
+watch(rowsMap, () => { if (!suppressDirty) dirty.value = true; }, { deep: true });
+
+// 新建弹窗
+const newVisible = ref(false);
+const newName = ref("");
+
+// ===== 数据集列表 =====
+async function loadDatasets() {
+  if (!store.currentPath) return;
+  try {
+    datasets.value = await tauri.scanDatasets(store.currentPath);
+  } catch { /* 已提示 */ }
+}
+
+async function onDatasetChange() {
+  if (!selectedPath.value || !store.currentProject) return;
+  try {
+    const entries = await tauri.datasetLoad(selectedPath.value, store.currentProject);
+    suppressDirty = true;
+    rowsMap.value = toDisplay(entries);
+    originalRowsMap.value = JSON.parse(JSON.stringify(rowsMap.value));
+    dirty.value = false;
+    await nextTick();
+    suppressDirty = false;
+  } catch { /* 已提示 */ }
+}
+
+async function confirmNew() {
+  const name = newName.value.trim();
+  if (!name) { ElMessage.warning("请输入数据集名"); return; }
+  if (datasets.value.some((d) => d.name === name)) { ElMessage.error(`${name} 已存在`); return; }
+  try {
+    await tauri.createDataset(store.currentPath, name);
+    newVisible.value = false;
+    newName.value = "";
+    await loadDatasets();
+    // 选中新建的
+    const created = datasets.value.find((d) => d.name === name);
+    if (created) {
+      selectedPath.value = created.path;
+      await onDatasetChange();
+    }
+    ElMessage.success("已创建");
+  } catch { /* 已提示 */ }
+}
+
+// ===== 保存 / 取消 =====
+async function saveDataset() {
+  if (!store.currentProject || !selectedPath.value) return;
+  try {
+    await tauri.datasetSave(selectedPath.value, store.currentProject, buildEntries());
+    originalRowsMap.value = JSON.parse(JSON.stringify(rowsMap.value));
+    dirty.value = false;
+    ElMessage.success("已保存");
+  } catch { /* 已提示 */ }
+}
+
+function cancelEdit() {
+  suppressDirty = true;
+  rowsMap.value = JSON.parse(JSON.stringify(originalRowsMap.value));
+  dirty.value = false;
+  nextTick(() => { suppressDirty = false; });
+}
+
+// ===== 行编辑 =====
 function rowCount(tableCode: string): number {
   return rowsMap.value[tableCode.toUpperCase()]?.length ?? 0;
 }
 
-function fileName(path: string): string {
-  return path ? path.split("/").pop() || path : "(未保存)";
-}
-
-// 表树(按分组;可隐藏无数据表)
-interface TreeNode {
-  id: string;
-  label: string;
-  type: "group" | "table";
-  tableCode?: string;
-  children?: TreeNode[];
-}
-const treeData = computed<TreeNode[]>(() => {
+const treeData = computed(() => {
   const p = store.currentProject;
   if (!p) return [];
-  return p.groups
-    .map((g) => ({
-      id: `group:${g.code}`,
-      label: g.name,
-      type: "group" as const,
-      children: p.tables
-        .filter((t) => t.group === g.code)
-        .filter((t) => !hideEmpty.value || rowCount(t.code) > 0)
-        .map((t) => ({
-          id: `table:${t.code}`,
-          label: `${t.code} (${rowCount(t.code)})`,
-          type: "table" as const,
-          tableCode: t.code,
-        })),
-    }))
-    .filter((g) => g.children.length > 0 || !hideEmpty.value);
+  return p.groups.map((g) => ({
+    id: `group:${g.code}`,
+    label: g.name,
+    type: "group" as const,
+    children: p.tables
+      .filter((t) => t.group === g.code)
+      .filter((t) => !hideEmpty.value || rowCount(t.code) > 0)
+      .map((t) => ({
+        id: `table:${t.code}`,
+        label: `${t.name} (${rowCount(t.code)})`,
+        type: "table" as const,
+        tableCode: t.code,
+      })),
+  })).filter((g) => g.children.length > 0 || !hideEmpty.value);
 });
 
 const currentTable = computed(() =>
   store.currentProject?.tables.find((t) => t.code === selectedTable.value)
 );
 
-// 当前表的行数组(只读展示;增删走 rowsMap 真实数组,避免临时数组丢写)
 const currentRows = computed<Row[]>(() => {
   const code = selectedTable.value.toUpperCase();
   return (code && rowsMap.value[code]) || [];
 });
 
-function onNodeClick(data: TreeNode) {
+function onNodeClick(data: { type: string; tableCode?: string }) {
   if (data.type === "table" && data.tableCode) selectedTable.value = data.tableCode;
 }
 
-// ===== 加载 / 保存 =====
-// 后端行值(混合类型) -> 显示态(字符串;null -> "")
+// ===== 类型转换(保留原逻辑)=====
 function toDisplay(entries: DatasetEntry[]): Record<string, Row[]> {
   const map: Record<string, Row[]> = {};
   for (const e of entries) {
@@ -87,7 +142,6 @@ function toDisplay(entries: DatasetEntry[]): Record<string, Row[]> {
   return map;
 }
 
-// 显示态 -> 后端条目(按字段类型规范化:空->null,整数->number,其余->string)
 function normalize(field: Field, raw: string): unknown {
   if (raw === "" || raw == null) return null;
   if (intTypes.includes(field.dataType)) {
@@ -96,6 +150,7 @@ function normalize(field: Field, raw: string): unknown {
   }
   return String(raw);
 }
+
 function buildEntries(): DatasetEntry[] {
   const p = store.currentProject!;
   return p.tables.map((t) => {
@@ -115,52 +170,6 @@ function buildEntries(): DatasetEntry[] {
   });
 }
 
-async function openDataset() {
-  if (!store.currentProject) return;
-  const path = await pickDatasetOpen();
-  if (!path) return;
-  try {
-    const entries = await tauri.datasetLoad(path, store.currentProject);
-    rowsMap.value = toDisplay(entries);
-    currentPath.value = path;
-    ElMessage.success(`已打开 ${fileName(path)}`);
-  } catch {
-    /* useTauri 已提示 */
-  }
-}
-
-async function newDataset() {
-  if (!store.currentProject) return;
-  const path = await pickDatasetSave();
-  if (!path) return;
-  rowsMap.value = {};
-  try {
-    await tauri.datasetSave(path, store.currentProject, buildEntries());
-    currentPath.value = path;
-    ElMessage.success(`已新建 ${fileName(path)}`);
-  } catch {
-    /* 已提示 */
-  }
-}
-
-async function saveDataset() {
-  if (!store.currentProject) return;
-  let path = currentPath.value;
-  if (!path) {
-    const picked = await pickDatasetSave();
-    if (!picked) return;
-    path = picked;
-  }
-  try {
-    await tauri.datasetSave(path, store.currentProject, buildEntries());
-    currentPath.value = path;
-    ElMessage.success(`已保存到 ${fileName(path)}`);
-  } catch {
-    /* 已提示 */
-  }
-}
-
-// ===== 行编辑 =====
 function addRow() {
   if (!currentTable.value) return;
   const code = selectedTable.value.toUpperCase();
@@ -169,35 +178,47 @@ function addRow() {
   for (const f of currentTable.value.fields) row[f.code.toUpperCase()] = "";
   rowsMap.value[code].push(row);
 }
+
 function removeRow(idx: number) {
   rowsMap.value[selectedTable.value.toUpperCase()]?.splice(idx, 1);
 }
+
 async function clearTable() {
   if (!currentTable.value) return;
   try {
-    await ElMessageBox.confirm(
-      `确认清空表 ${selectedTable.value} 的全部数据行?`,
-      "清空",
-      { type: "warning", confirmButtonText: "清空", cancelButtonText: "取消" }
-    );
+    await ElMessageBox.confirm(`确认清空表 ${selectedTable.value} 的全部数据行?`, "清空", {
+      type: "warning", confirmButtonText: "清空", cancelButtonText: "取消",
+    });
     rowsMap.value[selectedTable.value.toUpperCase()] = [];
-  } catch {
-    /* 取消 */
-  }
+  } catch { /* 取消 */ }
 }
+
+// 进入页面扫描数据集
+loadDatasets();
 </script>
 
 <template>
   <div v-if="store.currentProject" class="h-full flex flex-col">
-    <!-- 顶部:数据集文件操作 -->
-    <div class="flex items-center gap-12 px-16 h-48 border-b border-gray-200 flex-shrink-0">
+    <!-- 顶部:数据集下拉 + 新建 + dirty 保存/取消 -->
+    <div class="flex items-center px-16 h-48 border-b border-gray-200 flex-shrink-0">
       <el-button size="small" link @click="router.push('/')">← 返回</el-button>
-      <span class="text-13">数据集</span>
-      <span class="text-13 text-gray-500 font-mono">{{ fileName(currentPath) }}</span>
-      <el-button size="small" @click="newDataset">新建</el-button>
-      <el-button size="small" @click="openDataset">打开</el-button>
-      <el-button size="small" type="primary" @click="saveDataset">保存</el-button>
-      <el-checkbox v-model="hideEmpty" class="ml-8">隐藏无数据表</el-checkbox>
+      <span class="text-13" style="margin-left: 8px">数据集</span>
+      <el-select
+        v-model="selectedPath"
+        size="small"
+        placeholder="选择数据集"
+        style="width: 200px; margin-left: 8px"
+        @change="onDatasetChange"
+      >
+        <el-option v-for="d in datasets" :key="d.path" :label="d.name" :value="d.path" />
+      </el-select>
+      <el-button size="small" style="margin-left: 8px" @click="newVisible = true">新建</el-button>
+      <template v-if="dirty">
+        <el-button size="small" type="primary" style="margin-left: 8px" @click="saveDataset">保存</el-button>
+        <el-button size="small" style="margin-left: 8px" @click="cancelEdit">取消</el-button>
+      </template>
+      <div class="flex-1" />
+      <el-checkbox v-model="hideEmpty">隐藏无数据表</el-checkbox>
     </div>
 
     <!-- 主体:表树 + 数据网格 -->
@@ -212,9 +233,7 @@ async function clearTable() {
           @node-click="onNodeClick"
         >
           <template #default="{ data }">
-            <span class="text-13">
-              {{ data.type === "group" ? "📁" : "📄" }} {{ data.label }}
-            </span>
+            <span class="text-13">{{ data.type === "group" ? "📁" : "📄" }} {{ data.label }}</span>
           </template>
         </el-tree>
       </div>
@@ -222,7 +241,7 @@ async function clearTable() {
       <div class="flex-1 flex flex-col overflow-hidden p-16">
         <template v-if="currentTable">
           <div class="flex items-center gap-8 mb-12 flex-shrink-0">
-            <span class="font-bold text-14">{{ currentTable.code }} 数据</span>
+            <span class="font-bold text-14">{{ currentTable.name }}</span>
             <span class="text-12 text-gray-400">{{ currentRows.length }} 行</span>
             <div class="flex-1" />
             <el-button size="small" type="primary" @click="addRow">新增行</el-button>
@@ -234,7 +253,7 @@ async function clearTable() {
               <el-table-column
                 v-for="f in currentTable.fields"
                 :key="f.code"
-                :label="f.code"
+                :label="f.name"
                 min-width="140"
               >
                 <template #default="{ row }">
@@ -252,6 +271,23 @@ async function clearTable() {
         <el-empty v-else description="选择左侧的表" />
       </div>
     </div>
+
+    <!-- 新建弹窗 -->
+    <el-dialog v-model="newVisible" title="新建数据集" width="420px" :close-on-click-modal="false">
+      <el-form label-width="80px">
+        <el-form-item label="数据集名">
+          <el-input v-model="newName" placeholder="如 dev / test" />
+        </el-form-item>
+      </el-form>
+      <div class="text-12 text-gray-400 mb-8">
+        数据集文件 = 主文件名.数据集名.data(JSONL 格式,Git 友好)<br>
+        用于初始数据和测试数据,不存表结构(结构用主项目)
+      </div>
+      <template #footer>
+        <el-button @click="newVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmNew">创建</el-button>
+      </template>
+    </el-dialog>
   </div>
   <el-empty v-else description="未打开项目" class="h-full" />
 </template>

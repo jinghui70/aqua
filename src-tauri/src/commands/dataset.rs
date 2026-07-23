@@ -9,6 +9,7 @@ use std::path::Path;
 #[derive(Serialize)]
 pub struct DatasetInfo {
     pub name: String,
+    pub path: String,
 }
 
 /// Tauri command: 加载数据集文件(.data JSONL)。
@@ -40,7 +41,10 @@ pub async fn scan_datasets(project_path: String) -> Result<Vec<DatasetInfo>, Str
             if let Some(name) = entry.file_name().to_str() {
                 if let Some(rest) = name.strip_prefix(&format!("{}.", prefix)) {
                     if let Some(dataset_name) = rest.strip_suffix(".data") {
-                        datasets.push(DatasetInfo { name: dataset_name.to_string() });
+                        datasets.push(DatasetInfo {
+                            name: dataset_name.to_string(),
+                            path: entry.path().to_string_lossy().to_string(),
+                        });
                     }
                 }
             }
