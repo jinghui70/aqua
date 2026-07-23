@@ -5,13 +5,15 @@ import { computed, ref } from "vue";
 export type ExportKind = "ddl" | "diff" | "strconst";
 
 export const useUiStore = defineStore("ui", () => {
-  // 导出弹窗
-  const exportVisible = ref(false);
-  const exportKind = ref<ExportKind>("ddl");
+  // 导出弹窗(三个独立)
+  const ddlExportVisible = ref(false);
+  const diffExportVisible = ref(false);
+  const strConstExportVisible = ref(false);
 
   function openExport(kind: ExportKind) {
-    exportKind.value = kind;
-    exportVisible.value = true;
+    if (kind === "ddl") ddlExportVisible.value = true;
+    else if (kind === "diff") diffExportVisible.value = true;
+    else strConstExportVisible.value = true;
   }
 
   // 数据库配置弹窗(驱动安装/显隐)
@@ -56,7 +58,9 @@ export const useUiStore = defineStore("ui", () => {
   // 是否有对话框打开(菜单事件据此忽略,避免操作被打断;原生菜单栏无法灰显)
   const anyDialogOpen = computed(
     () =>
-      exportVisible.value ||
+      ddlExportVisible.value ||
+      diffExportVisible.value ||
+      strConstExportVisible.value ||
       databaseConfigVisible.value ||
       importVisible.value ||
       recentVisible.value ||
@@ -65,8 +69,9 @@ export const useUiStore = defineStore("ui", () => {
   );
 
   return {
-    exportVisible,
-    exportKind,
+    ddlExportVisible,
+    diffExportVisible,
+    strConstExportVisible,
     openExport,
     databaseConfigVisible,
     openDatabaseConfig,

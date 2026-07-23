@@ -10,7 +10,9 @@ import GroupTreeAside from "./GroupTreeAside.vue";
 import TabWorkspace from "./TabWorkspace.vue";
 import StatusBar from "./StatusBar.vue";
 import AppToolbar from "./AppToolbar.vue";
-import ExportDialog from "@/components/ExportDialog.vue";
+import DdlExportDialog from "@/components/DdlExportDialog.vue";
+import DiffExportDialog from "@/components/DiffExportDialog.vue";
+import StrConstExportDialog from "@/components/StrConstExportDialog.vue";
 import DatabaseConfigDialog from "@/components/DatabaseConfigDialog.vue";
 import ImportWizard from "@/components/ImportWizard.vue";
 import RecentProjectsDialog from "@/components/RecentProjectsDialog.vue";
@@ -54,7 +56,9 @@ watch(
     </template>
 
     <!-- 全局弹窗(两态都可用) -->
-    <ExportDialog />
+    <DdlExportDialog />
+    <DiffExportDialog />
+    <StrConstExportDialog />
     <DatabaseConfigDialog />
     <ImportWizard />
     <RecentProjectsDialog />

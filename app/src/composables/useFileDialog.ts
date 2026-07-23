@@ -14,10 +14,11 @@ export async function pickOpenFile(): Promise<string | null> {
   return typeof result === "string" ? result : null;
 }
 
-/** 保存文件选择框,返回目标路径(取消返回 null)。 */
-export async function pickSaveFile(): Promise<string | null> {
+/** 保存文件选择框,返回目标路径(取消返回 null)。defaultPath 可指定默认文件名。 */
+export async function pickSaveFile(defaultPath?: string): Promise<string | null> {
   const result = await save({
     filters: AQUA_FILTER,
+    defaultPath,
   });
   return result ?? null;
 }
