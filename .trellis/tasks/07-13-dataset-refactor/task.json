@@ -3,7 +3,7 @@
   "name": "dataset-refactor",
   "title": "数据集重构",
   "description": "表数据Tab+管理弹窗(新建/删除/切换类型/复制)+同目录文件规则+删旧页",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": "aqua",
