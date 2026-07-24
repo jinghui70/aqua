@@ -161,7 +161,7 @@ function copyField(idx: number) {
         </template>
       </el-table-column>
       <el-table-column label="#" width="44" type="index" />
-      <el-table-column label="编码" width="150">
+      <el-table-column label="编码" min-width="150">
         <template #default="{ row }">
           <span v-if="store.readOnly" class="text-13">{{ row.code }}</span>
           <el-input
@@ -174,13 +174,13 @@ function copyField(idx: number) {
           />
         </template>
       </el-table-column>
-      <el-table-column label="属性名" width="120">
+      <el-table-column label="属性名" min-width="130">
         <template #default="{ row }">
           <span v-if="store.readOnly" class="text-13">{{ row.prop }}</span>
           <el-input v-else v-model="row.prop" size="small" />
         </template>
       </el-table-column>
-      <el-table-column label="名称" width="110">
+      <el-table-column label="名称" min-width="100">
         <template #default="{ row }">
           <span v-if="store.readOnly" class="text-13">{{ row.name }}</span>
           <el-input v-else v-model="row.name" size="small" />
@@ -249,7 +249,7 @@ function copyField(idx: number) {
           <span class="text-13">{{ autoGenLabel(row) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="默认值" width="110">
+      <el-table-column label="默认值" min-width="90">
         <template #default="{ row }">
           <span v-if="store.readOnly" class="text-13">{{ row.defaultValue || "-" }}</span>
           <el-input v-else v-model="row.defaultValue" size="small" placeholder="-" />
