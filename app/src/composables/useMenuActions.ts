@@ -105,5 +105,5 @@ export function useMenuActions() {
     unlisten = null;
   }
 
-  return { mount, unmount, handle };
+  return { mount, unmount, handle, doSave };
 }

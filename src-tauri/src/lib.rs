@@ -13,16 +13,22 @@ use std::io::Write;
 use std::sync::{Arc, Mutex};
 
 use commands::{builtin, database, dataset, dataset_io, datasource, generate, import, project};
-use tauri::menu::{MenuBuilder, SubmenuBuilder};
+use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri::{Emitter, Manager};
 
 /// 构建原生窗口菜单(§6.1),菜单事件通过 "menu" event 发到前端。
 fn build_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<tauri::menu::Menu<R>> {
+    // 保存单独构造:带 Cmd/Ctrl+S 快捷键(SubmenuBuilder.text 无 accelerator 变体)。
+    // 触发后 emit menu("file.save") → useMenuActions.handle,与点工具栏保存按钮同一链路。
+    let save = MenuItemBuilder::new("保存")
+        .id("file.save")
+        .accelerator("CmdOrCtrl+S")
+        .build(app)?;
     let file_builder = SubmenuBuilder::new(app, "文件")
         .text("file.new", "新建项目")
         .text("file.open", "打开项目")
         .text("file.recent", "最近项目")
-        .text("file.save", "保存")
+        .item(&save)
         .text("file.saveAs", "另存为")
         .text("file.close", "关闭项目");
     // 非 macOS: 文件菜单末尾加退出(macOS 的退出在应用菜单)
