@@ -61,18 +61,29 @@ pub async fn generate_ddl_command(
     tables: Option<Vec<String>>,
     group: Option<String>,
     drop_if_exist: Option<bool>,
+    dataset_path: Option<String>,
 ) -> Result<String, String> {
     let dialect = Dialect::parse(&dialect).ok_or_else(|| format!("不支持的方言: {}", dialect))?;
-
-    Ok(generate_ddl(
-        &project,
-        &DdlOptions {
-            dialect,
-            tables,
-            group,
-            drop_if_exist: drop_if_exist.unwrap_or(true),
-        },
-    ))
+    let options = DdlOptions {
+        dialect,
+        tables,
+        group,
+        drop_if_exist: drop_if_exist.unwrap_or(true),
+    };
+    let mut ddl = generate_ddl(&project, &options);
+    // 选中数据集时,追加该数据集的 INSERT 语句(按同样表过滤)
+    if let Some(path) = dataset_path {
+        let entries = aqua_core::dataset::load_dataset(&path, &project)
+            .map_err(|e| e.to_string())?;
+        let insert = aqua_core::generators::ddl::generate_insert(&project, &entries, &options);
+        if !insert.is_empty() {
+            if !ddl.is_empty() {
+                ddl.push('\n');
+            }
+            ddl.push_str(&insert);
+        }
+    }
+    Ok(ddl)
 }
 
 /// Tauri command: 生成 Java 实体类(支持配置: 包名/类名/Lombok,注释始终生成)。
