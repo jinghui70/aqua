@@ -217,7 +217,6 @@ mod tests {
         let project = make_project();
         let options = StrConstOptions {
             group: Some("core".to_string()),
-            ..Default::default()
         };
         let result = generate_strconst(&project, &options);
         assert!(result.contains("package com.example.core;"));
