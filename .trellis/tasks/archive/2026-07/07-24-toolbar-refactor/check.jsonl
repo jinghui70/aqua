@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/app/frontend/quality-guidelines.md", "reason": "校验 unocss 原子类/无 scoped CSS/组件质量红线"}
+{"file": ".trellis/spec/app/frontend/component-guidelines.md", "reason": "校验工具栏组件结构符合项目组件规范"}
