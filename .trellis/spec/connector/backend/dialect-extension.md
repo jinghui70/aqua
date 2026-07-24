@@ -17,6 +17,9 @@ public interface Dialect {
     List<TableInfo> listTables(Connection conn, String schema) throws SQLException;  // 表名 + 注释
     List<ColumnMeta> getColumns(Connection conn, String table) throws SQLException;
     List<IndexMeta> getIndexes(Connection conn, String table) throws SQLException;
+    // 数据读写(导入导出用,AbstractJdbcDialect 基类已实现,子类无需重写)
+    QueryResult queryRows(Connection conn, String table) throws SQLException;   // SELECT * -> {columns, rows}
+    int executeUpdate(Connection conn, String sql) throws SQLException;          // 执行 TRUNCATE/INSERT
 }
 ```
 
@@ -24,6 +27,10 @@ public interface Dialect {
 
 **契约**: `listTables` 返回 `TableInfo{name, comment}`(不是裸表名),comment 在此一并带出,
 供选表界面显示 + import 复用,避免为取表注释再 spawn 一次。Rust 侧 `TableInfo` 与之字段对齐。
+
+**读写能力**: `queryRows`/`executeUpdate` 是数据层操作(非元数据),均由 `AbstractJdbcDialect` 基类用标准
+`Statement`/`ResultSet` 实现,子类无需重写。`queryRows` 走 `SELECT *` + `ResultSetMetaData` 取列名;
+`executeUpdate` 直接 `stmt.executeUpdate(sql)`,由 Rust 侧拼好 TRUNCATE/INSERT SQL 传入。
 
 ---
 
