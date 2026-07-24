@@ -6,7 +6,7 @@
 use crate::driver::{ColumnMeta, DbConfig, Driver, DriverError, IndexMeta, TableInfo};
 use crate::schema::DataType;
 use async_trait::async_trait;
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 use std::path::PathBuf;
 use std::process::Stdio;
 use tokio::io::AsyncWriteExt;
@@ -321,6 +321,36 @@ impl Driver for JdbcDriver {
             .unwrap_or_default();
 
         Ok(indexes)
+    }
+
+    async fn query_table_rows(&self, table: &str) -> Result<Vec<Map<String, Value>>, DriverError> {
+        let resp = self.call("queryRows", Some(json!({ "table": table }))).await?;
+        let empty = Vec::new();
+        let rows = resp.get("rows").and_then(|v| v.as_array()).unwrap_or(&empty);
+        // rows: [[v1, v2, ...], ...]; columns 从 resp.columns 取
+        let columns: Vec<String> = resp
+            .get("columns")
+            .and_then(|v| v.as_array())
+            .map(|arr| arr.iter().filter_map(|c| c.as_str().map(|s| s.to_uppercase())).collect())
+            .unwrap_or_default();
+        let mut result = Vec::new();
+        for row in rows {
+            if let Some(arr) = row.as_array() {
+                let mut map = Map::new();
+                for (i, col) in columns.iter().enumerate() {
+                    let val = arr.get(i).cloned().unwrap_or(Value::Null);
+                    map.insert(col.clone(), val);
+                }
+                result.push(map);
+            }
+        }
+        Ok(result)
+    }
+
+    async fn execute_update(&self, sql: &str) -> Result<usize, DriverError> {
+        let resp = self.call("executeUpdate", Some(json!({ "sql": sql }))).await?;
+        let affected = resp.get("affected").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+        Ok(affected)
     }
 }
 

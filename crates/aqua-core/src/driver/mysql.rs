@@ -5,6 +5,7 @@ use crate::schema::DataType;
 use async_trait::async_trait;
 use mysql_async::prelude::*;
 use mysql_async::{OptsBuilder, Pool, Row};
+use serde_json::{Map, Value};
 use std::collections::HashMap;
 
 /// MySQL native 驱动。
@@ -178,6 +179,29 @@ impl Driver for MysqlDriver {
             .collect();
 
         Ok(indexes)
+    }
+
+    async fn query_table_rows(&self, table: &str) -> Result<Vec<Map<String, Value>>, DriverError> {
+        let mut conn = self.pool.get_conn().await.map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
+        let sql = format!("SELECT * FROM `{}`", table);
+        let result: Vec<Row> = conn.query(sql).await.map_err(|e| DriverError::QueryFailed(e.to_string()))?;
+        let mut rows = Vec::new();
+        for row in result {
+            let mut map = Map::new();
+            for col in row.columns().iter() {
+                let name = col.name_str().to_string().to_uppercase();
+                let val: Option<String> = row.get(&*col.name_str());
+                map.insert(name, val.map(Value::String).unwrap_or(Value::Null));
+            }
+            rows.push(map);
+        }
+        Ok(rows)
+    }
+
+    async fn execute_update(&self, sql: &str) -> Result<usize, DriverError> {
+        let mut conn = self.pool.get_conn().await.map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
+        conn.query_drop(sql).await.map_err(|e| DriverError::QueryFailed(e.to_string()))?;
+        Ok(0)
     }
 }
 

@@ -4,6 +4,8 @@ use crate::driver::{ColumnMeta, DbConfig, Driver, DriverError, IndexMeta, TableI
 use crate::schema::DataType;
 use async_trait::async_trait;
 use deadpool_postgres::{Config, Pool};
+use serde_json::{Map, Value};
+use tokio_postgres::Row;
 
 /// PostgreSQL native 驱动。
 pub struct PostgresDriver {
@@ -151,6 +153,29 @@ impl Driver for PostgresDriver {
 
         Ok(indexes)
     }
+
+    async fn query_table_rows(&self, table: &str) -> Result<Vec<Map<String, Value>>, DriverError> {
+        let client = self.pool.get().await.map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
+        let sql = format!("SELECT * FROM {}", table);
+        let rows: Vec<Row> = client.query(&sql, &[]).await.map_err(|e| DriverError::QueryFailed(e.to_string()))?;
+        let mut result = Vec::new();
+        for row in rows {
+            let mut map = Map::new();
+            for (i, col) in row.columns().iter().enumerate() {
+                let name = col.name().to_uppercase();
+                let val: Option<String> = row.get(i);
+                map.insert(name, val.map(Value::String).unwrap_or(Value::Null));
+            }
+            result.push(map);
+        }
+        Ok(result)
+    }
+
+    async fn execute_update(&self, sql: &str) -> Result<usize, DriverError> {
+        let client = self.pool.get().await.map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
+        let n = client.execute(sql, &[]).await.map_err(|e| DriverError::QueryFailed(e.to_string()))?;
+        Ok(n as usize)
+    }
 }
 
 /// 解析 PG indexdef 提取字段列表。
@@ -180,7 +205,7 @@ fn map_pg_type(pg_type: &str) -> DataType {
         | "timestamptz"
         | "timestamp with time zone" => DataType::Datetime,
         "bytea" => DataType::Blob,
-        _ => DataType::Varchar, // 默认
+        _ => DataType::Varchar,
     }
 }
 
