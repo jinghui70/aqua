@@ -21,6 +21,10 @@ pub fn generate_entity_class(
         .clone()
         .unwrap_or_else(|| snake_to_pascal(&table.code));
 
+    // @Table 省略判据:类名恰好能反推表名(SysUser↔SYS_USER)时约定生效,省略;
+    // 否则(自定义类名不匹配)必须显式 @Table 指定表名。与字段 @Column 逻辑对称。
+    let need_table_anno = class_name != snake_to_pascal(&table.code);
+
     let mut output = Vec::new();
 
     // Package 声明
@@ -28,7 +32,7 @@ pub fn generate_entity_class(
     output.push(String::new());
 
     // Import 收集
-    let imports = collect_imports(table, options);
+    let imports = collect_imports(table, options, need_table_anno);
     for import in &imports {
         output.push(format!("import {};", import));
     }
@@ -38,7 +42,9 @@ pub fn generate_entity_class(
 
     // 类注解(Javadoc 注释始终生成:表名/备注作为文档)
     output.push(javadoc(&table.name, &table.comment, ""));
-    output.push(format!("@Table(name = \"{}\")", table.code));
+    if need_table_anno {
+        output.push(format!("@Table(name = \"{}\")", table.code));
+    }
     if options.use_lombok {
         output.push("@Data".to_string());
     }
@@ -82,11 +88,13 @@ fn default_package(project: &Project, table: &Table) -> String {
 }
 
 /// 收集需要的 imports。
-fn collect_imports(table: &Table, options: &JavaOptions) -> Vec<String> {
+fn collect_imports(table: &Table, options: &JavaOptions, need_table_anno: bool) -> Vec<String> {
     let mut imports = HashSet::new();
 
-    // rainbow-dbaccess 注解
-    imports.insert("io.github.rainbow.dbaccess.annotation.Table".to_string());
+    // rainbow-dbaccess 注解(@Table 仅在需要时 import)
+    if need_table_anno {
+        imports.insert("io.github.rainbow.dbaccess.annotation.Table".to_string());
+    }
     imports.insert("io.github.rainbow.dbaccess.annotation.Id".to_string());
     imports.insert("io.github.rainbow.dbaccess.annotation.Column".to_string());
 

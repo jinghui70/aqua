@@ -23,8 +23,9 @@ fn test_generate_java_entity_with_lombok() {
     // 验证 package
     assert!(java_code.contains("package"), "应包含 package 声明");
 
-    // 验证 import
-    assert!(java_code.contains("import io.github.rainbow.dbaccess.annotation.Table"));
+    // 验证 import(默认类名 SysUser 能反推 SYS_USER → 省略 @Table,故不 import Table)
+    assert!(!java_code.contains("import io.github.rainbow.dbaccess.annotation.Table"),
+        "默认类名省略 @Table,不应 import Table");
     assert!(java_code.contains("import lombok.Data"));
     assert!(
         java_code.contains("import java.time.LocalDateTime"),
@@ -35,8 +36,8 @@ fn test_generate_java_entity_with_lombok() {
         "应导入 BigDecimal"
     );
 
-    // 验证注解
-    assert!(java_code.contains("@Table(name = \"SYS_USER\")"));
+    // 验证注解(默认类名 SysUser↔SYS_USER 反推匹配 → 省略 @Table)
+    assert!(!java_code.contains("@Table"), "默认类名应省略 @Table");
     assert!(java_code.contains("@Data"));
     assert!(java_code.contains("@Id"), "主键字段应有 @Id");
 
@@ -102,6 +103,10 @@ fn test_custom_package_and_class_name() {
 
     assert!(java_code.contains("package com.example.entity;"));
     assert!(java_code.contains("public class User {"));
+    // 自定义类名 User 不能反推 SYS_USER → 必须写 @Table + import
+    assert!(java_code.contains("@Table(name = \"SYS_USER\")"), "自定义类名应写 @Table");
+    assert!(java_code.contains("import io.github.rainbow.dbaccess.annotation.Table"),
+        "写 @Table 时应 import Table");
 }
 
 #[test]
