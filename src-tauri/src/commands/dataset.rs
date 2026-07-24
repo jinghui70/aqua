@@ -1,6 +1,6 @@
 //! dataset 命令实现(数据集 .data JSONL 文件读写 + 目录扫描 + 新建)。
 
-use aqua_core::dataset::{load_dataset, save_dataset, DatasetEntry};
+use aqua_core::dataset::{load_dataset, save_dataset, DatasetEntry, SchemaDiff};
 use aqua_core::schema::Project;
 use serde::Serialize;
 use std::path::Path;
@@ -12,10 +12,18 @@ pub struct DatasetInfo {
     pub path: String,
 }
 
-/// Tauri command: 加载数据集文件(.data JSONL)。
+/// 加载结果: 重塑后的行数据 + 结构差异(非空表示数据集与项目结构不一致)。
+#[derive(Serialize)]
+pub struct LoadResult {
+    pub entries: Vec<DatasetEntry>,
+    pub diffs: Vec<SchemaDiff>,
+}
+
+/// Tauri command: 加载数据集文件(.data JSONL,按项目结构重塑,返回差异)。
 #[tauri::command]
-pub async fn dataset_load(path: String, project: Project) -> Result<Vec<DatasetEntry>, String> {
-    load_dataset(&path, &project).map_err(|e| e.to_string())
+pub async fn dataset_load(path: String, project: Project) -> Result<LoadResult, String> {
+    let (entries, diffs) = load_dataset(&path, &project).map_err(|e| e.to_string())?;
+    Ok(LoadResult { entries, diffs })
 }
 
 /// Tauri command: 保存数据集到 .data JSONL(按主键排序)。

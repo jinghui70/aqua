@@ -42,7 +42,7 @@ pub async fn dataset_import<R: Runtime>(
     let connector = connector_jar_path(&app);
     let driver = create_driver(config, drivers, &connector).map_err(|e| e.to_string())?;
     // 加载原数据集,保留未选中表的数据
-    let mut entries = load_dataset(&path, &project).map_err(|e| e.to_string())?;
+    let (mut entries, _) = load_dataset(&path, &project).map_err(|e| e.to_string())?;
     let want: HashSet<String> = match tables {
         Some(ts) => ts.into_iter().collect(),
         None => project.tables.iter().map(|t| t.code.clone()).collect(),
@@ -74,7 +74,7 @@ pub async fn dataset_export<R: Runtime>(
     truncate: bool,
     tables: Option<Vec<String>>,
 ) -> Result<ExportResult, String> {
-    let entries = load_dataset(&path, &project).map_err(|e| e.to_string())?;
+    let (entries, _) = load_dataset(&path, &project).map_err(|e| e.to_string())?;
     let want: HashSet<String> = match tables {
         Some(ts) => ts.into_iter().collect(),
         None => entries.iter().map(|e| e.table.clone()).collect(),

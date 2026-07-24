@@ -73,7 +73,7 @@ pub async fn generate_ddl_command(
     let mut ddl = generate_ddl(&project, &options);
     // 选中数据集时,追加该数据集的 INSERT 语句(按同样表过滤)
     if let Some(path) = dataset_path {
-        let entries = aqua_core::dataset::load_dataset(&path, &project)
+        let (entries, _) = aqua_core::dataset::load_dataset(&path, &project)
             .map_err(|e| e.to_string())?;
         let insert = aqua_core::generators::ddl::generate_insert(&project, &entries, &options);
         if !insert.is_empty() {
