@@ -6,6 +6,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import { useTauri } from "@/composables/useTauri";
 import { useProjectStore } from "@/stores/project";
+import { snakeToPascal } from "@/composables/useNaming";
 
 const props = defineProps<{ tableCode: string; active: boolean }>();
 
@@ -47,7 +48,8 @@ async function copy() {
 }
 
 async function saveFile() {
-  const cls = className.value || props.tableCode;
+  // 类名默认派生 PascalCase(与后端生成的 class 名一致),而非裸表名
+  const cls = className.value || snakeToPascal(props.tableCode);
   const path = await save({
     filters: [{ name: "Java", extensions: ["java"] }],
     defaultPath: `${cls}.java`,

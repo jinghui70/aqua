@@ -6,6 +6,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import { useTauri } from "@/composables/useTauri";
 import { useProjectStore } from "@/stores/project";
+import { snakeToCamel } from "@/composables/useNaming";
 
 const props = defineProps<{ tableCode: string; active: boolean }>();
 
@@ -35,9 +36,10 @@ async function copy() {
 }
 
 async function saveFile() {
+  // json-ui model 文件名规范:{小驼峰}.model.json
   const path = await save({
     filters: [{ name: "JSON", extensions: ["json"] }],
-    defaultPath: `${props.tableCode}.json`,
+    defaultPath: `${snakeToCamel(props.tableCode)}.model.json`,
   });
   if (!path) return;
   try {
