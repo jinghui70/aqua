@@ -49,7 +49,6 @@ const { doSave, handle } = useMenuActions();
       <template #dropdown>
         <el-dropdown-menu>
           <el-dropdown-item command="ddl">DDL</el-dropdown-item>
-          <el-dropdown-item command="diff">diff (ALTER)</el-dropdown-item>
           <el-dropdown-item command="strconst">字符串变量</el-dropdown-item>
         </el-dropdown-menu>
       </template>
