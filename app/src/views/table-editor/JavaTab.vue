@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // java Tab: 配置(包名/类名/Lombok/注释)+ 实时预览 + 复制/保存。
-import { ref, watch } from "vue";
+import { ref, computed, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
@@ -17,6 +17,17 @@ const useLombok = ref(true);
 const packageName = ref("");
 const className = ref("");
 const preview = ref("");
+
+// 当前表的默认包名 {basePackage}.{group}.entity(对齐后端 default_package)
+const defaultPackage = computed(() => {
+  const p = store.currentProject;
+  if (!p) return "";
+  const table = p.tables.find((t) => t.code === props.tableCode);
+  const group = (table?.group ?? "").toLowerCase();
+  return `${p.basePackage}.${group}.entity`;
+});
+// 类名占位符:表 code 派生的大驼峰(为空时显示,提示默认值)
+const classNamePlaceholder = computed(() => snakeToPascal(props.tableCode));
 
 async function refresh() {
   if (!store.currentProject) return;
@@ -35,10 +46,17 @@ async function refresh() {
   }
 }
 
+// 切表:包名重置为该表默认值(预填,可改),类名清空(用 placeholder 提示)
+watch(
+  () => props.tableCode,
+  () => {
+    packageName.value = defaultPackage.value;
+    className.value = "";
+  },
+  { immediate: true }
+);
 // 配置变化实时刷新
-watch([useLombok, packageName, className, () => props.tableCode], refresh, {
-  immediate: true,
-});
+watch([useLombok, packageName, className], refresh, { immediate: true });
 // 切回本 tab 时重新生成,同步字段/索引的改动
 watch(() => props.active, (a) => a && refresh());
 
@@ -81,7 +99,7 @@ async function saveFile() {
         <el-input
           v-model="className"
           size="small"
-          placeholder="默认派生"
+          :placeholder="classNamePlaceholder"
           style="width: 140px"
         />
       </span>
