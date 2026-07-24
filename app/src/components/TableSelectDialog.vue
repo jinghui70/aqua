@@ -3,26 +3,28 @@
 import { computed, nextTick, ref, watch } from "vue";
 import { useProjectStore } from "@/stores/project";
 
-const props = defineProps<{ modelValue: boolean; selected: string[] }>();
+const props = defineProps<{ modelValue: boolean; selected: string[]; dataRows?: Record<string, number> }>();
 const emit = defineEmits<{ "update:modelValue": [boolean]; confirm: [string[]] }>();
 
 const store = useProjectStore();
 const treeRef = ref();
 const filterText = ref("");
 
-const treeData = computed(() => [
-  {
-    code: "root",
-    name: "全部表",
-    children: (store.currentProject?.groups ?? []).map((g) => ({
+// dataRows 存在时,只显示有数据的表(导出场景);不存在时显示全部(DDL 场景)
+const hasRows = (code: string) => !props.dataRows || (props.dataRows[code] ?? 0) > 0;
+
+const treeData = computed(() => {
+  const groups = (store.currentProject?.groups ?? [])
+    .map((g) => ({
       code: `g:${g.code}`,
       name: g.name,
       children: (store.currentProject?.tables ?? [])
-        .filter((t) => t.group === g.code)
+        .filter((t) => t.group === g.code && hasRows(t.code))
         .map((t) => ({ code: t.code, name: `${t.code} (${t.name})` })),
-    })),
-  },
-]);
+    }))
+    .filter((g) => g.children.length > 0);
+  return [{ code: "root", name: "全部表", children: groups }];
+});
 
 watch(
   () => props.modelValue,

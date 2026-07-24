@@ -40,6 +40,10 @@ export function useTauri() {
       invoke<{ name: string; path: string }[]>("scan_datasets", { projectPath }),
     createDataset: (projectPath: string, name: string) =>
       invoke<string>("create_dataset", { projectPath, name }),
+    datasetImport: (path: string, project: Project, config: DbConfig, tables?: string[]) =>
+      invoke<{ total: number }>("dataset_import", { path, project, config, tables }),
+    datasetExport: (path: string, project: Project, config: DbConfig, truncate: boolean, tables?: string[]) =>
+      invoke<{ affected: number }>("dataset_export", { path, project, config, truncate, tables }),
 
     // 数据源持久化(密码 AES 加密)
     datasourceLoad: (projectPath: string) =>
@@ -54,7 +58,7 @@ export function useTauri() {
     generateDdl: (
       project: Project,
       dialect: string,
-      opts?: { tables?: string[]; group?: string; dropIfExist?: boolean }
+      opts?: { tables?: string[]; group?: string; dropIfExist?: boolean; datasetPath?: string }
     ) =>
       invoke<string>("generate_ddl_command", {
         project,
@@ -62,6 +66,7 @@ export function useTauri() {
         tables: opts?.tables,
         group: opts?.group,
         dropIfExist: opts?.dropIfExist,
+        datasetPath: opts?.datasetPath,
       }),
     generateJava: (
       project: Project,

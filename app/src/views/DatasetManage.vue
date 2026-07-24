@@ -6,11 +6,14 @@ import { useRouter } from "vue-router";
 import { nextTick } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useProjectStore } from "@/stores/project";
+import { useDataSourceStore } from "@/stores/datasource";
 import { useTauri } from "@/composables/useTauri";
-import { type DatasetEntry, type Field } from "@/types/schema";
+import { type DatasetEntry, type Field, type DbConfig } from "@/types/schema";
+import TableSelectDialog from "@/components/TableSelectDialog.vue";
 
 const router = useRouter();
 const store = useProjectStore();
+const dsStore = useDataSourceStore();
 const tauri = useTauri();
 
 type Row = Record<string, string>;
@@ -33,6 +36,67 @@ watch(rowsMap, () => { if (!suppressDirty) dirty.value = true; }, { deep: true }
 // 新建弹窗
 const newVisible = ref(false);
 const newName = ref("");
+
+// 导入导出:选数据源 + 选表
+const ioVisible = ref(false);
+const ioMode = ref<"import" | "export">("import");
+const ioSource = ref("");
+const ioSources = computed(() => dsStore.sources);
+const ioTables = ref<string[]>([]);
+const ioTableSelectVisible = ref(false);
+// 导出选表时只显示有数据的表(基于当前数据集行数)
+const ioDataRows = computed(() => {
+  const m: Record<string, number> = {};
+  for (const [code, rows] of Object.entries(rowsMap.value)) {
+    m[code] = rows.length;
+  }
+  return m;
+});
+
+async function openImport() {
+  if (!selectedPath.value) { ElMessage.warning("请先选择数据集"); return; }
+  ioMode.value = "import";
+  ioSource.value = ioSources.value[0]?.sourceName ?? "";
+  ioTables.value = [];
+  ioVisible.value = true;
+}
+
+async function openExport() {
+  if (!selectedPath.value) { ElMessage.warning("请先选择数据集"); return; }
+  ioMode.value = "export";
+  ioSource.value = ioSources.value[0]?.sourceName ?? "";
+  ioTables.value = [];
+  ioVisible.value = true;
+}
+
+function onIoTableConfirm(tables: string[]) {
+  ioTables.value = tables;
+}
+
+async function confirmIO() {
+  if (!ioSource.value) { ElMessage.warning("请选择数据源"); return; }
+  if (!store.currentProject || !selectedPath.value) return;
+  const source = ioSources.value.find((s) => s.sourceName === ioSource.value);
+  if (!source) return;
+  const { sourceName: _, ...config } = source;
+  const tables = ioTables.value.length ? ioTables.value : undefined;
+  try {
+    if (ioMode.value === "import") {
+      const result = await tauri.datasetImport(selectedPath.value, store.currentProject, config, tables);
+      ElMessage.success(`导入完成: ${result.total} 行`);
+      await onDatasetChange(); // 重新加载
+    } else {
+      try {
+        await ElMessageBox.confirm("导出将 TRUNCATE + INSERT 覆盖数据库表数据,确认?", "警告", {
+          type: "warning", confirmButtonText: "覆盖导出", cancelButtonText: "取消",
+        });
+      } catch { return; }
+      const result = await tauri.datasetExport(selectedPath.value, store.currentProject, config, true, tables);
+      ElMessage.success(`导出完成: ${result.affected} 行`);
+    }
+    ioVisible.value = false;
+  } catch { /* 已提示 */ }
+}
 
 // ===== 数据集列表 =====
 async function loadDatasets() {
@@ -213,6 +277,8 @@ loadDatasets();
         <el-option v-for="d in datasets" :key="d.path" :label="d.name" :value="d.path" />
       </el-select>
       <el-button size="small" style="margin-left: 8px" @click="newVisible = true">新建</el-button>
+      <el-button size="small" style="margin-left: 8px" @click="openImport" :disabled="!selectedPath">导入</el-button>
+      <el-button size="small" style="margin-left: 8px" @click="openExport" :disabled="!selectedPath">导出</el-button>
       <template v-if="dirty">
         <el-button size="small" type="primary" style="margin-left: 8px" @click="saveDataset">保存</el-button>
         <el-button size="small" style="margin-left: 8px" @click="cancelEdit">取消</el-button>
@@ -288,6 +354,44 @@ loadDatasets();
         <el-button type="primary" @click="confirmNew">创建</el-button>
       </template>
     </el-dialog>
+
+    <!-- 导入/导出弹窗 -->
+    <el-dialog
+      v-model="ioVisible"
+      :title="ioMode === 'import' ? '从数据库导入' : '导出到数据库'"
+      width="420px"
+      :close-on-click-modal="false"
+    >
+      <el-form label-width="80px">
+        <el-form-item label="数据源">
+          <el-select v-model="ioSource" placeholder="选数据源" style="width: 100%">
+            <el-option v-for="s in ioSources" :key="s.sourceName" :label="s.sourceName" :value="s.sourceName" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="表">
+          <el-button size="small" @click="ioTableSelectVisible = true">
+            选表{{ ioTables.length ? ` (${ioTables.length})` : "" }}
+          </el-button>
+          <span v-if="!ioTables.length" class="text-12 text-gray-400 ml-8">未选则全部表</span>
+        </el-form-item>
+      </el-form>
+      <div v-if="ioMode === 'export'" class="text-12 text-red-400 mb-8">
+        ⚠️ 导出将 TRUNCATE + INSERT 覆盖数据库表数据
+      </div>
+      <div v-else class="text-12 text-gray-400 mb-8">
+        导入将覆盖数据集当前数据
+      </div>
+      <template #footer>
+        <el-button @click="ioVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmIO">{{ ioMode === "import" ? "导入" : "导出" }}</el-button>
+      </template>
+    </el-dialog>
+    <TableSelectDialog
+      v-model="ioTableSelectVisible"
+      :selected="ioTables"
+      :data-rows="ioMode === 'export' ? ioDataRows : undefined"
+      @confirm="onIoTableConfirm"
+    />
   </div>
   <el-empty v-else description="未打开项目" class="h-full" />
 </template>
