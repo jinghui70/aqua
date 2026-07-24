@@ -56,24 +56,22 @@ pub struct JsonUiField {
     pub biz_type_data: Option<serde_json::Value>,
 }
 
-/// json-ui Table。
+/// json-ui DataModel(JsonModelSchema:type/code/name/fields)。
+/// 对齐 json-ui `src/schema/json-file.ts` 的 JsonModelSchema(存为 *.model.json)。
 #[derive(Debug, Clone, Serialize)]
-pub struct JsonUiTable {
+pub struct JsonUiModel {
+    /// 固定 "model",json-ui FileEngine 据此识别模型文件。
+    #[serde(rename = "type")]
+    pub type_: &'static str,
     pub code: String,
     pub name: String,
     pub fields: Vec<JsonUiField>,
 }
 
-/// json-ui 输出根(直接序列化,不经 Value 中转,保持字段声明顺序)。
-#[derive(Debug, Clone, Serialize)]
-struct JsonUiOutput {
-    tables: Vec<JsonUiTable>,
-}
-
 /// 前端 JSON 生成选项。
 #[derive(Debug, Clone, Default)]
 pub struct FrontendJsonOptions {
-    /// 单表过滤(为空则全部表)
+    /// 单表过滤(为空则取首表;json-ui model 是单表概念)
     pub table: Option<String>,
 }
 
@@ -93,30 +91,34 @@ pub fn transform_field(field: &Field) -> JsonUiField {
     }
 }
 
-/// Table -> JsonUiTable 转换。
-pub fn transform_table(table: &Table) -> JsonUiTable {
-    JsonUiTable {
+/// Table -> JsonUiModel 转换(JsonModelSchema,type 固定 "model")。
+pub fn transform_table(table: &Table) -> JsonUiModel {
+    JsonUiModel {
+        type_: "model",
         code: table.code.clone(),
         name: table.name.clone(),
         fields: table.fields.iter().map(transform_field).collect(),
     }
 }
 
-/// 前端 JSON 生成入口,返回 json-ui 兼容 JSON 文本。
+/// 前端 JSON 生成入口,返回单表 json-ui JsonModelSchema 文本。
+/// options.table 指定表(为空取首表);model 是单表概念,不再包裹 tables 数组。
 pub fn generate_frontend_json(project: &Project, options: &FrontendJsonOptions) -> String {
-    let tables: Vec<&Table> = if let Some(ref table_code) = options.table {
-        vec![project
+    let table: &Table = if let Some(ref table_code) = options.table {
+        project
             .tables
             .iter()
             .find(|t| t.code == *table_code)
-            .unwrap_or_else(|| panic!("Table not found: {}", table_code))]
+            .unwrap_or_else(|| panic!("Table not found: {}", table_code))
     } else {
-        project.tables.iter().collect()
+        project
+            .tables
+            .first()
+            .expect("项目无表,无法生成 model")
     };
 
-    let transformed: Vec<JsonUiTable> = tables.iter().map(|t| transform_table(t)).collect();
     // 直接序列化 struct 保持字段顺序;经 serde_json::Value 会被 BTreeMap 重排成字母序
-    serde_json::to_string_pretty(&JsonUiOutput { tables: transformed }).unwrap()
+    serde_json::to_string_pretty(&transform_table(table)).unwrap()
 }
 
 #[cfg(test)]
@@ -211,6 +213,10 @@ mod tests {
             groups: vec![],
         };
         let json = generate_frontend_json(&project, &FrontendJsonOptions::default());
+
+        // JsonModelSchema:顶层 type=model + code/name(单表,无 tables 包裹)
+        assert!(json.contains("\"type\": \"model\""), "顶层应有 type:model:\n{}", json);
+        assert!(!json.contains("\"tables\""), "不应再有 tables 包裹:\n{}", json);
 
         // 只看 field 对象片段(table 也有 name 字段,避免 find 匹配到 table.name)
         let field_json = &json[json.find("\"fields\"").unwrap()..];
