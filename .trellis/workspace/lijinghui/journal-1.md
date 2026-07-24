@@ -928,3 +928,39 @@ AutoGenStrategyDefine(code/name/paramDesc) + Project.autoGenStrategies。内置 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 25: 主工作界面工具栏重构
+
+**Date**: 2026-07-24
+**Task**: 主工作界面工具栏重构
+**Branch**: `main`
+
+### Summary
+
+重构 AppToolbar:引入 unocss presetIcons(@iconify-json/mdi,图标约定入 spec)全按钮图标化去 emoji;补保存按钮(只读隐藏/非dirty置灰/dirty红点/Cmd⌘S 走 Rust 菜单 accelerator);只读锁移最右;加关闭项目按钮(复用 file.close);导入按钮只读时隐藏;导出下拉暂去 diff(待重构)。连续 503 时改主会话直接实现+校验。vue-tsc/cargo build/vite build 全过,图标 SVG 确认内联。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `86220b0` | (see git log) |
+| `51873e0` | (see git log) |
+| `86202c2` | (see git log) |
+| `5a6b901` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
