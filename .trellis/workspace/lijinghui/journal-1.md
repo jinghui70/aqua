@@ -888,3 +888,43 @@ AutoGenStrategyDefine(code/name/paramDesc) + Project.autoGenStrategies。内置 
 ### Status
 
 [OK] **完成**
+
+
+## Session 24: 数据集重构收尾:DDL+INSERT、选表过滤、结构差异迁移
+
+**Date**: 2026-07-24
+**Task**: 数据集重构收尾:DDL+INSERT、选表过滤、结构差异迁移
+**Branch**: `main`
+
+### Summary
+
+完成数据集重构最后阶段:DDL 导出加数据集下拉追加 INSERT(generate_insert);导入导出加选表(导出过滤空表);打开数据集检测结构差异提示用户,继续则按项目结构重塑行数据(删多余字段/补新字段空值,dirty 跟踪迁移);connector Dialect 读写方法契约入 spec;clippy needless_update 清理。cargo test/clippy + vue-tsc 全过。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8eea401` | (see git log) |
+| `7c6a910` | (see git log) |
+| `f736dde` | (see git log) |
+| `1514d99` | (see git log) |
+| `1dc8a2f` | (see git log) |
+| `670db27` | (see git log) |
+| `213aff9` | (see git log) |
+| `8a6466d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

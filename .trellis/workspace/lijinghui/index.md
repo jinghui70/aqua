@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 23
-- **Last Active**: 2026-07-16
+- **Total Sessions**: 24
+- **Last Active**: 2026-07-24
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~795 | Active |
+| `journal-1.md` | ~930 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 24 | 2026-07-24 | 数据集重构收尾:DDL+INSERT、选表过滤、结构差异迁移 | `8eea401`, `7c6a910`, `f736dde`, `1514d99`, `1dc8a2f`, `670db27`, `213aff9`, `8a6466d` | `main` |
 | 23 | 2026-07-16 | 打包发布实施 + 连接层过时遗留清理 | `3e4908c`, `b79cb0b`, `00bee35`, `7ca58d9`, `2a9f9f8` | `main` |
 | 22 | 2026-07-15 | 数据库清单简化与反解通用化 | `b0aae59`, `b5ce6ab`, `c06b79f` | `main` |
 | 21 | 2026-07-13 | 项目中文名 + 项目设置对话框 | `45efe7d` | `main` |
