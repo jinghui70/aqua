@@ -56,7 +56,9 @@ pub fn generate_table(table: &Table, dialect: &Dialect) -> String {
     output
 }
 
-/// 字段定义: `CODE TYPE [NOT NULL] [DEFAULT xxx] [COMMENT 'xxx']`。
+/// 字段定义: `CODE TYPE [DEFAULT xxx] [NOT NULL] [COMMENT 'xxx']`。
+/// DEFAULT 必须在 NOT NULL 前:Oracle/DM 语法强制此序(否则 ORA-00907);
+/// MySQL/PG/SQLServer/H2 两序皆可,故统一 DEFAULT→NOT NULL 对所有方言安全。
 fn field_definition(field: &Field, dialect: &Dialect) -> String {
     let name = field.code.to_uppercase();
     let data_type = map_type(
@@ -85,7 +87,7 @@ fn field_definition(field: &Field, dialect: &Dialect) -> String {
         String::new()
     };
 
-    format!("{} {}{}{}{}", name, data_type, not_null, default, comment)
+    format!("{} {}{}{}{}", name, data_type, default, not_null, comment)
 }
 
 /// PRIMARY KEY 子句: `PRIMARY KEY (F1, F2)`。

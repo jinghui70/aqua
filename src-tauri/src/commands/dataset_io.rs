@@ -2,6 +2,7 @@
 
 use aqua_core::dataset::{load_dataset, save_dataset};
 use aqua_core::driver::{create_driver, DbConfig};
+use aqua_core::generators::ddl::format_literal;
 use aqua_core::schema::Project;
 use serde::Serialize;
 use std::collections::HashSet;
@@ -105,12 +106,9 @@ pub async fn dataset_export<R: Runtime>(
                     let vals: Vec<String> = fields
                         .iter()
                         .map(|f| {
+                            // 复用 DDL 的值序列化:数字/布尔按类型输出,不再误转空串
                             let key = f.to_uppercase();
-                            match row.get(&key) {
-                                Some(v) if v.is_null() => "NULL".to_string(),
-                                Some(v) => format!("'{}'", v.as_str().unwrap_or("").replace('\'', "''")),
-                                None => "NULL".to_string(),
-                            }
+                            format_literal(row.get(&key).unwrap_or(&serde_json::Value::Null))
                         })
                         .collect();
                     format!("({})", vals.join(","))

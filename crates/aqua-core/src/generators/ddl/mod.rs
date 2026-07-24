@@ -95,7 +95,8 @@ pub fn generate_insert(
 }
 
 /// SQL 值字面量: NULL -> NULL,数字原样,布尔 -> 1/0,字符串转义,其他 JSON 字符串。
-fn format_literal(v: &Value) -> String {
+/// 数据集导出(dataset_io)执行 INSERT 时也复用此函数,避免值序列化逻辑分叉。
+pub fn format_literal(v: &Value) -> String {
     match v {
         Value::Null => "NULL".to_string(),
         Value::Number(n) => n.to_string(),
@@ -257,5 +258,27 @@ mod tests {
         assert_eq!(format_literal(&json!(true)), "1");
         assert_eq!(format_literal(&json!(false)), "0");
         assert_eq!(format_literal(&json!("a'b")), "'a''b'");
+    }
+
+    #[test]
+    fn test_ddl_default_before_not_null() {
+        // Oracle/DM 语法要求 DEFAULT 在 NOT NULL 前(否则 ORA-00907)。
+        let mut project = make_project();
+        let f = &mut project.tables[0].fields[1]; // USER_NAME: not_null=true
+        f.default_value = Some("'x'".into());
+        for dialect in [Dialect::Mysql, Dialect::Postgresql, Dialect::Jdbc { name: "oracle".into() }] {
+            let ddl = generate_ddl(
+                &project,
+                &DdlOptions { dialect: dialect.clone(), drop_if_exist: false, ..Default::default() },
+            );
+            // 定位 USER_NAME 那一行(ID 字段也 NOT NULL,须行级判断)
+            let line = ddl
+                .lines()
+                .find(|l| l.contains("USER_NAME") && l.contains("NOT NULL"))
+                .unwrap_or_else(|| panic!("{:?}: 无 USER_NAME 行\n{}", dialect, ddl));
+            let def_pos = line.find("DEFAULT 'x'").expect("有 DEFAULT");
+            let nn_pos = line.find("NOT NULL").expect("有 NOT NULL");
+            assert!(def_pos < nn_pos, "{:?}: DEFAULT 应在 NOT NULL 前\n{}", dialect, line);
+        }
     }
 }
