@@ -174,13 +174,13 @@ function copyField(idx: number) {
           />
         </template>
       </el-table-column>
-      <el-table-column label="属性名" min-width="130">
+      <el-table-column label="属性名" min-width="150">
         <template #default="{ row }">
           <span v-if="store.readOnly" class="text-13">{{ row.prop }}</span>
           <el-input v-else v-model="row.prop" size="small" />
         </template>
       </el-table-column>
-      <el-table-column label="名称" min-width="100">
+      <el-table-column label="名称" min-width="150">
         <template #default="{ row }">
           <span v-if="store.readOnly" class="text-13">{{ row.name }}</span>
           <el-input v-else v-model="row.name" size="small" />
