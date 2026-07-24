@@ -12,7 +12,7 @@ use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::sync::{Arc, Mutex};
 
-use commands::{builtin, database, dataset, datasource, generate, import, project};
+use commands::{builtin, database, dataset, dataset_io, datasource, generate, import, project};
 use tauri::menu::{MenuBuilder, SubmenuBuilder};
 use tauri::{Emitter, Manager};
 
@@ -127,6 +127,8 @@ pub fn run() {
             dataset::dataset_save,
             dataset::scan_datasets,
             dataset::create_dataset,
+            dataset_io::dataset_import,
+            dataset_io::dataset_export,
             datasource::datasource_load,
             datasource::datasource_save,
             database::list_databases,
