@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.aqua.connector.meta.ColumnMeta;
 import com.aqua.connector.meta.IndexMeta;
+import com.aqua.connector.meta.QueryResult;
 import com.aqua.connector.meta.TableInfo;
 
 /**
@@ -31,4 +32,10 @@ public interface Dialect {
 
     /** 获取表的索引元数据。 */
     List<IndexMeta> getIndexes(Connection conn, String table) throws SQLException;
+
+    /** 查询表全部行(导入数据集用)。返回 {columns:[...], rows:[[v1,v2,...],...]}。 */
+    QueryResult queryRows(Connection conn, String table) throws SQLException;
+
+    /** 执行 UPDATE/INSERT/TRUNCATE(导出数据集用)。返回影响行数。 */
+    int executeUpdate(Connection conn, String sql) throws SQLException;
 }

@@ -15,6 +15,7 @@ import java.util.Map;
 
 import com.aqua.connector.meta.ColumnMeta;
 import com.aqua.connector.meta.IndexMeta;
+import com.aqua.connector.meta.QueryResult;
 import com.aqua.connector.meta.TableInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -106,6 +107,32 @@ public class Main {
                 for (IndexMeta i : indexes) {
                     arr.addPOJO(i);
                 }
+                return resp;
+            }
+            case "queryRows": {
+                QueryResult result = dialect.queryRows(conn, config.table);
+                ObjectNode resp = MAPPER.createObjectNode();
+                ArrayNode cols = resp.putArray("columns");
+                for (String c : result.columns) {
+                    cols.add(c);
+                }
+                ArrayNode rows = resp.putArray("rows");
+                for (List<Object> row : result.rows) {
+                    ArrayNode rowArr = rows.addArray();
+                    for (Object val : row) {
+                        if (val == null) {
+                            rowArr.addNull();
+                        } else {
+                            rowArr.add(val.toString());
+                        }
+                    }
+                }
+                return resp;
+            }
+            case "executeUpdate": {
+                int affected = dialect.executeUpdate(conn, config.sql);
+                ObjectNode resp = MAPPER.createObjectNode();
+                resp.put("affected", affected);
                 return resp;
             }
             default:

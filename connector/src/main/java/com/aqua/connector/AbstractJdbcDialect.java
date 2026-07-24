@@ -4,7 +4,9 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.Driver;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -14,6 +16,7 @@ import java.util.Properties;
 
 import com.aqua.connector.meta.ColumnMeta;
 import com.aqua.connector.meta.IndexMeta;
+import com.aqua.connector.meta.QueryResult;
 import com.aqua.connector.meta.TableInfo;
 
 /**
@@ -170,5 +173,35 @@ public abstract class AbstractJdbcDialect implements Dialect {
             indexes.add(new IndexMeta(e.getKey(), e.getValue(), idxUnique.getOrDefault(e.getKey(), false)));
         }
         return indexes;
+    }
+
+    @Override
+    public QueryResult queryRows(Connection conn, String table) throws SQLException {
+        String sql = "SELECT * FROM " + table;
+        List<String> columns = new ArrayList<>();
+        List<List<Object>> rows = new ArrayList<>();
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            ResultSetMetaData meta = rs.getMetaData();
+            int colCount = meta.getColumnCount();
+            for (int i = 1; i <= colCount; i++) {
+                columns.add(meta.getColumnName(i).toUpperCase());
+            }
+            while (rs.next()) {
+                List<Object> row = new ArrayList<>();
+                for (int i = 1; i <= colCount; i++) {
+                    Object val = rs.getObject(i);
+                    row.add(val == null ? null : val.toString());
+                }
+                rows.add(row);
+            }
+        }
+        return new QueryResult(columns, rows);
+    }
+
+    @Override
+    public int executeUpdate(Connection conn, String sql) throws SQLException {
+        try (Statement stmt = conn.createStatement()) {
+            return stmt.executeUpdate(sql);
+        }
     }
 }

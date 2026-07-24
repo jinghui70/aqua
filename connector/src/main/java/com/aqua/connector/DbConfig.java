@@ -16,6 +16,8 @@ public class DbConfig {
     public String password;
     public String database;
     public String schema;
-    /** getColumns/listIndexes 用的表名 */
+    /** getColumns/listIndexes/queryRows 用的表名 */
     public String table;
+    /** executeUpdate 用的 SQL */
+    public String sql;
 }
