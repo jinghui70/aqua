@@ -14,18 +14,21 @@ const tauri = useTauri();
 const store = useProjectStore();
 
 const useLombok = ref(true);
-const packageName = ref("");
+const packageSuffix = ref(""); // 包名可编辑部分({group}.entity),完整包名 = basePackage. + 此
 const className = ref("");
 const preview = ref("");
 
-// 当前表的默认包名 {basePackage}.{group}.entity(对齐后端 default_package)
-const defaultPackage = computed(() => {
-  const p = store.currentProject;
-  if (!p) return "";
-  const table = p.tables.find((t) => t.code === props.tableCode);
+const basePackage = computed(() => store.currentProject?.basePackage ?? "");
+// prepend 固定前缀 "basePackage.",basePackage 为空则不显示
+const packagePrefix = computed(() => (basePackage.value ? `${basePackage.value}.` : ""));
+// 包名可编辑部分默认值:{group}.entity(对齐后端 default_package 去掉 basePackage 段)
+const defaultSuffix = computed(() => {
+  const table = store.currentProject?.tables.find((t) => t.code === props.tableCode);
   const group = (table?.group ?? "").toLowerCase();
-  return `${p.basePackage}.${group}.entity`;
+  return group ? `${group}.entity` : "entity";
 });
+// 传给后端的完整包名 = 前缀 + 可编辑部分
+const fullPackage = computed(() => `${packagePrefix.value}${packageSuffix.value}`);
 // 类名占位符:表 code 派生的大驼峰(为空时显示,提示默认值)
 const classNamePlaceholder = computed(() => snakeToPascal(props.tableCode));
 
@@ -37,7 +40,7 @@ async function refresh() {
       props.tableCode,
       {
         useLombok: useLombok.value,
-        package: packageName.value || undefined,
+        package: fullPackage.value || undefined,
         className: className.value || undefined,
       }
     );
@@ -46,19 +49,27 @@ async function refresh() {
   }
 }
 
-// 切表:包名重置为该表默认值(预填,可改),类名清空(用 placeholder 提示)
+// 切表:包名后缀重置为该表默认值(预填,可改),类名清空(用 placeholder 提示)
 watch(
   () => props.tableCode,
   () => {
-    packageName.value = defaultPackage.value;
+    packageSuffix.value = defaultSuffix.value;
     className.value = "";
   },
   { immediate: true }
 );
 // 配置变化实时刷新
-watch([useLombok, packageName, className], refresh, { immediate: true });
+watch([useLombok, packageSuffix, className], refresh, { immediate: true });
 // 切回本 tab 时重新生成,同步字段/索引的改动
 watch(() => props.active, (a) => a && refresh());
+
+// clearable 清空 → 恢复默认(而非留空)
+function resetPackage() {
+  packageSuffix.value = defaultSuffix.value;
+}
+function resetClassName() {
+  className.value = "";
+}
 
 async function copy() {
   await navigator.clipboard.writeText(preview.value);
@@ -88,19 +99,25 @@ async function saveFile() {
       <span class="text-13">
         包名
         <el-input
-          v-model="packageName"
+          v-model="packageSuffix"
           size="small"
-          placeholder="默认 basePackage.group.entity"
-          style="width: 260px"
-        />
+          clearable
+          placeholder="group.entity"
+          style="width: 300px"
+          @clear="resetPackage"
+        >
+          <template v-if="packagePrefix" #prepend>{{ packagePrefix }}</template>
+        </el-input>
       </span>
       <span class="text-13">
         类名
         <el-input
           v-model="className"
           size="small"
+          clearable
           :placeholder="classNamePlaceholder"
           style="width: 140px"
+          @clear="resetClassName"
         />
       </span>
       <el-checkbox v-model="useLombok">Lombok</el-checkbox>
