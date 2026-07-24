@@ -9,8 +9,9 @@ import { useMenuActions } from "@/composables/useMenuActions";
 const router = useRouter();
 const store = useProjectStore();
 const ui = useUiStore();
-// 保存复用菜单动作的 doSave(无路径走保存对话框),按钮 + Cmd+S 单一实现双入口。
-const { doSave } = useMenuActions();
+// 保存/关闭复用菜单动作(doSave 无路径走对话框;handle('file.close') 带 dirty 确认),
+// 按钮 + 快捷键/菜单单一实现双入口。
+const { doSave, handle } = useMenuActions();
 </script>
 
 <template>
@@ -35,7 +36,7 @@ const { doSave } = useMenuActions();
     <el-divider v-if="!store.readOnly" direction="vertical" />
 
     <!-- 生成组 -->
-    <el-button size="default" :disabled="store.readOnly" @click="ui.openImport">
+    <el-button v-if="!store.readOnly" size="default" @click="ui.openImport">
       <span class="i-mdi-database-import w-16 h-16 mr-4" />
       导入
     </el-button>
@@ -68,6 +69,14 @@ const { doSave } = useMenuActions();
     <el-button size="default" @click="ui.openDatabaseConfig">
       <span class="i-mdi-database-cog w-16 h-16 mr-4" />
       驱动管理
+    </el-button>
+
+    <el-divider direction="vertical" />
+
+    <!-- 关闭项目(复用菜单 file.close:带 dirty 确认 + 跳 welcome) -->
+    <el-button size="default" @click="handle('file.close')">
+      <span class="i-mdi-close-box w-16 h-16 mr-4" />
+      关闭项目
     </el-button>
 
     <div class="flex-1" />
