@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "aqua 默认权限",
   "windows": ["main"],
-  "permissions": ["core:default", "dialog:default", "process:default"]
+  "permissions": ["core:default", "core:window:allow-set-title", "dialog:default", "process:default"]
 }

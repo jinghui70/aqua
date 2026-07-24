@@ -2,7 +2,6 @@
 // 欢迎页:操作卡片 + 最近项目列表。
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { ElMessage } from "element-plus";
 import { useProjectStore } from "@/stores/project";
 import { useUiStore } from "@/stores/ui";
 import { useRecentProjects, type RecentProject } from "@/composables/useRecentProjects";
@@ -33,7 +32,6 @@ async function openPath(path: string) {
   if (!(await store.confirmIfDirty())) return;
   try {
     await store.openProject(path);
-    ElMessage.success(`已打开 ${path}`);
     refresh();
   } catch {
     // 打开失败(文件可能已删),从最近列表移除

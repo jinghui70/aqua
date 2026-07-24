@@ -2,7 +2,6 @@
 // 最近项目对话框:菜单「文件 → 最近项目」触发,列出并打开最近项目。
 import { ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import { ElMessage } from "element-plus";
 import { useProjectStore } from "@/stores/project";
 import { useUiStore } from "@/stores/ui";
 import { useRecentProjects, type RecentProject } from "@/composables/useRecentProjects";
@@ -27,7 +26,6 @@ async function openPath(path: string) {
   try {
     await store.openProject(path);
     router.push("/");
-    ElMessage.success(`已打开 ${path}`);
     ui.recentVisible = false;
   } catch {
     // 打开失败(文件可能已删),从最近列表移除

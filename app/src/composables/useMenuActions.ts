@@ -70,7 +70,6 @@ export function useMenuActions() {
     try {
       await store.openProject(path);
       router.push("/");
-      ElMessage.success(`已打开 ${path}`);
     } catch {
       /* useTauri 已提示 */
     }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from "vue";
+import { onMounted, onUnmounted, watch } from "vue";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -16,6 +16,17 @@ const database = useDatabaseStore();
 const store = useProjectStore();
 let unlistenClose: (() => void) | null = null;
 let unlistenExit: (() => void) | null = null;
+
+// 窗口标题随项目变:有项目 -> "Aqua-中文名"(名字空退回 Aqua),无项目 -> "Aqua"。
+// 覆盖打开/新建/改名/关闭所有场景(watch name,immediate 含初始态)。
+watch(
+  () => store.currentProject?.name,
+  (name) => {
+    const title = store.currentProject ? (name ? `Aqua-${name}` : "Aqua") : "Aqua";
+    void getCurrentWindow().setTitle(title);
+  },
+  { immediate: true }
+);
 
 // 退出确认:dirty 时弹保存/不保存/取消;保存/不保存 -> 标记已确认 + exit;取消 -> 不退
 async function doConfirmExit() {
