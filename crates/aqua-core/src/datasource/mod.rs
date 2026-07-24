@@ -182,11 +182,13 @@ mod tests {
         dir
     }
 
-    fn uid() -> u128 {
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
+    /// 测试临时目录唯一后缀:PID + 进程内原子递增。
+    /// (原用纳秒时间戳,并发测试同一纳秒会碰撞 → 共用目录 → key 文件互相干扰导致 flaky。)
+    fn uid() -> String {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+        format!("{}_{}", std::process::id(), n)
     }
 
     fn sample(name: &str, pwd: &str) -> (String, DataSourceConfig) {
