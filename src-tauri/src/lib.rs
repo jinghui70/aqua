@@ -133,6 +133,7 @@ pub fn run() {
             dataset::dataset_save,
             dataset::scan_datasets,
             dataset::create_dataset,
+            dataset::copy_datasets,
             dataset_io::dataset_import,
             dataset_io::dataset_export,
             datasource::datasource_load,

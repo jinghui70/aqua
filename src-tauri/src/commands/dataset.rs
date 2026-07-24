@@ -72,3 +72,42 @@ pub async fn create_dataset(project_path: String, name: String) -> Result<String
     std::fs::write(&file_path, "").map_err(|e| format!("创建失败: {}", e))?;
     Ok(file_path.to_string_lossy().to_string())
 }
+
+/// Tauri command: 另存为时复制数据集({旧前缀}.*.data → {新前缀}.*.data)。
+/// 数据集按 主文件名 命名,另存改了主文件名/目录 → 需把旧目录的 .data 复制到新位置,
+/// 否则新项目扫不到数据集(bug: saveAs 数据集丢失)。返回复制的数据集数量。
+#[tauri::command]
+pub async fn copy_datasets(
+    old_project_path: String,
+    new_project_path: String,
+) -> Result<usize, String> {
+    if old_project_path == new_project_path {
+        return Ok(0); // 普通保存(非另存),无需复制
+    }
+    let old = Path::new(&old_project_path);
+    let old_dir = old.parent().ok_or("无效旧路径")?;
+    let old_prefix = old.file_stem().and_then(|s| s.to_str()).ok_or("无效旧文件名")?;
+
+    let new = Path::new(&new_project_path);
+    let new_dir = new.parent().ok_or("无效新路径")?;
+    let new_prefix = new.file_stem().and_then(|s| s.to_str()).ok_or("无效新文件名")?;
+
+    let mut copied = 0;
+    if let Ok(entries) = std::fs::read_dir(old_dir) {
+        for entry in entries.flatten() {
+            let fname = entry.file_name();
+            let Some(name) = fname.to_str() else { continue };
+            // 匹配 {old_prefix}.{dataset}.data,提取 dataset 名
+            let Some(rest) = name.strip_prefix(&format!("{}.", old_prefix)) else { continue };
+            let Some(dataset) = rest.strip_suffix(".data") else { continue };
+            let dst = new_dir.join(format!("{}.{}.data", new_prefix, dataset));
+            // 目标已存在则跳过,不覆盖(避免另存到已有数据集的项目时冲掉)
+            if dst.exists() {
+                continue;
+            }
+            std::fs::copy(entry.path(), &dst).map_err(|e| format!("复制数据集失败: {}", e))?;
+            copied += 1;
+        }
+    }
+    Ok(copied)
+}

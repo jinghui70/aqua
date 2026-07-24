@@ -40,6 +40,8 @@ export function useTauri() {
       invoke<{ name: string; path: string }[]>("scan_datasets", { projectPath }),
     createDataset: (projectPath: string, name: string) =>
       invoke<string>("create_dataset", { projectPath, name }),
+    copyDatasets: (oldProjectPath: string, newProjectPath: string) =>
+      invoke<number>("copy_datasets", { oldProjectPath, newProjectPath }),
     datasetImport: (path: string, project: Project, config: DbConfig, tables?: string[]) =>
       invoke<{ total: number }>("dataset_import", { path, project, config, tables }),
     datasetExport: (path: string, project: Project, config: DbConfig, truncate: boolean, tables?: string[]) =>

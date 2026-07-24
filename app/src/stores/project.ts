@@ -95,6 +95,7 @@ export const useProjectStore = defineStore("project", () => {
     if (!currentProject.value) return;
     const target = path ?? currentPath.value;
     if (!target) throw new Error("未指定保存路径");
+    const prevPath = currentPath.value; // 另存为复制数据集用(此时尚未更新)
     await tauri.projectSave(target, currentProject.value);
     const pathChanged = target !== datasource.projectPath;
     currentPath.value = target;
@@ -108,6 +109,14 @@ export const useProjectStore = defineStore("project", () => {
     }
     // 首次保存或另存为:把内存态数据源落盘到该路径对应配置文件
     if (pathChanged) await datasource.bindDirAndPersist(target);
+    // 另存为(路径变了且有旧路径):把旧目录的数据集 .data 复制到新前缀,否则新项目扫不到
+    if (prevPath && prevPath !== target) {
+      try {
+        await tauri.copyDatasets(prevPath, target);
+      } catch (err) {
+        console.warn('复制数据集失败:', err);
+      }
+    }
   }
 
   /**
