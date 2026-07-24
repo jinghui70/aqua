@@ -2,7 +2,7 @@
 
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { ElMessage } from "element-plus";
-import type { Project, DbConfig, DatabaseInfo, ValidationError, DatasetEntry, BizTypeDefine } from "@/types/schema";
+import type { Project, DbConfig, DatabaseInfo, ValidationError, DatasetEntry, SchemaDiff, BizTypeDefine } from "@/types/schema";
 
 /** 表信息(表名 + 注释),listTables 返回,对齐 Rust TableInfo。 */
 export interface TableInfo {
@@ -33,7 +33,7 @@ export function useTauri() {
 
     // 数据集
     datasetLoad: (path: string, project: Project) =>
-      invoke<DatasetEntry[]>("dataset_load", { path, project }),
+      invoke<{ entries: DatasetEntry[]; diffs: SchemaDiff[] }>("dataset_load", { path, project }),
     datasetSave: (path: string, project: Project, entries: DatasetEntry[]) =>
       invoke<void>("dataset_save", { path, project, entries }),
     scanDatasets: (projectPath: string) =>

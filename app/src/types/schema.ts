@@ -145,3 +145,12 @@ export interface DatasetEntry {
   table: string;
   data: Array<Record<string, unknown>>;
 }
+
+/** 结构差异(打开数据集时检测)。 */
+export interface SchemaDiff {
+  table: string;
+  /** 项目有、数据集无(补空值)。 */
+  added: string[];
+  /** 数据集有、项目无(丢弃)。 */
+  removed: string[];
+}

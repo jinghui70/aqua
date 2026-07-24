@@ -22,6 +22,8 @@ const intTypes = ["TINYINT", "INT", "LONG"];
 // 数据集列表 + 选中
 const datasets = ref<{ name: string; path: string }[]>([]);
 const selectedPath = ref("");
+const lastLoadedPath = ref(""); // 打开取消时回退到此
+const migratedDirty = ref(false); // 打开时有结构迁移 -> 取消编辑也保持 dirty
 const hideEmpty = ref(false);
 const selectedTable = ref("");
 
@@ -109,11 +111,30 @@ async function loadDatasets() {
 async function onDatasetChange() {
   if (!selectedPath.value || !store.currentProject) return;
   try {
-    const entries = await tauri.datasetLoad(selectedPath.value, store.currentProject);
+    const { entries, diffs } = await tauri.datasetLoad(selectedPath.value, store.currentProject);
+    if (diffs.length) {
+      const msg = diffs.map((d) => {
+        const parts: string[] = [];
+        if (d.removed.length) parts.push(`删除 [${d.removed.join(", ")}]`);
+        if (d.added.length) parts.push(`新增 [${d.added.join(", ")}]`);
+        return `表 ${d.table}：${parts.join("，")}`;
+      }).join("\n");
+      try {
+        await ElMessageBox.confirm(
+          `检测到数据集结构与当前项目不一致：\n${msg}\n\n按新结构打开?(删除的字段将丢弃,新增的字段填空值)`,
+          "结构变化",
+          { type: "warning", confirmButtonText: "按新结构打开", cancelButtonText: "取消" },
+        );
+      } catch {
+        selectedPath.value = lastLoadedPath.value; // 取消,回退到上次打开的
+        return;
+      }
+    }
     suppressDirty = true;
     rowsMap.value = toDisplay(entries);
     originalRowsMap.value = JSON.parse(JSON.stringify(rowsMap.value));
-    dirty.value = false;
+    dirty.value = (migratedDirty.value = diffs.length > 0); // 有迁移 -> 需保存
+    lastLoadedPath.value = selectedPath.value;
     await nextTick();
     suppressDirty = false;
   } catch { /* 已提示 */ }
@@ -144,6 +165,7 @@ async function saveDataset() {
   try {
     await tauri.datasetSave(selectedPath.value, store.currentProject, buildEntries());
     originalRowsMap.value = JSON.parse(JSON.stringify(rowsMap.value));
+    migratedDirty.value = false; // 保存后文件已是新结构
     dirty.value = false;
     ElMessage.success("已保存");
   } catch { /* 已提示 */ }
@@ -152,7 +174,7 @@ async function saveDataset() {
 function cancelEdit() {
   suppressDirty = true;
   rowsMap.value = JSON.parse(JSON.stringify(originalRowsMap.value));
-  dirty.value = false;
+  dirty.value = migratedDirty.value; // 有迁移时取消仍需保存
   nextTick(() => { suppressDirty = false; });
 }
 
