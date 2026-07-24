@@ -6,7 +6,7 @@
 use crate::schema::{Project, Table};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use thiserror::Error;
 
 /// dataset 错误类型。
@@ -36,8 +36,22 @@ pub struct DatasetEntry {
     pub data: Vec<Map<String, Value>>,
 }
 
-/// 加载数据集(.data JSONL)-> 按表分组 -> DatasetEntry 列表(按项目表顺序)。
-pub fn load_dataset(path: &str, project: &Project) -> Result<Vec<DatasetEntry>, DatasetError> {
+/// 结构差异(打开数据集时检测,提示用户按新结构重塑)。
+#[derive(Debug, Clone, Serialize)]
+pub struct SchemaDiff {
+    pub table: String,
+    /// 项目有、数据集无的字段(打开时补空值)。
+    pub added: Vec<String>,
+    /// 数据集有、项目无的字段(打开时丢弃)。
+    pub removed: Vec<String>,
+}
+
+/// 加载数据集(.data JSONL)-> 按项目结构重塑行数据。
+/// 重塑:每行只保留项目字段(缺失补 null,多余丢弃);返回差异列表(非空表示结构变了)。
+pub fn load_dataset(
+    path: &str,
+    project: &Project,
+) -> Result<(Vec<DatasetEntry>, Vec<SchemaDiff>), DatasetError> {
     let content = std::fs::read_to_string(path)?;
     let mut map: BTreeMap<String, Vec<Map<String, Value>>> = BTreeMap::new();
     for line in content.lines() {
@@ -48,17 +62,46 @@ pub fn load_dataset(path: &str, project: &Project) -> Result<Vec<DatasetEntry>, 
         let row: JsonlRow = serde_json::from_str(line)?;
         map.entry(row.table).or_default().push(row.row);
     }
-    // 按项目表顺序输出(项目有但数据集无 -> 空数据)
-    let entries: Vec<DatasetEntry> = project
-        .tables
-        .iter()
-        .map(|t| DatasetEntry {
+    let mut entries = Vec::new();
+    let mut diffs = Vec::new();
+    for t in &project.tables {
+        let rows = map.remove(&t.code).unwrap_or_default();
+        let field_codes: Vec<String> = t.fields.iter().map(|f| f.code.to_uppercase()).collect();
+        // 检测差异(数据集字段并集 vs 项目字段),仅当数据集有行时
+        if !rows.is_empty() {
+            let ds_fields: HashSet<String> = rows
+                .iter()
+                .flat_map(|r| r.keys().map(|k| k.to_uppercase()))
+                .collect();
+            let proj_fields: HashSet<String> = field_codes.iter().cloned().collect();
+            let added: Vec<String> = proj_fields.difference(&ds_fields).cloned().collect();
+            let removed: Vec<String> = ds_fields.difference(&proj_fields).cloned().collect();
+            if !added.is_empty() || !removed.is_empty() {
+                diffs.push(SchemaDiff {
+                    table: t.code.clone(),
+                    added,
+                    removed,
+                });
+            }
+        }
+        // 重塑:按项目字段顺序,缺失补 null,多余丢弃
+        let migrated: Vec<Map<String, Value>> = rows
+            .iter()
+            .map(|row| {
+                let mut new_row = Map::new();
+                for code in &field_codes {
+                    let val = row.get(code).cloned().unwrap_or(Value::Null);
+                    new_row.insert(code.clone(), val);
+                }
+                new_row
+            })
+            .collect();
+        entries.push(DatasetEntry {
             table: t.code.clone(),
-            data: map.remove(&t.code).unwrap_or_default(),
-        })
-        .collect();
-    validate_against(project, &entries)?;
-    Ok(entries)
+            data: migrated,
+        });
+    }
+    Ok((entries, diffs))
 }
 
 /// 保存数据集(.data JSONL,按主键排序)。
@@ -179,7 +222,8 @@ mod tests {
         let _ = std::fs::remove_file(tmp);
 
         save_dataset(tmp, &project, &entries).expect("保存失败");
-        let loaded = load_dataset(tmp, &project).expect("加载失败");
+        let (loaded, diffs) = load_dataset(tmp, &project).expect("加载失败");
+        assert!(diffs.is_empty()); // 结构一致,无差异
 
         assert_eq!(loaded.len(), 1);
         assert_eq!(loaded[0].data.len(), 2);
@@ -212,9 +256,38 @@ mod tests {
         let _ = std::fs::remove_file(tmp);
         std::fs::write(tmp, "").unwrap();
 
-        let loaded = load_dataset(tmp, &project).expect("加载空数据集失败");
+        let (loaded, diffs) = load_dataset(tmp, &project).expect("加载空数据集失败");
         assert_eq!(loaded.len(), 1); // 项目有1张表
         assert!(loaded[0].data.is_empty()); // 无数据
+        assert!(diffs.is_empty()); // 空数据集无差异
+        let _ = std::fs::remove_file(tmp);
+    }
+
+    #[test]
+    fn test_load_migrates_schema() {
+        let project = make_project();
+        let tmp = "/tmp/aqua_test_migrate.data";
+        let _ = std::fs::remove_file(tmp);
+        // 原始数据集行: 有项目无的 OLD_COL, 缺 USER_NAME/AMOUNT
+        let line = r#"{"table":"SYS_USER","row":{"ID":1,"OLD_COL":"x"}}"#;
+        std::fs::write(tmp, line).unwrap();
+
+        let (loaded, diffs) = load_dataset(tmp, &project).expect("加载失败");
+        assert_eq!(loaded[0].data.len(), 1);
+        let row = &loaded[0].data[0];
+        // 重塑: 只保留项目字段, OLD_COL 丢弃, USER_NAME/AMOUNT 补 null
+        assert_eq!(row.len(), 3);
+        assert_eq!(row["ID"], Value::Number(1.into()));
+        assert_eq!(row["USER_NAME"], Value::Null);
+        assert_eq!(row["AMOUNT"], Value::Null);
+        assert!(!row.contains_key("OLD_COL"));
+        // 差异: removed=[OLD_COL], added=[USER_NAME, AMOUNT]
+        assert_eq!(diffs.len(), 1);
+        assert_eq!(diffs[0].table, "SYS_USER");
+        assert_eq!(diffs[0].removed, vec!["OLD_COL"]);
+        let mut added = diffs[0].added.clone();
+        added.sort();
+        assert_eq!(added, vec!["AMOUNT", "USER_NAME"]);
         let _ = std::fs::remove_file(tmp);
     }
 }
