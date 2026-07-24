@@ -37,6 +37,20 @@ baseFontSize: 4 使 1 个 unocss 单位 = 1px,数值即像素值,直观:
 
 ---
 
+## 图标(unocss presetIcons)
+
+图标用 `presetIcons` + `@iconify-json/mdi`(devDep),以 class 使用,**不引运行时图标库**(无 `@element-plus/icons-vue`),不用 emoji 当图标:
+
+```vue
+<span class="i-mdi-content-save w-16 h-16 mr-4" />   <!-- 保存图标 16px -->
+```
+
+**必须显式给尺寸** `w-{n} h-{n}`:presetRemToPx 使 `1em=4px`,图标默认 `1em×1em` 会缩成 4px 不可见。`uno.config.ts` 的 presetIcons 已配 `extraProperties: { display:'inline-block', 'vertical-align':'middle' }` 保证与文字基线对齐。
+
+**禁止**: 用 emoji(📁🔒 等)当功能图标(跨平台渲染不一、无法控色);改用 `i-mdi-*`。
+
+---
+
 ## Forbidden Patterns
 
 ### ❌ 浏览器原生弹窗 window.prompt / confirm / alert
