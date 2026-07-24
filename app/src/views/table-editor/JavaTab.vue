@@ -1,10 +1,11 @@
 <script setup lang="ts">
-// java Tab: 配置(包名/类名/Lombok/注释)+ 实时预览 + 复制/下载。
+// java Tab: 配置(包名/类名/Lombok/注释)+ 实时预览 + 复制/保存。
 import { ref, watch } from "vue";
 import { ElMessage } from "element-plus";
+import { invoke } from "@tauri-apps/api/core";
+import { save } from "@tauri-apps/plugin-dialog";
 import { useTauri } from "@/composables/useTauri";
 import { useProjectStore } from "@/stores/project";
-import { downloadText } from "@/composables/useDownload";
 
 const props = defineProps<{ tableCode: string; active: boolean }>();
 
@@ -45,9 +46,19 @@ async function copy() {
   ElMessage.success("已复制");
 }
 
-function download() {
+async function saveFile() {
   const cls = className.value || props.tableCode;
-  downloadText(`${cls}.java`, preview.value);
+  const path = await save({
+    filters: [{ name: "Java", extensions: ["java"] }],
+    defaultPath: `${cls}.java`,
+  });
+  if (!path) return;
+  try {
+    await invoke<void>("write_text_file", { path, content: preview.value });
+    ElMessage.success("已保存");
+  } catch (e) {
+    ElMessage.error(`保存失败: ${e}`);
+  }
 }
 </script>
 
@@ -75,7 +86,7 @@ function download() {
       <el-checkbox v-model="useLombok">Lombok</el-checkbox>
       <div class="flex-1" />
       <el-button size="small" @click="copy">复制</el-button>
-      <el-button size="small" type="primary" @click="download">下载</el-button>
+      <el-button size="small" type="primary" @click="saveFile">保存</el-button>
     </div>
     <div class="flex-1 min-h-0">
       <el-input
