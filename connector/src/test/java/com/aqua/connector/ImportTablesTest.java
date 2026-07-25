@@ -74,17 +74,19 @@ class ImportTablesTest {
         assertEquals("SYS_USER", tables.get(0).get("name").asText());
         assertEquals("SYS_ORDER", tables.get(1).get("name").asText());
 
-        // SYS_USER: 两列 + 批量转发的唯一索引 IDX_SYS_USER_USER_NAME(按 name 查,不假设顺序)
+        // SYS_USER: 两列 + 唯一索引 IDX_SYS_USER_USER_NAME;主键索引已跳过,故索引恰好 1 条
         JsonNode user = tables.get(0);
         assertEquals(2, user.get("columns").size(), "SYS_USER 两列");
+        assertEquals(1, user.get("indexes").size(), "SYS_USER 索引恰 1 条(主键索引已跳过): " + user.get("indexes"));
         JsonNode userIdx = findIndex(user.get("indexes"), "IDX_SYS_USER_USER_NAME");
         assertNotNull(userIdx, "SYS_USER 应含 IDX_SYS_USER_USER_NAME: " + user.get("indexes"));
         assertTrue(userIdx.get("unique").asBoolean(), "IDX_SYS_USER_USER_NAME 唯一");
         assertEquals("USER_NAME", userIdx.get("fields").get(0).asText());
 
-        // SYS_ORDER: 两列(批量转发列元数据正确)
+        // SYS_ORDER: 两列,仅有主键 → 主键索引跳过后索引为空
         JsonNode order = tables.get(1);
         assertEquals(2, order.get("columns").size(), "SYS_ORDER 两列");
+        assertEquals(0, order.get("indexes").size(), "SYS_ORDER 仅主键,索引应为空: " + order.get("indexes"));
     }
 
     /** 按 name 在 indexes 数组查一条,找不到返回 null。 */

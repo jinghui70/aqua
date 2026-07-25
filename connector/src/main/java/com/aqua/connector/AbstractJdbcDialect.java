@@ -10,9 +10,12 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import com.aqua.connector.meta.ColumnMeta;
 import com.aqua.connector.meta.IndexMeta;
@@ -146,31 +149,40 @@ public abstract class AbstractJdbcDialect implements Dialect {
         DatabaseMetaData meta = conn.getMetaData();
         String schema = resolveSchema(conn, conn.getSchema());
 
-        // 取主键约束名,用于跳过主键索引
+        // 主键约束名 + 主键列集:用于跳过主键背后的索引。
+        // 仅靠 PK_NAME==INDEX_NAME 不可靠(H2 等 PK_NAME 为约束名/null,索引名却是 PRIMARY_KEY_x),
+        // 故同时按"索引列集与主键列集完全相同"兜底识别(主键必由覆盖其列的唯一索引支撑)。
         String pkName = null;
+        Set<String> pkColumns = new HashSet<>();
         try (ResultSet pkRs = meta.getPrimaryKeys(conn.getCatalog(), schema, table)) {
-            if (pkRs.next()) {
-                pkName = pkRs.getString("PK_NAME");
+            while (pkRs.next()) {
+                if (pkName == null) pkName = pkRs.getString("PK_NAME");
+                pkColumns.add(pkRs.getString("COLUMN_NAME"));
             }
         }
 
-        // 按索引名分组字段
-        Map<String, List<String>> idxFields = new HashMap<>();
+        // 按索引名分组字段(LinkedHashMap 保序,输出稳定)
+        Map<String, List<String>> idxFields = new LinkedHashMap<>();
         Map<String, Boolean> idxUnique = new HashMap<>();
         try (ResultSet rs = meta.getIndexInfo(conn.getCatalog(), schema, table, false, false)) {
             while (rs.next()) {
                 String idxName = rs.getString("INDEX_NAME");
                 if (idxName == null) continue;
-                // 跳过主键索引(主键已在 ColumnMeta.isKey 处理)
-                if (pkName != null && pkName.equals(idxName)) continue;
                 String colName = rs.getString("COLUMN_NAME");
                 idxFields.computeIfAbsent(idxName, k -> new ArrayList<>()).add(colName);
                 idxUnique.put(idxName, !rs.getBoolean("NON_UNIQUE"));
             }
         }
+
         List<IndexMeta> indexes = new ArrayList<>();
         for (Map.Entry<String, List<String>> e : idxFields.entrySet()) {
-            indexes.add(new IndexMeta(e.getKey(), e.getValue(), idxUnique.getOrDefault(e.getKey(), false)));
+            String idxName = e.getKey();
+            List<String> cols = e.getValue();
+            // 跳过主键背后的索引(主键已由 ColumnMeta.isKey 表达):名字匹配 PK_NAME,或列集与主键列集完全相同
+            boolean isPkIndex = (pkName != null && pkName.equals(idxName))
+                    || (!pkColumns.isEmpty() && pkColumns.size() == cols.size() && pkColumns.containsAll(cols));
+            if (isPkIndex) continue;
+            indexes.add(new IndexMeta(idxName, cols, idxUnique.getOrDefault(idxName, false)));
         }
         return indexes;
     }

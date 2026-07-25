@@ -101,6 +101,11 @@ class H2DialectTest {
                 .orElseThrow(() -> new AssertionError("未找到 IDX_SYS_USER_USER_NAME: " + indexes));
         assertTrue(idx.unique, "应为唯一索引");
         assertTrue(idx.fields.contains("USER_NAME"));
+
+        // 主键背后的索引必须跳过:H2 主键索引名形如 PRIMARY_KEY_x,列集=主键列集(ID),不得混入
+        assertTrue(
+                indexes.stream().noneMatch(i -> i.fields.size() == 1 && i.fields.contains("ID")),
+                "主键索引(单列 ID)应被跳过,实际: " + indexes);
     }
 
     private ColumnMeta find(List<ColumnMeta> columns, String name) {

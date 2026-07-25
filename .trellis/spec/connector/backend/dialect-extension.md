@@ -79,6 +79,16 @@ public abstract class AbstractJdbcDialect implements Dialect {
 **Fix**: OracleDialect 覆写 `resolveTableComments`/`resolveColumnComments`,批量查数据字典。
 **Prevention**: 新方言若注释缺失,先确认 REMARKS 是否可靠,不可靠则覆写补查钩子(批量查,勿逐列查)。
 
+### Common Mistake: 主键索引未跳过(仅靠 PK_NAME==INDEX_NAME)
+
+**Symptom**: 导入结果多出一条覆盖主键列的伪唯一索引(主键已由 `ColumnMeta.isKey` 表达)。
+**Cause**: `getIndexes` 靠 `getPrimaryKeys().PK_NAME` 匹配 `getIndexInfo().INDEX_NAME` 来跳过主键索引,
+但二者不一定相等——H2 的 `PK_NAME` 是约束名(或 null),主键索引名却是 `PRIMARY_KEY_x`,匹配失败 → 未跳过。
+**Fix**: `AbstractJdbcDialect.getIndexes` 用**双判据**:名字匹配 PK_NAME(Oracle 等),**或**索引列集与主键列集完全相同
+(`pkColumns.size()==cols.size() && pkColumns.containsAll(cols)`)。后者跨方言可靠——主键必由覆盖其列的唯一索引支撑。
+**Prevention**: 凡"按名字匹配数据库对象"的跨方言逻辑,先问该名字在各库是否一致;不一致就找结构性判据(列集/类型)兜底,别只靠名字。
+**权衡**: 用户若另建一条恰好覆盖主键列的冗余唯一索引,会被一并跳过——可接受(它本就与主键冗余)。
+
 **为什么这三个钩子**: 实测发现,JDBC `DatabaseMetaData` API 在不同数据库间高度一致,真正因库而异的只有:
 1. **连接 URL 格式**(如 H2 的 `jdbc:h2:mem:` vs Oracle 的 `jdbc:oracle:thin:@//`)
 2. **类型映射**(如 Oracle NUMBER 按 precision 反解为 TINYINT/INT/LONG,H2/MySQL 无此特例)
