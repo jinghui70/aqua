@@ -964,3 +964,39 @@ AutoGenStrategyDefine(code/name/paramDesc) + Project.autoGenStrategies。内置 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 26: 数据库导入批量化 + native/JDBC 元数据修复
+
+**Date**: 2026-07-25
+**Task**: 数据库导入批量化 + native/JDBC 元数据修复
+**Branch**: `main`
+
+### Summary
+
+根因:JDBC 导 N 表 = 2N 次 java -jar 冷启动(每进程一 action、一连接),串行、无反馈。A 批量化:connector 加 importTables(一连接反解多表),Driver::import_tables 批量方法(JDBC 覆写 1 次 spawn,native 走 trait 默认循环——native 已用连接池非瓶颈),from_db 改批量编排,2N→1。C:ImportWizard 导入按钮 loading+禁关 dialog。测试中连带修复三个 native/JDBC 元数据缺陷:MySQL list_tables 补 TABLE_COMMENT(表中文名);PG list_tables 改用 self.schema(命令层默认 schema=库名是 MySQL 语义,PG 表在 public 故看不到表)+ obj_description 取注释;AbstractJdbcDialect 主键索引跳过改双判据(PK_NAME 或列集匹配,修 H2 PK_NAME≠INDEX_NAME 泄漏伪索引)。三库(Oracle/MySQL/PG)均验证,含连 PG 实测。spec 补 POJONode 树遍历坑 + PK 索引跳过坑;architecture.md 修正 native 连接池描述。加 pnpm dev:full 强制重建 connector。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4dcc21c` | (see git log) |
+| `0e08fbc` | (see git log) |
+| `de71ff3` | (see git log) |
+| `56ca391` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
