@@ -58,13 +58,20 @@ impl Driver for MysqlDriver {
             .await
             .map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
 
-        let sql = "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? ORDER BY TABLE_NAME";
-        let tables: Vec<String> = conn
+        let sql = "SELECT TABLE_NAME, TABLE_COMMENT FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? ORDER BY TABLE_NAME";
+        let rows: Vec<(String, Option<String>)> = conn
             .exec(sql, (schema,))
             .await
             .map_err(|e| DriverError::QueryFailed(e.to_string()))?;
 
-        Ok(tables.into_iter().map(|name| TableInfo { name, comment: None }).collect())
+        // MySQL TABLE_COMMENT 无注释时为空串,归一为 None(表中文名回退表名的判断交给上层)
+        Ok(rows
+            .into_iter()
+            .map(|(name, comment)| TableInfo {
+                name,
+                comment: comment.filter(|c| !c.is_empty()),
+            })
+            .collect())
     }
 
     async fn get_columns(&self, table: &str) -> Result<Vec<ColumnMeta>, DriverError> {

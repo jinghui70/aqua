@@ -53,24 +53,38 @@ impl Driver for PostgresDriver {
         Ok(())
     }
 
-    async fn list_tables(&self, schema: &str) -> Result<Vec<TableInfo>, DriverError> {
+    async fn list_tables(&self, _schema: &str) -> Result<Vec<TableInfo>, DriverError> {
         let client = self
             .pool
             .get()
             .await
             .map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
 
+        // 用 self.schema(config.schema 或默认 "public"):命令层把 PG 的 schema 默认成库名是
+        // MySQL 语义,PG 表在 public schema,按库名过滤会查空("看不到表"根因)。
+        // 同时经 pg_catalog + obj_description 取表注释(表中文名),对齐 Oracle/MySQL。
         let rows = client
             .query(
-                "SELECT table_name FROM information_schema.tables
-                 WHERE table_schema = $1 AND table_type = 'BASE TABLE'
-                 ORDER BY table_name",
-                &[&schema],
+                "SELECT c.relname, obj_description(c.oid, 'pg_class')
+                 FROM pg_class c
+                 JOIN pg_namespace n ON n.oid = c.relnamespace
+                 WHERE n.nspname = $1 AND c.relkind IN ('r', 'p')
+                 ORDER BY c.relname",
+                &[&self.schema],
             )
             .await
             .map_err(|e| DriverError::QueryFailed(e.to_string()))?;
 
-        Ok(rows.iter().map(|r| TableInfo { name: r.get::<_, String>(0), comment: None }).collect())
+        Ok(rows
+            .iter()
+            .map(|r| {
+                let comment: Option<String> = r.get(1);
+                TableInfo {
+                    name: r.get::<_, String>(0),
+                    comment: comment.filter(|c| !c.is_empty()),
+                }
+            })
+            .collect())
     }
 
     async fn get_columns(&self, table: &str) -> Result<Vec<ColumnMeta>, DriverError> {
