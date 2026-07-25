@@ -34,7 +34,7 @@ aqua v2 = **Tauri 2.x 桌面 + Rust 后端(`aqua-core`) + Vue3/element-plus 前�
 - **混合驱动**:
   - MySQL/PG:Rust native(`mysql_async`/`tokio-postgres`),**免 Java**。
   - Oracle/DM/KingBase/GBase/H2:Java JDBC(spawn connector)。
-- **Driver trait**:`trait Driver { test_connection / list_tables / get_columns / list_indexes / query_rows }`,native + Jdbc 两实现,返回统一 aqua schema 类型,反解藏各实现内。工厂 `create_driver(config) -> Box<dyn Driver>`。native 一次性连接不维护池。
+- **Driver trait**:`trait Driver { test_connection / list_tables / get_columns / list_indexes / query_rows }`,native + Jdbc 两实现,返回统一 aqua schema 类型,反解藏各实现内。工厂 `create_driver(config) -> Box<dyn Driver>`。native 用连接池(`mysql_async::Pool`/`deadpool_postgres::Pool`)跨调用复用连接。
 - **不做 SSH**:直连,用户自保证库可达(VPN/端口转发)。
 
 ## 3. 反解(物理类型 -> 逻辑类型)分库归属
