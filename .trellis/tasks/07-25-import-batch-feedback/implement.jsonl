@@ -1,0 +1,5 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/connector/backend/subprocess-io-contract.md", "reason": "新增 importTables action 必守 UTF-8/路径/错误协议"}
+{"file": ".trellis/spec/connector/backend/dialect-extension.md", "reason": "复用 Dialect getColumns/getIndexes 接口契约"}
+{"file": ".trellis/spec/aqua-core/backend/database-guidelines.md", "reason": "Driver trait 批量方法/native 池化约定"}
+{"file": ".trellis/spec/app/frontend/component-guidelines.md", "reason": "ImportWizard loading 态遵循组件规范"}

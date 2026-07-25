@@ -3,7 +3,7 @@
 //! 通信协议(architecture.md §2): 一次性命令,stdin JSON 请求 -> stdout JSON 响应 -> exit。
 //! connector.jar (Java) 负责实际 JDBC 连接 + 反解,本驱动只做子进程通信。
 
-use crate::driver::{ColumnMeta, DbConfig, Driver, DriverError, IndexMeta, TableInfo};
+use crate::driver::{ColumnMeta, DbConfig, Driver, DriverError, IndexMeta, TableInfo, TableMeta};
 use crate::schema::DataType;
 use async_trait::async_trait;
 use serde_json::{json, Map, Value};
@@ -321,6 +321,42 @@ impl Driver for JdbcDriver {
             .unwrap_or_default();
 
         Ok(indexes)
+    }
+
+    async fn import_tables(&self, tables: &[String]) -> Result<Vec<TableMeta>, DriverError> {
+        // 批量:一次 spawn 反解全部选中表,替代逐表 2N 次 JVM 冷启动。
+        let resp = self
+            .call("importTables", Some(json!({ "tables": tables })))
+            .await?;
+
+        let metas = resp
+            .get("tables")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|t| {
+                        let name = t.get("name")?.as_str()?.to_string();
+                        let columns = t
+                            .get("columns")
+                            .and_then(|v| v.as_array())
+                            .map(|a| a.iter().filter_map(parse_column_meta).collect())
+                            .unwrap_or_default();
+                        let indexes = t
+                            .get("indexes")
+                            .and_then(|v| v.as_array())
+                            .map(|a| a.iter().filter_map(parse_index_meta).collect())
+                            .unwrap_or_default();
+                        Some(TableMeta {
+                            name,
+                            columns,
+                            indexes,
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        Ok(metas)
     }
 
     async fn query_table_rows(&self, table: &str) -> Result<Vec<Map<String, Value>>, DriverError> {

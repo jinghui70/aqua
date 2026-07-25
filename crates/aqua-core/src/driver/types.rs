@@ -64,3 +64,17 @@ pub struct IndexMeta {
     /// 是否唯一索引
     pub unique: bool,
 }
+
+/// 批量反解结果:单表的列+索引元数据。
+///
+/// `import_tables` 一次返回全部选中表的元数据(JDBC 一次 spawn),
+/// 表注释不在此(沿用调用方已持有的 `TableInfo.comment`)。
+#[derive(Debug, Clone)]
+pub struct TableMeta {
+    /// 表名
+    pub name: String,
+    /// 列元数据
+    pub columns: Vec<ColumnMeta>,
+    /// 索引元数据
+    pub indexes: Vec<IndexMeta>,
+}

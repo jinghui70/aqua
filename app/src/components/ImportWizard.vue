@@ -49,6 +49,8 @@ const groups = computed(() => store.currentProject?.groups ?? []);
 
 // 导入结果缓存
 const importedProject = ref<Project | null>(null);
+// 导入进行中(反解多表可能耗时,按钮 loading + 禁止关闭 dialog,避免"点了没反应"错觉)
+const importing = ref(false);
 
 function reset() {
   step.value = 0;
@@ -105,8 +107,9 @@ async function nextFromTables() {
 
 async function doImport() {
   if (!config.value || !store.currentProject) return;
+  importing.value = true;
   try {
-    // 按选中表导入(后端只反解选中表,避免整库 spawn 开销)
+    // 按选中表导入(后端一次批量反解选中表,避免逐表 spawn 开销)
     const tableInfos = allTables.value.filter((t) =>
       selectedTables.value.includes(t.name)
     );
@@ -125,12 +128,14 @@ async function doImport() {
     ui.importVisible = false;
   } catch {
     /* 已提示 */
+  } finally {
+    importing.value = false;
   }
 }
 </script>
 
 <template>
-  <el-dialog v-model="ui.importVisible" title="导入向导" width="640px" :close-on-click-modal="false">
+  <el-dialog v-model="ui.importVisible" title="导入向导" width="640px" :close-on-click-modal="false" :close-on-press-escape="!importing" :show-close="!importing">
     <el-steps :active="step" finish-status="success" simple class="mb-16">
       <el-step title="数据源" />
       <el-step title="选表" />
@@ -195,12 +200,12 @@ async function doImport() {
     </div>
 
     <template #footer>
-      <el-button v-if="step > 0" @click="step--">上一步</el-button>
+      <el-button v-if="step > 0" :disabled="importing" @click="step--">上一步</el-button>
       <el-button v-if="step === 0" type="primary" :loading="loadingTables" @click="nextFromSource">
         下一步
       </el-button>
       <el-button v-else-if="step === 1" type="primary" @click="nextFromTables">下一步</el-button>
-      <el-button v-else type="primary" @click="doImport">导入</el-button>
+      <el-button v-else type="primary" :loading="importing" @click="doImport">导入</el-button>
     </template>
   </el-dialog>
 </template>

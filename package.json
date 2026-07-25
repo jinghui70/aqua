@@ -6,6 +6,7 @@
   "scripts": {
     "tauri": "tauri",
     "dev": "tauri dev",
+    "dev:full": "pnpm build:connector && pnpm dev",
     "build": "tauri build",
     "build:connector": "node scripts/build-connector.mjs",
     "build:connector:if-missing": "node scripts/build-connector.mjs --if-missing",

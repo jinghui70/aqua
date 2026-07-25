@@ -1,12 +1,14 @@
 //! 从数据库导入 schema 核心逻辑。
 
-use crate::driver::{ColumnMeta, Driver, DriverError, IndexMeta, TableInfo};
+use crate::driver::{ColumnMeta, Driver, DriverError, IndexMeta, TableInfo, TableMeta};
 use crate::generators::java::naming::snake_to_camel;
 use crate::schema::{Direction, Field, Index, IndexField, Project, Table};
+use std::collections::HashMap;
 
 /// 从数据库导入 schema,生成 Project。
 ///
-/// 仅反解 `tables` 指定的表(用户在导入向导选中的表),避免整库反解的无效 spawn 开销。
+/// 仅反解 `tables` 指定的表(用户在导入向导选中的表)。通过 `driver.import_tables` 批量反解:
+/// JDBC 一次 spawn 拿全部表元数据,消除逐表 2N 次 JVM 冷启动;native 走连接池,无额外开销。
 ///
 /// # 参数
 /// - `driver`: 数据库驱动
@@ -20,11 +22,20 @@ pub async fn import_from_db(
     tables: &[TableInfo],
     base_package: Option<String>,
 ) -> Result<Project, DriverError> {
-    // 逐表反解(仅选中表,表注释从 listTables 复用,不另 spawn)
-    let mut result = Vec::new();
+    // 一次批量反解全部选中表(JDBC 单次 spawn)
+    let names: Vec<String> = tables.iter().map(|t| t.name.clone()).collect();
+    let metas = driver.import_tables(&names).await?;
+
+    // name → 列/索引元数据,按输入表顺序组装(表注释复用 TableInfo,不另查)
+    let mut meta_map: HashMap<String, TableMeta> =
+        metas.into_iter().map(|m| (m.name.clone(), m)).collect();
+
+    let mut result = Vec::with_capacity(tables.len());
     for table in tables {
-        let t = import_table(driver, table).await?;
-        result.push(t);
+        let meta = meta_map.remove(&table.name).ok_or_else(|| {
+            DriverError::QueryFailed(format!("导入结果缺少表 {} 的元数据", table.name))
+        })?;
+        result.push(build_table(table, meta));
     }
 
     Ok(Project {
@@ -38,18 +49,13 @@ pub async fn import_from_db(
     })
 }
 
-/// 导入单个表。
-async fn import_table(driver: &dyn Driver, table: &TableInfo) -> Result<Table, DriverError> {
-    // 1. 获取列
-    let columns = driver.get_columns(&table.name).await?;
-    let fields: Vec<Field> = columns.into_iter().map(column_to_field).collect();
+/// 由批量反解的元数据 + 表信息组装单个 Table(纯组装,不触驱动)。
+fn build_table(table: &TableInfo, meta: TableMeta) -> Table {
+    let fields: Vec<Field> = meta.columns.into_iter().map(column_to_field).collect();
+    let indexes: Vec<Index> = meta.indexes.into_iter().map(index_meta_to_index).collect();
 
-    // 2. 获取索引
-    let indexes_meta = driver.list_indexes(&table.name).await?;
-    let indexes: Vec<Index> = indexes_meta.into_iter().map(index_meta_to_index).collect();
-
-    // 3. 构造 Table(表注释作为中文名 name;无注释时回退表名)
-    Ok(Table {
+    // 表注释作为中文名 name;无注释时回退表名
+    Table {
         code: table.name.to_uppercase(),
         name: table
             .comment
@@ -64,7 +70,7 @@ async fn import_table(driver: &dyn Driver, table: &TableInfo) -> Result<Table, D
             Some(indexes)
         },
         comment: None,
-    })
+    }
 }
 
 /// ColumnMeta → Field 转换。

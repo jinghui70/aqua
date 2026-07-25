@@ -111,6 +111,34 @@ if !output.status.success() {
 
 ---
 
+## 5. 单测断言 dispatch 输出:先序列化再 readTree
+
+### 契约
+`Main.dispatch` 用 `ArrayNode.addPOJO(meta)` 塞列/索引元数据,得到的是 **`POJONode`**(不透明 POJO 包装),
+不是展开的 `ObjectNode`。POJONode **能正确序列化成 JSON 文本**(正是 Rust 侧消费的 wire 格式),
+但**不支持树遍历**——`pojoNode.get("name")` 返回 `null`,即使 `toString()` 显示该字段存在。
+
+### Wrong vs Correct
+
+#### Wrong(树遍历 POJONode,get 恒 null → 误判"字段缺失")
+```java
+ObjectNode resp = Main.dispatch("importTables", dialect, conn, config);
+// resp.toString() 看着是 {"name":"...",...},但下面 get 返回 null
+resp.get("tables").get(0).get("indexes").get(0).get("name").asText(); // NPE
+```
+
+#### Correct(序列化再 readTree,还原真实 wire 结构)
+```java
+ObjectNode raw = Main.dispatch("importTables", dialect, conn, config);
+JsonNode resp = MAPPER.readTree(MAPPER.writeValueAsString(raw)); // POJONode 展开为可遍历 ObjectNode
+resp.get("tables").get(0).get("indexes").get(0).get("name").asText(); // OK
+```
+
+> **Prevention**: 凡单测要**遍历** dispatch 返回的树,一律先 `writeValueAsString` 再 `readTree`。
+> 这也更贴近真实:Rust 侧拿到的就是序列化后的字节,不是内存里的 POJONode。
+
+---
+
 ## 相关规范
 
 - [Dialect 扩展规范](./dialect-extension.md) - Dialect 接口契约与 comment 补查钩子

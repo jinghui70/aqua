@@ -26,9 +26,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  * connector.jar 入口:读 stdin JSON,分发 action,写 stdout JSON。
  *
  * 协议(对齐 Rust driver/jdbc.rs):
- * 请求: {action, dialect, host, port, user, password, database, schema, table}
- * action: testConnection / listTables / getColumns / listIndexes
+ * 请求: {action, dialect, host, port, user, password, database, schema, table, tables}
+ * action: testConnection / listTables / getColumns / listIndexes / importTables
  * 响应: {status:"ok"} / {tables:[...]} / {columns:[...]} / {indexes:[...]} / {error:"..."}
+ * importTables 响应: {tables:[{name, columns:[...], indexes:[...]}]}(一条连接批量反解)
  */
 public class Main {
 
@@ -74,7 +75,8 @@ public class Main {
         }
     }
 
-    private static ObjectNode dispatch(String action, Dialect dialect, Connection conn, DbConfig config)
+    /** action 分发(package-private 供单测直调,绕开 stdin/stdout/System.exit)。 */
+    static ObjectNode dispatch(String action, Dialect dialect, Connection conn, DbConfig config)
             throws Exception {
         switch (action) {
             case "testConnection": {
@@ -106,6 +108,27 @@ public class Main {
                 ArrayNode arr = resp.putArray("indexes");
                 for (IndexMeta i : indexes) {
                     arr.addPOJO(i);
+                }
+                return resp;
+            }
+            case "importTables": {
+                // 批量导入:一条连接循环反解多表的列+索引,一次性返回,
+                // 消除 Rust 侧逐表 spawn(2N 次 JVM 冷启动)。任一表失败冒泡到 main catch → writeError(all-or-nothing)。
+                ObjectNode resp = MAPPER.createObjectNode();
+                ArrayNode arr = resp.putArray("tables");
+                for (String tableName : config.tables) {
+                    List<ColumnMeta> columns = dialect.getColumns(conn, tableName);
+                    List<IndexMeta> indexes = dialect.getIndexes(conn, tableName);
+                    ObjectNode tableNode = arr.addObject();
+                    tableNode.put("name", tableName);
+                    ArrayNode cols = tableNode.putArray("columns");
+                    for (ColumnMeta c : columns) {
+                        cols.addPOJO(c);
+                    }
+                    ArrayNode idxs = tableNode.putArray("indexes");
+                    for (IndexMeta i : indexes) {
+                        idxs.addPOJO(i);
+                    }
                 }
                 return resp;
             }
