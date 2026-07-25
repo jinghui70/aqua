@@ -5,7 +5,6 @@
 //!
 //! commands 是前端(Tauri invoke)与 aqua-core 之间的薄桥。
 
-pub mod cli;
 pub mod commands;
 
 use std::fs::{File, OpenOptions};

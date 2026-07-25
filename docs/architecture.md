@@ -13,7 +13,7 @@ aqua v2 = **Tauri 2.x 桌面 + Rust 后端(`aqua-core`) + Vue3/element-plus 前�
 ```
 ┌──────────────────────────────────────────────┐
 │  src-tauri (Tauri 2.x 壳, Rust)               │
-│   main.rs: 无 args 开 GUI / 有 args 走 CLI    │
+│   main.rs: 开 GUI(Tauri webview)             │
 │   commands: 调 aqua-core + spawn connector    │
 ├──────────────────────────────────────────────┤
 │  crates/aqua-core (Rust 纯逻辑核心)            │
@@ -89,16 +89,18 @@ aqua v2 = **Tauri 2.x 桌面 + Rust 后端(`aqua-core`) + Vue3/element-plus 前�
 - 前端 JSON 生成(`generators/frontend-json`)**保留移植**,服务于外部 json-ui 项目(非 aqua 自身 UI)。
 - Tauri = Rust 后端 + Web 前端(系统 webview)。前端必然 Web 技术(无"Rust 写前端")。
 
-## 7. CLI
-- Tauri 二进制**双模式**:无 args 开 GUI,有 args(`aqua generate ...`)走 CLI 不开窗。generate 逻辑在 aqua-core。
-- generator 内置 4 个(ddl/java/json/strconst),扩展靠改程序重编译(plugin 机制延后)。
+## 7. CLI(已移除)
+- **决策(2026-07-24)**:删除 CLI,Tauri 二进制只保留 GUI 单模式。
+- **原因**:CLI 的唯一独占价值是 generator 封装的**信创库类型映射矩阵**(9 逻辑类型 × 达梦/GBase/KingBase 等方言,AI 现场生成会编错)。但生产场景(json-ui 前台 + springboot/rainbow-dbaccess 后台)只用 H2/MySQL,用不上该矩阵;H2/MySQL 的 DDL、strconst、Java entity 都是简单逻辑(strconst 约 40 行纯字符串搬运,MySQL 类型映射仅 9 分支),在 Java 项目侧就地重写的成本 < 生产引入 aqua(Rust 二进制/进程调用)的依赖成本。
+- **AI 如何用 aqua 产物**:直接读 `schema.json`(AI 强项,不需 aqua),生成逻辑在目标项目就地实现。generator 逻辑的正确性由 aqua-core 单元测试(`cargo test`)保证,比 CLI 手动跑更直接。
+- 若未来生产需面对信创库/多方言,再评估以 MCP server 或 CLI 暴露 generator(核心已抽为纯函数 `Project → String`,加接口壳即可复用)。
 
 ## 8. 项目结构
 ```
 aqua/
   Cargo.toml              # workspace: crates/aqua-core, src-tauri
   crates/aqua-core/       # Rust 纯逻辑核心(schema/generators/dataset/import/driver)
-  src-tauri/              # Tauri 壳 + CLI 入口
+  src-tauri/              # Tauri 壳(GUI 入口)
   app/                    # Vue3/element-plus 前端
   connector/              # Java connector(复用,反解移入外置 jar)
   drivers/                # JDBC 驱动 jar(用户提供,运行时落 app_data_dir/drivers/)
@@ -119,7 +121,7 @@ aqua/
 - Q5 纯桌面 + 推倒重写 + 目标结构
 - Q6 用户自备 JDK 17+ + connector 内置 + 驱动用户提供
 - Q7 放弃 json-ui 用 element-plus + 前端 JSON 生成保留
-- Q8 CLI Tauri 双模式 + generator 内置
+- Q8 ~~CLI Tauri 双模式~~ + generator 内置(CLI 已移除,见 §7;generator 保留供 GUI 调用)
 - Q9 不做 SSH 直连
 - Q10 不自动更新 + 仅中文 + 移植起点 schema
 - Q11 新建 ~/work/aqua,原目录 mv aqua-legacy

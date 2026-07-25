@@ -31,7 +31,6 @@
 7. **导入**:连库读结构(MySQL/PG 走 Rust native;Oracle/信创/H2 走 Java JDBC)
 8. **数据集管理**:JSON/SQLite 双格式,库↔数据集↔库迁移
 9. **Undo/Redo**:主文件任何变动可撤销/重做(待实现)
-10. **CLI**:generate(统一命令,内置 4 个 generator)
 
 ### 1.3 工作流
 
@@ -57,7 +56,7 @@
 
 **单元测试**:
 ```
-JSON -> aqua generate --type ddl --dialect h2 + 数据集 -> 初始化内存库
+schema.json -> 生成 H2 DDL(目标项目就地实现)+ 数据集 -> 初始化内存库
 ```
 
 ---
@@ -69,7 +68,6 @@ JSON -> aqua generate --type ddl --dialect h2 + 数据集 -> 初始化内存库
 - **Tauri 2.x 桌面** + Rust 后端(`crates/aqua-core` 纯逻辑核心 + `src-tauri` 壳) + Vue3/element-plus 前端(`app/`) + Java connector(复用,`connector/`)
 - **连接层混合**:MySQL/PG 走 Rust native 免 Java;Oracle/信创/H2 走 Java JDBC(用户自备 JDK 17+)
 - **两类数据库**:内置方言(native,硬编码) + JDBC 方言(外置 JDBC 驱动,零重编译扩展)
-- **CLI**:Tauri 二进制双模式(无 args 开 GUI / 有 args 走 CLI)
 - **打包**:~20MB(connector.jar 内置,JRE 用户自备,无 Chromium)
 - **不做**:自动更新、SSH 隧道、Web/Docker 部署。**仅中文**。
 
@@ -463,53 +461,11 @@ interface DiffResult {
 
 ---
 
-## 5. 命令行(CLI)
+## 5. 命令行(CLI)—— 已移除
 
-### 5.1 定位
+CLI 已删除,Tauri 二进制只保留 GUI 单模式。决策理由见 [`architecture.md` §7](./architecture.md)。
 
-Tauri 二进制双模式:无 args 开 GUI,有 args(`aqua generate ...`)走 CLI 不开窗。generate 逻辑在 aqua-core。
-
-### 5.2 命令
-
-```bash
-aqua generate --project ./myproject --type <type> [options]
-# 输出到 stdout,用操作系统管道重定向
-```
-
-**type 种类**(内置 4 个,扩展靠改程序重编译):
-
-#### type: ddl
-```bash
-aqua generate --project ./myproject --type ddl \
-  [--dialect mysql]              # 默认 mysql
-  [--table user,order]           # 可选,逗号分隔
-  [--group core]                 # 可选,与 --table 互斥
-  [--dataset test]               # 可选,包含数据集(仅 JSON 数据集)
-```
-
-**方言**:mysql / postgresql / oracle / dm / kingbase / gbase / h2
-**--dataset 限制**:只支持 JSON 数据集(SQLite 二进制无法流式输出 stdout)
-
-#### type: java(单表)
-```bash
-aqua generate --project ./myproject --type java \
-  --table user                   # 必需,只支持单表
-  [--package com.example.entity] # 可选,默认 basePackage.groupCode.entity
-```
-
-#### type: json(单表)
-```bash
-aqua generate --project ./myproject --type json --table user
-```
-
-#### type: strconst
-```bash
-aqua generate --project ./myproject --type strconst \
-  [--table user,order]           # 可选,默认全部
-  [--group core]                 # 可选
-  [--package com.example.const]  # 可选,默认 basePackage.const
-  [--classname StrConst]         # 可选,默认 StrConst
-```
+简言之:CLI 的独占价值是 generator 封装的信创库类型映射矩阵,但生产只用 H2/MySQL,简单生成逻辑在目标项目就地重写的成本低于引入 aqua 依赖。AI 直接读 `schema.json`,generator 正确性由 `cargo test` 保证。
 
 ---
 
@@ -767,7 +723,7 @@ aqua generate --project ./myproject --type strconst \
 - [x] 数据集管理(JSON/SQLite 双格式,核心 CRUD)
 - [x] 数据源配置持久化(.dbconfig.json + AES-256-GCM)
 - [x] 项目中文名 + 项目设置对话框
-- [x] CLI(Tauri 双模式,generate 内置 4 generator)
+- [x] ~~CLI(Tauri 双模式,generate 内置 4 generator)~~ 已移除(见 §5)
 - [x] 表删除级联提醒(按表聚合)
 
 ### 待实现(本批交互优化 + Undo/Redo)
