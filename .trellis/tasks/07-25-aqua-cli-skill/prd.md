@@ -31,11 +31,11 @@
 ## CLI Commands（本期)
 
 ```
-aqua groups <file.aqua>                    # 列所有表组(code + name)
-aqua tables [--group <code>] <file.aqua>   # 列表(可按组过滤);code + name(+ 所属组)
-aqua show   <table> <file.aqua>            # 单表结构:字段(code/name/逻辑类型/长度/主键/notNull/bizType)+ 索引
-aqua gen entity    <table> <file.aqua>     # → stdout: dba 规范 entity Java
-aqua gen datamodel <table> <file.aqua>     # → stdout: json-ui DataModel JSON
+aqua-cli groups <file.aqua>                    # 列所有表组(code + name)
+aqua-cli tables [--group <code>] <file.aqua>   # 列表(可按组过滤);code + name(+ 所属组)
+aqua-cli show   <table> <file.aqua>            # 单表结构:字段(code/name/逻辑类型/长度/主键/notNull/bizType)+ 索引
+aqua-cli gen entity    <table> <file.aqua>     # → stdout: dba 规范 entity Java
+aqua-cli gen datamodel <table> <file.aqua>     # → stdout: json-ui DataModel JSON
 ```
 
 命令按三层(组→表→字段)拆分命名,不用重载的 `list`。`<file.aqua>` 位置参数由 AI 传入。参数最终形态在 design.md 敲定。
@@ -50,8 +50,8 @@ aqua gen datamodel <table> <file.aqua>     # → stdout: json-ui DataModel JSON
 ## Acceptance Criteria
 
 - [ ] 新增 `crates/aqua-cli`,以 `aqua-core` 为依赖,无重复 schema/生成实现(R3)。
-- [ ] `aqua groups` / `aqua tables [--group <g>]` / `aqua show <table>` 正确输出(R1)。
-- [ ] `aqua gen entity <table>` / `gen datamodel <table>` stdout 输出与现有生成器一致的产物(R2,D7)。
+- [ ] `aqua-cli groups` / `aqua-cli tables [--group <g>]` / `aqua-cli show <table>` 正确输出(R1)。
+- [ ] `aqua-cli gen entity <table>` / `gen datamodel <table>` stdout 输出与现有生成器一致的产物(R2,D7)。
 - [ ] `release.yml` 产出 `mac-arm64` + `win-x64` CLI 二进制(D2)。
 - [ ] `aqua` SKILL 含 aqua 简介 + schema 速览 + 命令清单 + 典型触发,**不含 `.aqua` 文件位置**;可放入消费项目 `.claude/skills/aqua/` 并在目标平台跑通(D1/D2/D8)。
 

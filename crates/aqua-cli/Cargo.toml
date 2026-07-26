@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [[bin]]
-name = "aqua"
+name = "aqua-cli"
 path = "src/main.rs"
 
 [dependencies]

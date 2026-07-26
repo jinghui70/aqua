@@ -10,7 +10,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(
-    name = "aqua",
+    name = "aqua-cli",
     about = "aqua 数据表结构工具 —— 读结构 + 生成 entity/DataModel",
     long_about = None
 )]
