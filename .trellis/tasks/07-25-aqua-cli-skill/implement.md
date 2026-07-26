@@ -16,8 +16,8 @@
    - 验证:同上,对比 DataModel JSON 一致。
 6. **clap 顶层**:`main.rs` 装配子命令 + `--help`;统一退出码。
    - 验证:`aqua --help` / 各子命令 `--help` 可读;错误路径(表不存在、文件不存在)给清晰 stderr。
-7. **wrapper + 分发**:写 `skills/aqua/aqua`(bash wrapper)+ `SKILL.md`;`release.yml` matrix 加 `cargo build --release -p aqua-cli` + 上传二进制。
-   - 验证:本地 `bash skills/aqua/aqua groups frs.aqua` 走通(mac 分支);release.yml 语法 `act` 或 push tag 前 review。
+7. **分发**:写 `skills/aqua/SKILL.md`(含按平台选二进制的说明);`release.yml` matrix 加 `cargo build --release -p aqua-cli` + 上传二进制。
+   - 验证:本地 `./target/debug/aqua groups frs.aqua` 走通;release.yml 语法 `act` 或 push tag 前 review。
 8. **SKILL.md**:按 design §6 写;不含文件路径;命令示例用占位 `<file.aqua>`。
    - 验证:通读,确认与 frs spec 无重复、无硬编码路径。
 

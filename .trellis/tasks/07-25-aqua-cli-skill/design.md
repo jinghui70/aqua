@@ -51,16 +51,15 @@ let project = aqua_core::schema::validate::parse_project(value)?; // schema/校�
 
 ## 5. 分发(D1/D2)
 
-- **release.yml**:在现有 mac/win matrix 里,`pnpm tauri build` 之后加一步 `cargo build --release -p aqua-cli`,上传二进制(`aqua-macos-arm64` / `aqua-windows-x64.exe`)到 Release。
+- **release.yml**:在现有 mac/win matrix 里,`pnpm tauri build` 之后加一步 `cargo build --release -p aqua-cli`,上传二进制(`aqua-mac-arm64` / `aqua-win-x64.exe`)到 Release。
 - **skill 目录结构**(消费项目 `.claude/skills/aqua/`):
   ```
   aqua/
     SKILL.md
-    aqua                 # bash wrapper:uname → 转发到对应二进制
     bin/aqua-mac-arm64
     bin/aqua-win-x64.exe
   ```
-- wrapper 见 prd D2;win 侧依赖 git-bash 的 `uname`。备选:无 wrapper,SKILL 指示 AI 按 OS 选 `bin/` 下二进制。
+- 无 wrapper:AI 按自身 OS 直接调 `bin/` 下二进制(SKILL.md 说明),消除 windows 的 bash 依赖。
 
 ## 6. SKILL.md 骨架(D8)
 

@@ -20,7 +20,7 @@
 ## Decisions
 
 - **D1 分发**:CLI 二进制放进消费项目 `.claude/skills/aqua/` 随 SKILL 一起 git 管理。零安装、clone 即用、版本天然对齐。代价:二进制入 git(可接受)。
-- **D2 平台**:团队 Windows + Mac(可能含 Intel Mac),无 Linux → `mac-arm64` + `win-x64`(视情况加 `mac-x64`)。多平台入口用 wrapper(bash 按 `uname` 转发),AI 只调 `aqua`;备选 SKILL 里让 AI 按 OS 选。实现期细节。
+- **D2 平台**:团队 Windows + Mac(可能含 Intel Mac),无 Linux → `mac-arm64` + `win-x64`(视情况加 `mac-x64`)。**无统一 wrapper**,AI 按自身 OS 直接调 `bin/` 下对应二进制(SKILL.md 说明),消除 windows 的 bash 依赖。
 - **D3 语言**:Rust,复用 aqua-core,挂 `release.yml` matrix。已确认(Python 重写因双源漂移 + Rust 跨平台 CI 已就绪而否决)。
 - **D4 不写入**:CLI 只读 + 生成,全部无副作用。AI 设计表(直接编辑 `.aqua` JSON)+ `validate` 归后续。
 - **D5 测试架构(方案 A)**:frs 测试建 H2 内存表由 **frs 的 Java `DbTest`/`MemoryDba` 自行实现**(读 `.aqua` → H2 DDL + `.data` → insert)。跨语言复用三条路(spawn 进程/平台耦合、预生成数据同步隐患、Java 重写)均有代价;H2 转换稳定 + H2 是 Java 生态原生(Hibernate H2Dialect)→ Java 重写代价最低。**属 frs 后续任务。**

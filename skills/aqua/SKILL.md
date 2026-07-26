@@ -9,6 +9,12 @@ aqua 管理项目所有数据表结构(前后端字段契约的**单源**)。表
 
 > `.aqua` 文件在项目中的**存放位置由本项目自己的规范决定**(见项目 spec),本 skill 不假定路径:所有命令的 `<file.aqua>` 由你按项目规范填入。
 
+## 调用方式
+
+本 skill 的二进制在 `bin/` 下,按你的平台选一个,下文命令用 `aqua` 代指:
+- **mac**:`./bin/aqua-mac-arm64`(Apple Silicon)/ `./bin/aqua-mac-x64`(Intel)
+- **windows**:`.\bin\aqua-win-x64.exe`
+
 ## schema 速览(够读懂 `show` 输出)
 
 - **逻辑类型**(9 种):`VARCHAR` `CLOB` `TINYINT` `INT` `LONG` `DECIMAL` `DATE` `DATETIME` `BLOB`

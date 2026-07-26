@@ -36,7 +36,7 @@ src/
 ## 分发
 
 二进制随 `release.yml` 的 mac/win matrix 编译,命名为 `aqua-mac-arm64` / `aqua-win-x64.exe`,
-随 `skills/aqua/`(wrapper + SKILL.md,源码在此)一起放进消费项目的 `.claude/skills/aqua/`。
+随 `skills/aqua/`(SKILL.md,源码在此;无 wrapper,AI 按平台调 `bin/` 下二进制)一起放进消费项目的 `.claude/skills/aqua/`。
 
 ## Quality Check
 
