@@ -115,6 +115,8 @@ packages:
     path: app
   aqua-core:
     path: crates/aqua-core
+  aqua-cli:
+    path: crates/aqua-cli
   aqua:
     path: src-tauri
 default_package: @aqua/app

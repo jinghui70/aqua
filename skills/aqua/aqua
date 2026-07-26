@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# aqua CLI 统一入口 —— 按平台转发到 bin/ 下对应二进制。
+# 随本 skill 一起放进消费项目的 .claude/skills/aqua/;AI 只需调用 `aqua ...`。
+# Windows 侧依赖 git-bash 的 uname(用 Claude Code 的 Windows 环境通常已装 git)。
+set -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+case "$(uname -s)-$(uname -m)" in
+  Darwin-arm64)               BIN="$DIR/bin/aqua-mac-arm64" ;;
+  Darwin-x86_64)              BIN="$DIR/bin/aqua-mac-x64" ;;
+  MINGW*|MSYS*|CYGWIN*)       BIN="$DIR/bin/aqua-win-x64.exe" ;;
+  *) echo "aqua: 不支持的平台 $(uname -s)-$(uname -m)" >&2; exit 1 ;;
+esac
+[ -x "$BIN" ] || { echo "aqua: 缺少二进制 $BIN(从 aqua release 下载对应平台文件放入 bin/)" >&2; exit 1; }
+exec "$BIN" "$@"
