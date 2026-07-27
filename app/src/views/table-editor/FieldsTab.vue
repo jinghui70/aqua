@@ -100,6 +100,24 @@ function addField() {
   });
 }
 
+// 切换类型时清理不适用属性(§3.1):VARCHAR 仅 length,DECIMAL 仅 precision/scale,其余无
+function onDataTypeChange(field: Field) {
+  switch (field.dataType) {
+    case DataType.Varchar:
+      field.precision = undefined;
+      field.scale = undefined;
+      break;
+    case DataType.Decimal:
+      field.length = undefined;
+      break;
+    default:
+      field.length = undefined;
+      field.precision = undefined;
+      field.scale = undefined;
+      break;
+  }
+}
+
 // inline 改 code 前 focus 缓存旧值,用于级联索引
 const oldCodeOnFocus = ref("");
 function onCodeFocus(field: Field) {
@@ -243,7 +261,7 @@ function deleteSelected() {
         <template #default="{ row }">
           <span v-if="store.readOnly" class="text-13">{{ row.dataType }}<template v-if="row.dataType === 'VARCHAR' && row.length">({{ row.length }})</template><template v-if="row.dataType === 'DECIMAL' && row.precision">({{ row.precision }},{{ row.scale ?? 0 }})</template></span>
           <div v-else class="flex items-center gap-4">
-            <el-select v-model="row.dataType" size="small" style="width: 100px">
+            <el-select v-model="row.dataType" size="small" style="width: 100px" @change="onDataTypeChange(row)">
               <el-option v-for="dt in dataTypes" :key="dt" :label="dt" :value="dt" />
             </el-select>
             <el-input-number
