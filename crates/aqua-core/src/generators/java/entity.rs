@@ -2,20 +2,14 @@
 
 use super::naming::{snake_to_camel, snake_to_pascal};
 use super::types::{get_java_import, map_java_type, JavaOptions};
-use crate::schema::{DataType, Field, Project, Table};
+use crate::schema::{DataType, Field, Table};
 use std::collections::HashSet;
 
 /// 生成 Java 实体类。
 pub fn generate_entity_class(
-    project: &Project,
     table: &Table,
     options: &JavaOptions,
 ) -> Result<String, String> {
-    let package = options
-        .package
-        .clone()
-        .unwrap_or_else(|| default_package(project, table));
-
     let class_name = options
         .class_name
         .clone()
@@ -27,9 +21,11 @@ pub fn generate_entity_class(
 
     let mut output = Vec::new();
 
-    // Package 声明
-    output.push(format!("package {};", package));
-    output.push(String::new());
+    // Package 声明(仅当指定了 package 时生成)
+    if let Some(ref package) = options.package {
+        output.push(format!("package {};", package));
+        output.push(String::new());
+    }
 
     // Import 收集
     let imports = collect_imports(table, options, need_table_anno);
@@ -78,37 +74,53 @@ fn javadoc(name: &str, comment: &Option<String>, indent: &str) -> String {
     }
 }
 
-/// 默认 package: {basePackage}.{group}.entity
-fn default_package(project: &Project, table: &Table) -> String {
-    format!(
-        "{}.{}.entity",
-        project.base_package,
-        table.group.to_lowercase()
-    )
-}
-
-/// 收集需要的 imports。
+/// 收集需要的 imports(仅 import 实际用到的注解)。
 fn collect_imports(table: &Table, options: &JavaOptions, need_table_anno: bool) -> Vec<String> {
+    const ANNO: &str = "io.github.jinghui70.rainbow.dbaccess.annotation";
     let mut imports = HashSet::new();
 
-    // rainbow-dbaccess 注解(@Table 仅在需要时 import)
+    // @Table(仅在类名不匹配表名时)
     if need_table_anno {
-        imports.insert("io.github.rainbow.dbaccess.annotation.Table".to_string());
+        imports.insert(format!("{ANNO}.Table"));
     }
-    imports.insert("io.github.rainbow.dbaccess.annotation.Id".to_string());
-    imports.insert("io.github.rainbow.dbaccess.annotation.Column".to_string());
+
+    // 扫描字段,按实际使用收集注解 import
+    let mut use_id = false;
+    let mut use_column = false;
+    let mut use_generated_value = false;
+    for field in &table.fields {
+        if field.is_key.unwrap_or(false) {
+            use_id = true;
+        }
+        if field.auto_generate.is_some() {
+            use_generated_value = true;
+        }
+        // @Column: 非标准命名 or Clob/Blob(sqlType=Types.BLOB)
+        let expected_prop = snake_to_camel(&field.code);
+        if field.prop != expected_prop || matches!(field.data_type, DataType::Clob | DataType::Blob) {
+            use_column = true;
+        }
+    }
+    if use_id {
+        imports.insert(format!("{ANNO}.Id"));
+    }
+    if use_column {
+        imports.insert(format!("{ANNO}.Column"));
+    }
+    if use_generated_value {
+        imports.insert(format!("{ANNO}.GeneratedValue"));
+    }
 
     // Lombok
     if options.use_lombok {
         imports.insert("lombok.Data".to_string());
     }
 
-    // 字段类型
+    // 字段类型 + Clob/Blob 的 java.sql.Types
     for field in &table.fields {
         if let Some(import) = get_java_import(field.data_type) {
             imports.insert(import.to_string());
         }
-        // Clob/Blob 字段需 @Column(sqlType=Types.BLOB)
         if matches!(field.data_type, DataType::Clob | DataType::Blob) {
             imports.insert("java.sql.Types".to_string());
         }

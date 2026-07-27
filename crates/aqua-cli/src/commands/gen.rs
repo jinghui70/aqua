@@ -9,9 +9,16 @@ use aqua_core::generators::frontend_json::{generate_frontend_json, FrontendJsonO
 use aqua_core::generators::java::{generate_java_entity, JavaOptions};
 
 /// 生成 dba 规范 entity Java。
-pub fn entity(file: &str, table: &str) -> Result<()> {
+/// package: None -> 不生成 package 声明;Some -> 全路径包名
+/// class_name: None -> PascalCase(table.code);Some -> 自定义类名
+pub fn entity(file: &str, table: &str, package: Option<String>, class_name: Option<String>) -> Result<()> {
     let project = load(file)?;
-    let code = generate_java_entity(&project, table, &JavaOptions::default())
+    let options = JavaOptions {
+        use_lombok: true,
+        package,
+        class_name,
+    };
+    let code = generate_java_entity(&project, table, &options)
         .map_err(|e| anyhow!("生成 entity 失败: {e}"))?;
     print!("{code}");
     Ok(())

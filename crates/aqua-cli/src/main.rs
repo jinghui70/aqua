@@ -50,6 +50,12 @@ enum GenWhat {
     Entity {
         /// 表 code
         table: String,
+        /// 自定义包名(默认 {basePackage}.{group}.entity)
+        #[arg(long)]
+        package: Option<String>,
+        /// 自定义类名(默认 table.code 的 PascalCase)
+        #[arg(long = "class-name")]
+        class_name: Option<String>,
     },
     /// json-ui DataModel JSON
     Datamodel {
@@ -73,7 +79,9 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         Command::Tables { group } => commands::query::tables(file, group.as_deref()),
         Command::Show { table } => commands::query::show(file, &table),
         Command::Gen { what } => match what {
-            GenWhat::Entity { table } => commands::gen::entity(file, &table),
+            GenWhat::Entity { table, package, class_name } => {
+                commands::gen::entity(file, &table, package, class_name)
+            }
             GenWhat::Datamodel { table } => commands::gen::datamodel(file, &table),
         },
     }

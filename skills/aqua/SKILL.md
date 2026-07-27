@@ -27,13 +27,13 @@ aqua 管理项目所有数据表结构(前后端字段契约的**单源**)。表
 
 ```
 aqua-cli <file.aqua> groups                    # 列所有表组:code  name
-aqua-cli <file.aqua> tables [--group <code>]   # 列表(可按组过滤):code  name  (group)
+aqua-cli <file.aqua> tables [--group <code>]   # 列表(可按组过滤):code  name
 aqua-cli <file.aqua> show <table>              # 单表结构(JSON:字段 + 索引)
-aqua-cli <file.aqua> gen entity <table>     # → stdout:dba 规范 entity Java
+aqua-cli <file.aqua> gen entity <table> [--package <包名>] [--class-name <类名>]  # → stdout:dba 规范 entity Java
 aqua-cli <file.aqua> gen datamodel <table>     # → stdout:json-ui DataModel JSON
 ```
 
-`<table>` 用表 code(如 `SYS_USER`)。生成的包名由 `.aqua` 的 basePackage + 分组自动决定,无需传入。
+`<table>` 用表 code(如 `SYS_USER`)。`gen entity`:`--package` 不传则不生成 package 声明(你自行补),传则用全路径包名(如 `cn.com.yusys.frs.sys.user.entity`);`--class-name` 不传则默认 PascalCase(table.code)。
 
 ## 典型用法
 

@@ -15,16 +15,20 @@ fn load_fixture(name: &str) -> aqua_core::schema::Project {
 #[test]
 fn test_generate_java_entity_with_lombok() {
     let project = load_fixture("valid-full.json");
+    let options = JavaOptions {
+        package: Some("com.example.core.entity".to_string()),
+        ..Default::default()
+    };
     let java_code =
-        generate_java_entity(&project, "SYS_USER", &JavaOptions::default()).expect("生成失败");
+        generate_java_entity(&project, "SYS_USER", &options).expect("生成失败");
 
     println!("\n=== Generated Java (Lombok) ===\n{}\n", java_code);
 
     // 验证 package
-    assert!(java_code.contains("package"), "应包含 package 声明");
+    assert!(java_code.contains("package com.example.core.entity;"), "应包含 package 声明");
 
     // 验证 import(默认类名 SysUser 能反推 SYS_USER → 省略 @Table,故不 import Table)
-    assert!(!java_code.contains("import io.github.rainbow.dbaccess.annotation.Table"),
+    assert!(!java_code.contains("io.github.jinghui70.rainbow.dbaccess.annotation.Table"),
         "默认类名省略 @Table,不应 import Table");
     assert!(java_code.contains("import lombok.Data"));
     assert!(
@@ -105,7 +109,7 @@ fn test_custom_package_and_class_name() {
     assert!(java_code.contains("public class User {"));
     // 自定义类名 User 不能反推 SYS_USER → 必须写 @Table + import
     assert!(java_code.contains("@Table(name = \"SYS_USER\")"), "自定义类名应写 @Table");
-    assert!(java_code.contains("import io.github.rainbow.dbaccess.annotation.Table"),
+    assert!(java_code.contains("io.github.jinghui70.rainbow.dbaccess.annotation.Table"),
         "写 @Table 时应 import Table");
 }
 

@@ -22,5 +22,5 @@ pub fn generate_java_entity(
         .find(|t| t.code == table_code)
         .ok_or_else(|| format!("Table not found: {}", table_code))?;
 
-    entity::generate_entity_class(project, table, options)
+    entity::generate_entity_class(table, options)
 }
