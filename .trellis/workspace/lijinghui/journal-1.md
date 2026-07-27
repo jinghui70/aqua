@@ -1000,3 +1000,29 @@ AutoGenStrategyDefine(code/name/paramDesc) + Project.autoGenStrategies。内置 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 27: 字段拷贝/粘贴/删除 + 表编辑器与代码生成多项修复
+
+**Date**: 2026-07-27
+**Task**: 字段拷贝/粘贴/删除 + 表编辑器与代码生成多项修复
+**Branch**: `main`
+
+### Summary
+
+围绕表编辑器与代码生成做了一批修复增强:规范类型属性全链路(frontend_json/validate/import)+CLOB 注解修正;DDL 页签加'先删后建'开关;keep-alive 关闭再打开为新状态;JavaTab 包名输入改造;task.py 兼容 Python 3.9;字段拷贝/粘贴/删除(全局剪贴板+原子冲突检查+操作列精简)。新增 spec app/frontend/icons.md(unocss 图标规范)。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ea7f055` | (see git log) |
+| `0d7bd0d` | (see git log) |
+| `8c5081c` | (see git log) |
+| `d6b8a67` | (see git log) |
+| `989856b` | (see git log) |
+| `1bb4aa1` | (see git log) |
+
+### Status
+
+[OK] **Completed**
