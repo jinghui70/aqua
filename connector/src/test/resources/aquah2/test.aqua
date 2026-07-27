@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0",
+  "basePackage": "com.example",
+  "groups": [{"code": "core", "name": "核心"}],
+  "tables": [
+    {
+      "code": "SYS_USER",
+      "name": "用户",
+      "group": "core",
+      "fields": [
+        {"code": "ID", "prop": "id", "name": "主键", "dataType": "LONG", "isKey": true, "notNull": true},
+        {"code": "NAME", "prop": "name", "name": "名称", "dataType": "VARCHAR", "length": 64, "notNull": true, "defaultValue": "'anon'"},
+        {"code": "AGE", "prop": "age", "name": "年龄", "dataType": "INT"},
+        {"code": "AMOUNT", "prop": "amount", "name": "金额", "dataType": "DECIMAL", "precision": 12, "scale": 2},
+        {"code": "WEIGHT", "prop": "weight", "name": "重量", "dataType": "DOUBLE"},
+        {"code": "GENDER", "prop": "gender", "name": "性别", "dataType": "TINYINT"},
+        {"code": "BIRTH", "prop": "birth", "name": "生日", "dataType": "DATE"},
+        {"code": "CREATE_TIME", "prop": "createTime", "name": "创建时间", "dataType": "DATETIME", "defaultValue": "CURRENT_TIMESTAMP"},
+        {"code": "BIO", "prop": "bio", "name": "简介", "dataType": "CLOB"},
+        {"code": "AVATAR", "prop": "avatar", "name": "头像", "dataType": "BLOB"}
+      ],
+      "indexes": [
+        {"name": "IDX_USER_NAME", "fields": [{"code": "NAME", "direction": "ASC"}], "unique": true}
+      ]
+    },
+    {
+      "code": "LOG",
+      "name": "日志",
+      "group": "core",
+      "fields": [
+        {"code": "ID", "prop": "id", "name": "主键", "dataType": "LONG", "isKey": true},
+        {"code": "MSG", "prop": "msg", "name": "消息", "dataType": "VARCHAR", "length": 200}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+{"table":"SYS_USER","row":{"ID":1,"NAME":"张三","AGE":20,"AMOUNT":99.5,"WEIGHT":70.2,"GENDER":1,"BIRTH":"2000-01-01","CREATE_TIME":"2024-01-01 10:00:00","BIO":"hello","AVATAR":null}}
+{"table":"LOG","row":{"ID":1,"MSG":"test"}}
