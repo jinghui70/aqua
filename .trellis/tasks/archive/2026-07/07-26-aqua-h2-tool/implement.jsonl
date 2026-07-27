@@ -1,0 +1,1 @@
+{"file": ".trellis/spec/connector/backend/index.md", "reason": "connector 模块规范:AquaH2 放 connector test,复用 Maven/jackson/h2 编译验证"}

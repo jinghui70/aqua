@@ -13,7 +13,7 @@
   | **AquaH2**(底层) | 解析 .aqua/.data,生成 H2 SQL | **aqua**(copy 源码) | 仅 Jackson |
   | **DbaBuilder**(中间层) | IO(classpath 找文件)+ 调 AquaH2 + 建 MemoryDba | frs common-test | Spring + H2 + dba |
   | **Test**(消费层) | builder 调用 | frs 业务测试 | DbaBuilder |
-- **aqua-core H2 映射已确认完整**:`generators/ddl/types.rs:map_h2` 9 种逻辑类型全覆盖,Java 照搬。
+- **aqua-core H2 映射已确认完整**:`generators/ddl/types.rs:map_h2` 10 种逻辑类型全覆盖,Java 照搬。
 - **frs common-test 现状**:`BaseTest`/`DbaConfig` 空壳;resources 有 `frs.aqua` + `frs.test.data`;命名约定 `<aquaFile>.aqua` / `<aquaFile>.<dataset>.data`。
 
 ## Decisions
@@ -21,7 +21,7 @@
 - **D1 归属与分发**:AquaH2 放 aqua 项目,随 schema 进化;**不分发 jar**,消费项目 copy 源码。单源维护 + 零分发成本。
 - **D2 纯逻辑**:AquaH2 不碰 IO、不绑 Spring、不建库。只接 String/InputStream(内容),出 SQL String。建库是 DbaBuilder 的活。
 - **D3 builder 接口**:构造绑主文件;dataset/table/group fluent 配置;**唯一 `export()` 出口**。table/group 都空 = 全部表;可混合(累加,export 时合并去重)。
-- **D4 H2 映射照搬 `map_h2`**:Varchar->VARCHAR(n) 默认 255、Clob->CLOB、Tinyint->TINYINT、Int->INT、Long->BIGINT、Decimal->DECIMAL(p,s)、Date->DATE、Datetime->TIMESTAMP、Blob->BLOB。
+- **D4 H2 映射照搬 `map_h2`**:Varchar->VARCHAR(n) 默认 255、Clob->CLOB、Tinyint->TINYINT、Int->INT、Long->BIGINT、Decimal->DECIMAL(p,s)、Date->DATE、Datetime->TIMESTAMP、Blob->BLOB、Double->DOUBLE。
 - **D5 依赖**:仅 Jackson(JDK 17 record 定义 POJO)。不依赖 Spring/H2 JDBC/rainbow-dbaccess。
 
 ## Interface
