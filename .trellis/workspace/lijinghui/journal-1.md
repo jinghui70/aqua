@@ -1026,3 +1026,25 @@ AutoGenStrategyDefine(code/name/paramDesc) + Project.autoGenStrategies。内置 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 28: AquaH2 测试工具类 + 字段类型切换清理
+
+**Date**: 2026-07-27
+**Task**: AquaH2 测试工具类 + 字段类型切换清理
+**Branch**: `main`
+
+### Summary
+
+07-26 AquaH2: Java 单文件(record POJO+Jackson)读 .aqua/.data 生成 H2 DDL+INSERT,供 frs common-test copy 源码建内存表。10 种类型映射照搬 map_h2、table/group 过滤合并去重、DEFAULT 智能加引号(裸字符串)、INSERT 字面量转义。脱敏测试数据(frs 真实 .aqua 含公司信息不提交)。另修字段类型切换残留 length/precision/scale(07-27 衍生 bug)。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `928e663` | (see git log) |
+| `b4b15d9` | (see git log) |
+
+### Status
+
+[OK] **Completed**

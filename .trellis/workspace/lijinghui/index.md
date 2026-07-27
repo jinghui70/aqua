@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 27
+- **Total Sessions**: 28
 - **Last Active**: 2026-07-27
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1028 | Active |
+| `journal-1.md` | ~1050 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 28 | 2026-07-27 | AquaH2 测试工具类 + 字段类型切换清理 | `928e663`, `b4b15d9` | `main` |
 | 27 | 2026-07-27 | 字段拷贝/粘贴/删除 + 表编辑器与代码生成多项修复 | `ea7f055`, `0d7bd0d`, `8c5081c`, `d6b8a67`, `989856b`, `1bb4aa1` | `main` |
 | 26 | 2026-07-25 | 数据库导入批量化 + native/JDBC 元数据修复 | `4dcc21c`, `0e08fbc`, `de71ff3`, `56ca391` | `main` |
 | 25 | 2026-07-24 | 主工作界面工具栏重构 | `86220b0`, `51873e0`, `86202c2`, `5a6b901` | `main` |
