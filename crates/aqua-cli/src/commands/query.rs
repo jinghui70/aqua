@@ -21,7 +21,7 @@ pub fn tables(file: &str, group: Option<&str>) -> Result<()> {
                 continue;
             }
         }
-        println!("{}\t{}\t({})", t.code, t.name, t.group);
+        println!("{}\t{}", t.code, t.name);
     }
     Ok(())
 }
