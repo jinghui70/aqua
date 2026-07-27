@@ -57,6 +57,22 @@ pub fn show(file: &str, table_code: &str) -> Result<()> {
                     obj.remove("scale");
                 }
             }
+            // defaultValue: 数字类型转 JSON number(存储是字符串,显示应类型正确)
+            if matches!(dt.as_str(), "TINYINT" | "INT" | "LONG" | "DECIMAL") {
+                if let Some(obj) = field.as_object_mut() {
+                    let default_val = obj
+                        .get("defaultValue")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_owned());
+                    if let Some(default) = default_val {
+                        if let Ok(n) = default.parse::<i64>() {
+                            obj.insert("defaultValue".to_string(), serde_json::Value::from(n));
+                        } else if let Ok(n) = default.parse::<f64>() {
+                            obj.insert("defaultValue".to_string(), serde_json::Value::from(n));
+                        }
+                    }
+                }
+            }
         }
     }
     println!("{}", serde_json::to_string_pretty(&value)?);
