@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/app/frontend/quality-guidelines.md", "reason": "前端质量基线校验"}
+{"file": ".trellis/spec/app/frontend/component-guidelines.md", "reason": "组件规范校验:props 操作、按钮可用性"}
