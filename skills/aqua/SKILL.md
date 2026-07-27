@@ -26,21 +26,21 @@ aqua 管理项目所有数据表结构(前后端字段契约的**单源**)。表
 所有命令末尾传 `.aqua` 文件路径。查询类输出可读文本,`gen` 类把产物打到 **stdout**(你再落到项目规定的位置)。
 
 ```
-aqua-cli groups <file.aqua>                    # 列所有表组:code  name
-aqua-cli tables [--group <code>] <file.aqua>   # 列表(可按组过滤):code  name  (group)
-aqua-cli show <table> <file.aqua>              # 单表结构:字段 + 索引
-aqua-cli gen entity    <table> <file.aqua>     # → stdout:dba 规范 entity Java
-aqua-cli gen datamodel <table> <file.aqua>     # → stdout:json-ui DataModel JSON
+aqua-cli <file.aqua> groups                    # 列所有表组:code  name
+aqua-cli <file.aqua> tables [--group <code>]   # 列表(可按组过滤):code  name  (group)
+aqua-cli <file.aqua> show <table>              # 单表结构(JSON:字段 + 索引)
+aqua-cli <file.aqua> gen entity <table>     # → stdout:dba 规范 entity Java
+aqua-cli <file.aqua> gen datamodel <table>     # → stdout:json-ui DataModel JSON
 ```
 
 `<table>` 用表 code(如 `SYS_USER`)。生成的包名由 `.aqua` 的 basePackage + 分组自动决定,无需传入。
 
 ## 典型用法
 
-- **不知项目有哪些模块** → `aqua-cli groups <file.aqua>`
-- **看某模块下有哪些表** → `aqua-cli tables --group sys <file.aqua>`
-- **写业务代码要了解某表字段** → `aqua-cli show SYS_USER <file.aqua>`(比读整份 JSON 省 token)
-- **要 entity / DataModel** → `aqua-cli gen entity SYS_USER <file.aqua>` / `aqua-cli gen datamodel SYS_USER <file.aqua>`,把 stdout 产物写到项目规范的位置(entity 进对应功能包、DataModel 进前端页面目录)
+- **不知项目有哪些模块** → `aqua-cli <file.aqua> groups`
+- **看某模块下有哪些表** → `aqua-cli <file.aqua> tables --group sys`
+- **写业务代码要了解某表字段** → `aqua-cli <file.aqua> show SYS_USER`(JSON 输出,比读整份 .aqua 省 token)
+- **要 entity / DataModel** → `aqua-cli <file.aqua> gen entity SYS_USER` / `aqua-cli <file.aqua> gen datamodel SYS_USER`,把 stdout 产物写到项目规范的位置(entity 进对应功能包、DataModel 进前端页面目录)
 
 ## 说明
 

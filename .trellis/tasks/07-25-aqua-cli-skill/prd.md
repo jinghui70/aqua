@@ -31,11 +31,11 @@
 ## CLI Commands（本期)
 
 ```
-aqua-cli groups <file.aqua>                    # 列所有表组(code + name)
-aqua-cli tables [--group <code>] <file.aqua>   # 列表(可按组过滤);code + name(+ 所属组)
-aqua-cli show   <table> <file.aqua>            # 单表结构:字段(code/name/逻辑类型/长度/主键/notNull/bizType)+ 索引
-aqua-cli gen entity    <table> <file.aqua>     # → stdout: dba 规范 entity Java
-aqua-cli gen datamodel <table> <file.aqua>     # → stdout: json-ui DataModel JSON
+aqua-cli <file.aqua> groups                    # 列所有表组(code + name)
+aqua-cli <file.aqua> tables [--group <code>]   # 列表(可按组过滤);code + name(+ 所属组)
+aqua-cli <file.aqua> show   <table>            # 单表结构(JSON:字段/索引,类型感知省略无意义 length)
+aqua-cli <file.aqua> gen entity <table>     # → stdout: dba 规范 entity Java
+aqua-cli <file.aqua> gen datamodel <table>     # → stdout: json-ui DataModel JSON
 ```
 
 命令按三层(组→表→字段)拆分命名,不用重载的 `list`。`<file.aqua>` 位置参数由 AI 传入。参数最终形态在 design.md 敲定。

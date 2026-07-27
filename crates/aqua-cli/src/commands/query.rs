@@ -1,8 +1,7 @@
-//! 查询命令:groups / tables / show —— 省 token 地读结构,输出可读文本。
+//! 查询命令:groups / tables / show -- 省 token 地读结构。
 
 use crate::load::load;
 use anyhow::{anyhow, Result};
-use aqua_core::schema::{Field, Table};
 
 /// 列出所有表组。
 pub fn groups(file: &str) -> Result<()> {
@@ -27,7 +26,11 @@ pub fn tables(file: &str, group: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-/// 显示单表结构(字段 + 索引)。
+/// 显示单表结构(JSON)。
+///
+/// 清理:仅 VARCHAR 显示 length,仅 DECIMAL 显示 precision/scale;
+/// 其余类型(TINYINT/INT/LONG/DATE/DATETIME/CLOB/BLOB)去掉无意义的 length。
+/// None 字段(bizType 等)由 serde skip_serializing_if 自动省略。
 pub fn show(file: &str, table_code: &str) -> Result<()> {
     let project = load(file)?;
     let table = project
@@ -35,63 +38,27 @@ pub fn show(file: &str, table_code: &str) -> Result<()> {
         .iter()
         .find(|t| t.code == table_code)
         .ok_or_else(|| anyhow!("表不存在: {table_code}"))?;
-    print_table(table);
-    Ok(())
-}
-
-fn print_table(t: &Table) {
-    println!("Table: {} ({})  group={}", t.code, t.name, t.group);
-    if let Some(c) = &t.comment {
-        if !c.is_empty() {
-            println!("  comment: {c}");
-        }
-    }
-    println!("Fields:");
-    for f in &t.fields {
-        let key = if f.is_key.unwrap_or(false) { "PK" } else { "" };
-        let nn = if f.not_null.unwrap_or(false) {
-            "notNull"
-        } else {
-            ""
-        };
-        let biz = f.biz_type.as_deref().unwrap_or("-");
-        println!(
-            "  {:<22} {:<24} {:<14} {:<3} {:<8} bizType={}",
-            f.code,
-            f.name,
-            fmt_type(f),
-            key,
-            nn,
-            biz
-        );
-    }
-    match &t.indexes {
-        Some(idxs) if !idxs.is_empty() => {
-            println!("Indexes:");
-            for idx in idxs {
-                let name = idx.name.as_deref().unwrap_or("(unnamed)");
-                let cols: Vec<String> = idx
-                    .fields
-                    .iter()
-                    .map(|f| format!("{} {}", f.code, f.direction.as_str()))
-                    .collect();
-                let uniq = if idx.unique { "[unique] " } else { "" };
-                println!("  {uniq}{name}: {}", cols.join(", "));
+    let mut value = serde_json::to_value(table)?;
+    if let Some(fields) = value.get_mut("fields").and_then(|f| f.as_array_mut()) {
+        for field in fields {
+            let dt = field
+                .get("dataType")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_owned();
+            if dt != "VARCHAR" {
+                if let Some(obj) = field.as_object_mut() {
+                    obj.remove("length");
+                }
+            }
+            if dt != "DECIMAL" {
+                if let Some(obj) = field.as_object_mut() {
+                    obj.remove("precision");
+                    obj.remove("scale");
+                }
             }
         }
-        _ => {}
     }
-}
-
-/// 逻辑类型显示为 UPPERCASE(对齐 .aqua 里的原值),带长度/精度。
-fn fmt_type(f: &Field) -> String {
-    let base = format!("{:?}", f.data_type).to_uppercase();
-    if let Some(l) = f.length {
-        return format!("{base}({l})");
-    }
-    match (f.precision, f.scale) {
-        (Some(p), Some(s)) => format!("{base}({p},{s})"),
-        (Some(p), None) => format!("{base}({p})"),
-        _ => base,
-    }
+    println!("{}", serde_json::to_string_pretty(&value)?);
+    Ok(())
 }

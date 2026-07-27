@@ -17,7 +17,7 @@
 6. **clap 顶层**:`main.rs` 装配子命令 + `--help`;统一退出码。
    - 验证:`aqua --help` / 各子命令 `--help` 可读;错误路径(表不存在、文件不存在)给清晰 stderr。
 7. **分发**:写 `skills/aqua/SKILL.md`(含按平台选二进制的说明);`release.yml` matrix 加 `cargo build --release -p aqua-cli` + 上传二进制。
-   - 验证:本地 `./target/debug/aqua-cli-cli groups frs.aqua` 走通;release.yml 语法 `act` 或 push tag 前 review。
+   - 验证:本地 `./target/debug/aqua-cli groups frs.aqua` 走通;release.yml 语法 `act` 或 push tag 前 review。
 8. **SKILL.md**:按 design §6 写;不含文件路径;命令示例用占位 `<file.aqua>`。
    - 验证:通读,确认与 frs spec 无重复、无硬编码路径。
 
@@ -26,11 +26,11 @@
 ```bash
 FIXTURE=~/work/frs/backend/common-test/src/main/resources/frs.aqua
 cargo build -p aqua-cli
-./target/debug/aqua-cli-cli groups "$FIXTURE"
-./target/debug/aqua-cli-cli tables --group <g> "$FIXTURE"
-./target/debug/aqua-cli-cli show <table> "$FIXTURE"
-./target/debug/aqua-cli-cli gen entity <table> "$FIXTURE"
-./target/debug/aqua-cli-cli gen datamodel <table> "$FIXTURE"
+./target/debug/aqua-cli "$FIXTURE" groups
+./target/debug/aqua-cli "$FIXTURE" tables --group <g>
+./target/debug/aqua-cli "$FIXTURE" show <table>
+./target/debug/aqua-cli "$FIXTURE" gen entity <table>
+./target/debug/aqua-cli "$FIXTURE" gen datamodel <table>
 cargo test -p aqua-core   # 确认未回归(CLI 不改 core)
 ```
 
