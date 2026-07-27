@@ -1,7 +1,7 @@
 //! 生成命令:gen entity / gen datamodel —— 复用 aqua-core 生成器,产物打到 stdout。
 //!
 //! 产物放哪由消费项目的目录规范决定(只有 AI 知道),故 CLI 只输出、不落盘。
-//! 包名由生成器从 .aqua 的 basePackage + 分组自算,不需传入。
+//! package 参数化:不传 -> 类体片段;传 --package -> 完整文件(含 package + @Table)。
 
 use crate::load::load;
 use anyhow::{anyhow, Result};
