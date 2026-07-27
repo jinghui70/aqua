@@ -15,6 +15,7 @@ const store = useProjectStore();
 const dbStore = useDatabaseStore();
 
 const dialect = ref("mysql");
+const dropIfExist = ref(true);
 const preview = ref("");
 
 async function refresh() {
@@ -22,14 +23,15 @@ async function refresh() {
   try {
     preview.value = await tauri.generateDdl(store.currentProject, dialect.value, {
       tables: [props.tableCode],
+      dropIfExist: dropIfExist.value,
     });
   } catch {
     /* 已提示 */
   }
 }
 
-// 方言 / 表变化实时刷新
-watch([dialect, () => props.tableCode], refresh, { immediate: true });
+// 方言 / dropIfExist / 表变化实时刷新
+watch([dialect, dropIfExist, () => props.tableCode], refresh, { immediate: true });
 // 切回本 tab 时重新生成,同步字段/索引的改动
 watch(() => props.active, (a) => a && refresh());
 
@@ -62,6 +64,7 @@ async function saveFile() {
           <el-option v-for="d in dbStore.generatable" :key="d.name" :label="d.label" :value="d.name" />
         </el-select>
       </span>
+      <el-checkbox v-model="dropIfExist" class="text-13">先删后建</el-checkbox>
       <div class="flex-1" />
       <el-button size="small" @click="copy">复制</el-button>
       <el-button size="small" type="primary" @click="saveFile">保存</el-button>

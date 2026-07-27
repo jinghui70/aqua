@@ -96,7 +96,7 @@ watch([selectedTables, dropIfExist, dialect, datasetPath], () => {
         <el-button size="small" style="margin-left: 16px" @click="tableSelectVisible = true">
           选表{{ selectedTables.length ? ` (${selectedTables.length})` : "" }}
         </el-button>
-        <el-checkbox v-model="dropIfExist" style="margin-left: 16px">删表重建</el-checkbox>
+        <el-checkbox v-model="dropIfExist" style="margin-left: 16px">先删后建</el-checkbox>
         <span class="text-13" style="margin-left: 16px">数据集</span>
         <el-select v-model="datasetPath" size="small" clearable placeholder="不追加 INSERT" style="width: 170px; margin-left: 4px">
           <el-option v-for="d in datasets" :key="d.path" :label="d.name" :value="d.path" />
