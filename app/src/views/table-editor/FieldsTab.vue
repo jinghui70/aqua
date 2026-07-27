@@ -5,12 +5,14 @@ import { ElMessage } from "element-plus";
 import Sortable from "sortablejs";
 import { DataType, type Field } from "@/types/schema";
 import { useProjectStore } from "@/stores/project";
+import { useClipboardStore } from "@/stores/clipboard";
 import { useBuiltinStore } from "@/stores/builtin";
 import FieldDetailDialog from "./FieldDetailDialog.vue";
 
 const props = defineProps<{ fields: Field[]; tableId: string }>();
 
 const store = useProjectStore();
+const clipboard = useClipboardStore();
 const builtin = useBuiltinStore();
 
 // 稳定 row-key: 给每个 field 对象分配递增 id(不污染 schema),
@@ -98,12 +100,6 @@ function addField() {
   });
 }
 
-function removeField(idx: number) {
-  const code = props.fields[idx]?.code;
-  props.fields.splice(idx, 1);
-  if (code) store.removeFieldFromIndexes(props.tableId, code);
-}
-
 // inline 改 code 前 focus 缓存旧值,用于级联索引
 const oldCodeOnFocus = ref("");
 function onCodeFocus(field: Field) {
@@ -136,25 +132,82 @@ function onCodeChange(field: Field) {
   }
 }
 
-function copyField(idx: number) {
-  const src = props.fields[idx];
-  const copy: Field = JSON.parse(JSON.stringify(src));
-  copy.code = src.code + "_COPY";
-  copy.prop = src.prop + "Copy";
-  props.fields.splice(idx + 1, 0, copy);
-  ElMessage.success("已复制字段");
+// 多选选中(row 对象引用数组,删除时按引用定位 idx)
+const selected = ref<Field[]>([]);
+function onSelectionChange(rows: Field[]) {
+  selected.value = rows;
+}
+
+const canCopy = computed(() => selected.value.length > 0);
+const canPaste = computed(() => clipboard.has);
+const canDelete = computed(() => selected.value.length > 0);
+
+// 拷贝选中字段到全局剪贴板(深拷贝,跨表/跨项目可粘贴)
+function copySelected() {
+  if (!selected.value.length) return;
+  clipboard.set(selected.value);
+  ElMessage.success(`已拷贝 ${selected.value.length} 个字段`);
+}
+
+// 粘贴:原子冲突检查(目标表 code + 剪贴板内部去重),任一冲突则不执行
+function paste() {
+  if (!clipboard.has) return;
+  const copied = clipboard.get();
+  const existing = new Set(props.fields.map((f) => f.code));
+  const seen = new Set<string>();
+  const conflicts: string[] = [];
+  for (const f of copied) {
+    if (existing.has(f.code) || seen.has(f.code)) conflicts.push(f.code);
+    seen.add(f.code);
+  }
+  if (conflicts.length) {
+    ElMessage.warning(`code 冲突,未粘贴: ${conflicts.join(", ")}`);
+    return;
+  }
+  props.fields.push(...copied);
+  ElMessage.success(`已粘贴 ${copied.length} 个字段`);
+}
+
+// 删除选中:按 idx 降序 splice 避免偏移 + 级联清理索引引用
+function deleteSelected() {
+  if (!selected.value.length) return;
+  const idxs = selected.value
+    .map((f) => props.fields.indexOf(f))
+    .filter((i) => i >= 0)
+    .sort((a, b) => b - a);
+  for (const i of idxs) {
+    const code = props.fields[i]?.code;
+    props.fields.splice(i, 1);
+    if (code) store.removeFieldFromIndexes(props.tableId, code);
+  }
+  ElMessage.success(`已删除 ${idxs.length} 个字段`);
+  selected.value = [];
+  tableRef.value?.clearSelection();
 }
 </script>
 
 <template>
   <div class="h-full flex flex-col">
-    <div class="mb-12 flex-shrink-0">
+    <div class="mb-12 flex-shrink-0 flex items-center">
       <el-button v-if="!store.readOnly" size="small" type="primary" @click="addField">
         + 新增字段
       </el-button>
+      <el-button size="small" :disabled="!canCopy" @click="copySelected">
+        <span class="i-mdi-content-copy w-16 h-16 mr-4" />
+        拷贝
+      </el-button>
+      <el-button v-if="!store.readOnly" size="small" :disabled="!canPaste" @click="paste">
+        <span class="i-mdi-content-paste w-16 h-16 mr-4" />
+        粘贴
+      </el-button>
+      <el-button v-if="!store.readOnly" size="small" type="danger" :disabled="!canDelete" @click="deleteSelected">
+        <span class="i-mdi-delete w-16 h-16 mr-4" />
+        删除
+      </el-button>
     </div>
     <div class="flex-1 min-h-0">
-      <el-table ref="tableRef" :data="fields" :row-key="rowKey" border size="small" height="100%" class="select-none" style="width: 100%">
+      <el-table ref="tableRef" :data="fields" :row-key="rowKey" border size="small" height="100%" class="select-none" style="width: 100%" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="36" />
       <el-table-column v-if="!store.readOnly" label="" width="36" align="center" key="drag">
         <template #default>
           <span class="drag-handle cursor-move text-gray-400 select-none">⣿</span>
@@ -261,13 +314,9 @@ function copyField(idx: number) {
           <el-input v-else v-model="row.comment" size="small" placeholder="-" />
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="120" align="center" fixed="right">
-        <template #default="{ row, $index }">
+      <el-table-column label="操作" width="80" align="center" fixed="right">
+        <template #default="{ row }">
           <el-button size="small" link type="primary" @click="openDetail(row)">详情</el-button>
-          <el-button v-if="!store.readOnly" size="small" link @click="copyField($index)">复制</el-button>
-          <el-button v-if="!store.readOnly" size="small" link type="danger" @click="removeField($index)">
-            删
-          </el-button>
         </template>
       </el-table-column>
     </el-table>
