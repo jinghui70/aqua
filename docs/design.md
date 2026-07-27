@@ -108,7 +108,6 @@ interface Field {
   notNull?: boolean           // 非空
   defaultValue?: string       // DDL DEFAULT 子句
   autoGenerate?: {            // 应用层生成(@GeneratedValue)
-    enabled: boolean
     strategy: "default"|"now"|string  // default=雪花, now=当前时间, 自定义
     param?: string
     timing: "INSERT"|"INSERT_UPDATE"
@@ -339,7 +338,8 @@ autoGenerate 是应用层生成(@GeneratedValue),DDL 不体现。
 | length/scale | length/scale | 直接使用 |
 | bizType/bizTypeData | bizType/bizTypeData | 直接使用 |
 | isKey/notNull | isKey/notNull | 直接使用 |
-| precision/autoGenerate/comment | - | 不输出 |
+| precision/comment | - | 不输出 |
+| autoGenerate | autoGenerate | 应用层生成标记,auto_generate 有值时输出 true |
 
 > 前端 JSON 服务于外部 json-ui 项目(非 aqua 自身 UI)。
 

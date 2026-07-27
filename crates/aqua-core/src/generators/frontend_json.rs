@@ -28,7 +28,7 @@ pub fn map_data_type(dt: DataType) -> JsonUiDataType {
     }
 }
 
-/// json-ui Field(排除 precision/autoGenerate/comment)。
+/// json-ui Field(排除 precision/comment)。
 ///
 /// 字段声明顺序即序列化顺序:code/prop/name 靠前,bizType/bizTypeData 靠后。
 /// 注意:序列化必须直接走 struct(见 generate_frontend_json),不能经 serde_json::Value 中转,
@@ -48,6 +48,9 @@ pub struct JsonUiField {
     pub is_key: bool,
     #[serde(rename = "notNull")]
     pub not_null: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "autoGenerate")]
+    pub auto_generate: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "bizType")]
     pub biz_type: Option<String>,
@@ -75,7 +78,7 @@ pub struct FrontendJsonOptions {
     pub table: Option<String>,
 }
 
-/// Field -> JsonUiField 转换(排除 precision/autoGenerate/comment)。
+/// Field -> JsonUiField 转换(排除 precision/comment)。
 pub fn transform_field(field: &Field) -> JsonUiField {
     JsonUiField {
         prop: field.prop.clone(),
@@ -88,6 +91,7 @@ pub fn transform_field(field: &Field) -> JsonUiField {
         biz_type_data: field.biz_type_data.clone(),
         is_key: field.is_key.unwrap_or(false),
         not_null: field.not_null.unwrap_or(false),
+        auto_generate: field.auto_generate.is_some().then_some(true),
     }
 }
 
@@ -124,6 +128,7 @@ pub fn generate_frontend_json(project: &Project, options: &FrontendJsonOptions) 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::schema::{AutoGenerate, GenerateTiming};
 
     #[test]
     fn test_map_data_type() {
@@ -168,11 +173,55 @@ mod tests {
         assert!(serialized.contains("\"scale\":2"));
         assert!(serialized.contains("\"notNull\":true"));
 
-        // 排除 precision/autoGenerate/comment
+        // 排除 precision/comment(auto_generate=None 时 autoGenerate 不输出)
         assert!(!serialized.contains("precision"));
         assert!(!serialized.contains("autoGenerate"));
         assert!(!serialized.contains("comment"));
         assert!(!serialized.contains("备注"));
+    }
+
+    #[test]
+    fn test_transform_field_auto_generate_flag() {
+        // 有 auto_generate -> 输出 "autoGenerate":true(布尔信号,json-ui 据此从表单排除该字段)
+        let with_ag = Field {
+            prop: "id".to_string(),
+            code: "ID".to_string(),
+            name: "主键".to_string(),
+            data_type: DataType::Long,
+            length: None,
+            precision: None,
+            scale: None,
+            biz_type: None,
+            biz_type_data: None,
+            is_key: Some(true),
+            not_null: Some(true),
+            auto_generate: Some(AutoGenerate {
+                strategy: "default".to_string(),
+                param: None,
+                timing: GenerateTiming::Insert,
+            }),
+            default_value: None,
+            enum_ref: None,
+            comment: None,
+        };
+        let serialized = serde_json::to_string(&transform_field(&with_ag)).unwrap();
+        assert!(
+            serialized.contains("\"autoGenerate\":true"),
+            "有 auto_generate 应输出 \"autoGenerate\":true:\n{}",
+            serialized
+        );
+
+        // 无 auto_generate -> 不输出 autoGenerate
+        let without_ag = Field {
+            auto_generate: None,
+            ..with_ag.clone()
+        };
+        let serialized2 = serde_json::to_string(&transform_field(&without_ag)).unwrap();
+        assert!(
+            !serialized2.contains("autoGenerate"),
+            "无 auto_generate 不应输出 autoGenerate:\n{}",
+            serialized2
+        );
     }
 
     #[test]
