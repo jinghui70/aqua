@@ -95,7 +95,7 @@ fn collect_imports(table: &Table, options: &JavaOptions, need_table_anno: bool) 
         if field.auto_generate.is_some() {
             use_generated_value = true;
         }
-        // @Column: 非标准命名 or Clob/Blob(sqlType=Types.BLOB)
+        // @Column: 非标准命名 or Clob/Blob(sqlType=Types.CLOB/BLOB)
         let expected_prop = snake_to_camel(&field.code);
         if field.prop != expected_prop || matches!(field.data_type, DataType::Clob | DataType::Blob) {
             use_column = true;
@@ -173,16 +173,21 @@ fn generate_field(field: &Field) -> Vec<String> {
         }
     }
 
-    // @Column (非标准命名 or Clob/Blob 加 sqlType=Types.BLOB)
+    // @Column (非标准命名 or Clob/Blob 加 sqlType)
     let prop = &field.prop;
     let expected_prop = snake_to_camel(&field.code);
-    let is_lob = matches!(field.data_type, DataType::Clob | DataType::Blob);
+    // Clob->Types.CLOB, Blob->Types.BLOB(此前误把 Clob 也写成 BLOB)
+    let sql_type = match field.data_type {
+        DataType::Clob => Some("Types.CLOB"),
+        DataType::Blob => Some("Types.BLOB"),
+        _ => None,
+    };
     let mut column_parts: Vec<String> = Vec::new();
     if prop != &expected_prop {
         column_parts.push(format!("name = \"{}\"", field.code));
     }
-    if is_lob {
-        column_parts.push("sqlType = Types.BLOB".to_string());
+    if let Some(st) = sql_type {
+        column_parts.push(format!("sqlType = {}", st));
     }
     if !column_parts.is_empty() {
         lines.push(format!("    @Column({})", column_parts.join(", ")));

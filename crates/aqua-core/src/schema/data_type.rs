@@ -13,10 +13,10 @@ pub enum DataType {
     Tinyint,
     Int,
     Long,
-    Decimal,
     /// 双精度浮点(IEEE 754)。非金额物理量专用,不允许 precision/scale。
     /// 金额/精确小数必须用 DECIMAL。
     Double,
+    Decimal,
     Date,
     Datetime,
     Blob,

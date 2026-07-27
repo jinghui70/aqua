@@ -2,7 +2,7 @@
 
 use crate::driver::{ColumnMeta, Driver, DriverError, IndexMeta, TableInfo, TableMeta};
 use crate::generators::java::naming::snake_to_camel;
-use crate::schema::{Direction, Field, Index, IndexField, Project, Table};
+use crate::schema::{DataType, Direction, Field, Index, IndexField, Project, Table};
 use std::collections::HashMap;
 
 /// 从数据库导入 schema,生成 Project。
@@ -73,16 +73,23 @@ fn build_table(table: &TableInfo, meta: TableMeta) -> Table {
     }
 }
 
-/// ColumnMeta → Field 转换。
+/// ColumnMeta → Field 转换。物理元数据 → 逻辑模型边界,按 §3.1 规范化类型属性:
+/// 仅 VARCHAR 留 length,仅 DECIMAL 留 precision/scale,其余丢弃(DB 对整数/浮点也会返回
+/// precision/scale,如 MySQL INT NUMERIC_PRECISION=10,逻辑模型不应保留)。
 fn column_to_field(col: ColumnMeta) -> Field {
+    let (length, precision, scale) = match col.data_type {
+        DataType::Varchar => (col.length, None, None),
+        DataType::Decimal => (None, col.precision, col.scale),
+        _ => (None, None, None),
+    };
     Field {
         code: col.name.to_uppercase(),
         name: col.comment.unwrap_or_else(|| col.name.clone()),
         prop: snake_to_camel(&col.name),
         data_type: col.data_type,
-        length: col.length,
-        precision: col.precision,
-        scale: col.scale,
+        length,
+        precision,
+        scale,
         not_null: Some(!col.nullable),
         is_key: Some(col.is_key),
         auto_generate: None, // 导入时无法推断,需人工配置
@@ -135,6 +142,46 @@ mod tests {
         assert_eq!(field.name, "用户名");
         assert_eq!(field.data_type, DataType::Varchar);
         assert_eq!(field.not_null, Some(true));
+    }
+
+    #[test]
+    fn test_column_to_field_normalizes_type_attrs() {
+        // §3.1: DB 元数据对整数/浮点也返回 precision/scale,逻辑模型应丢弃。
+        let mk = |dt: DataType, length, precision, scale| ColumnMeta {
+            name: "c".to_string(),
+            data_type: dt,
+            length,
+            precision,
+            scale,
+            nullable: false,
+            is_key: false,
+            default_value: None,
+            comment: None,
+        };
+
+        // INT: DB 返回 precision=10/scale=0(MySQL NUMERIC_PRECISION/SCALE),应全丢弃
+        let f = column_to_field(mk(DataType::Int, None, Some(10), Some(0)));
+        assert_eq!(f.length, None);
+        assert_eq!(f.precision, None);
+        assert_eq!(f.scale, None);
+
+        // DOUBLE: DB 返回 precision=22,应丢弃
+        let f = column_to_field(mk(DataType::Double, None, Some(22), None));
+        assert_eq!(f.length, None);
+        assert_eq!(f.precision, None);
+        assert_eq!(f.scale, None);
+
+        // DECIMAL: precision/scale 保留
+        let f = column_to_field(mk(DataType::Decimal, None, Some(12), Some(2)));
+        assert_eq!(f.length, None);
+        assert_eq!(f.precision, Some(12));
+        assert_eq!(f.scale, Some(2));
+
+        // VARCHAR: length 保留,脏 precision/scale 丢弃
+        let f = column_to_field(mk(DataType::Varchar, Some(64), Some(10), Some(0)));
+        assert_eq!(f.length, Some(64));
+        assert_eq!(f.precision, None);
+        assert_eq!(f.scale, None);
     }
 
     #[test]

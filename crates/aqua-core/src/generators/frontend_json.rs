@@ -77,15 +77,39 @@ pub struct FrontendJsonOptions {
     pub table: Option<String>,
 }
 
+/// 按数据类型规范前端 JSON 的 length/scale 输出(§3.1 + §4.2.2)。
+///
+/// Field 上的 length/scale 可能为脏值(反解残留/编辑未清),前端 JSON 不原样透传,
+/// 而是按逻辑类型决定输出:
+/// - VARCHAR: length(原值), 无 scale
+/// - TINYINT/INT/LONG: 无 length, scale=0(整数,显式告知 json-ui 无小数位)
+/// - DECIMAL: 无 length, scale(原值); precision 不输出(§4.2.2)
+/// - DOUBLE: 均无(§3.1 不允许 precision/scale,IEEE 754 浮点无小数位概念)
+/// - CLOB/BLOB/DATE/DATETIME: 均无
+fn normalize_length_scale(
+    dt: DataType,
+    length: Option<u32>,
+    scale: Option<u32>,
+) -> (Option<u32>, Option<u32>) {
+    match dt {
+        DataType::Varchar => (length, None),
+        DataType::Tinyint | DataType::Int | DataType::Long => (None, Some(0)),
+        DataType::Decimal => (None, scale),
+        DataType::Double | DataType::Clob | DataType::Blob | DataType::Date
+        | DataType::Datetime => (None, None),
+    }
+}
+
 /// Field -> JsonUiField 转换(排除 precision/comment)。
 pub fn transform_field(field: &Field) -> JsonUiField {
+    let (length, scale) = normalize_length_scale(field.data_type, field.length, field.scale);
     JsonUiField {
         prop: field.prop.clone(),
         code: field.code.clone(),
         name: field.name.clone(),
         data_type: map_data_type(field.data_type),
-        length: field.length,
-        scale: field.scale,
+        length,
+        scale,
         biz_type: field.biz_type.clone(),
         biz_type_data: field.biz_type_data.clone(),
         is_key: field.is_key.unwrap_or(false),
@@ -276,5 +300,85 @@ mod tests {
         assert!(pos("\"name\"") < pos("\"dataType\""), "name 应在 dataType 前:\n{}", json);
         // bizType/bizTypeData 靠后(在 notNull 之后)
         assert!(pos("\"notNull\"") < pos("\"bizType\""), "bizType 应靠后:\n{}", json);
+    }
+
+    /// 构造最小 Field(仅类型 + length/scale 不同),供 length/scale 输出测试复用。
+    fn mk_field(dt: DataType, length: Option<u32>, scale: Option<u32>) -> Field {
+        Field {
+            prop: "f".to_string(),
+            code: "F".to_string(),
+            name: "f".to_string(),
+            data_type: dt,
+            length,
+            precision: None,
+            scale,
+            biz_type: None,
+            biz_type_data: None,
+            is_key: Some(false),
+            not_null: Some(false),
+            auto_generate: None,
+            default_value: None,
+            enum_ref: None,
+            comment: None,
+        }
+    }
+
+    #[test]
+    fn test_length_scale_by_data_type() {
+        // VARCHAR: 保留 length, 不输出 scale(即便 Field 上有脏 scale)
+        let s = serde_json::to_string(&transform_field(&mk_field(
+            DataType::Varchar,
+            Some(8),
+            Some(2),
+        )))
+        .unwrap();
+        assert!(s.contains("\"length\":8"), "VARCHAR 应输出 length:\n{}", s);
+        assert!(!s.contains("scale"), "VARCHAR 不应输出 scale:\n{}", s);
+
+        // TINYINT/INT/LONG: 不输出 length(即便有脏值), 输出 scale:0
+        for dt in [DataType::Tinyint, DataType::Int, DataType::Long] {
+            let s = serde_json::to_string(&transform_field(&mk_field(dt, Some(10), None)))
+                .unwrap();
+            assert!(!s.contains("length"), "{:?} 不应输出 length:\n{}", dt, s);
+            assert!(
+                s.contains("\"scale\":0"),
+                "{:?} 应输出 scale:0:\n{}",
+                dt,
+                s
+            );
+        }
+
+        // DECIMAL: 不输出 length, 保留原 scale
+        let s = serde_json::to_string(&transform_field(&mk_field(
+            DataType::Decimal,
+            Some(10),
+            Some(2),
+        )))
+        .unwrap();
+        assert!(!s.contains("length"), "DECIMAL 不应输出 length:\n{}", s);
+        assert!(s.contains("\"scale\":2"), "DECIMAL 应输出原 scale:\n{}", s);
+
+        // DOUBLE: 均不输出(§3.1 不允许 precision/scale)
+        let s = serde_json::to_string(&transform_field(&mk_field(
+            DataType::Double,
+            Some(10),
+            Some(2),
+        )))
+        .unwrap();
+        assert!(!s.contains("length"), "DOUBLE 不应输出 length:\n{}", s);
+        assert!(!s.contains("scale"), "DOUBLE 不应输出 scale:\n{}", s);
+
+        // CLOB/BLOB/DATE/DATETIME: 均不输出
+        for dt in [
+            DataType::Clob,
+            DataType::Blob,
+            DataType::Date,
+            DataType::Datetime,
+        ] {
+            let s = serde_json::to_string(&transform_field(&mk_field(dt, Some(10), Some(2))))
+                .unwrap();
+            assert!(!s.contains("length"), "{:?} 不应输出 length:\n{}", dt, s);
+            assert!(!s.contains("scale"), "{:?} 不应输出 scale:\n{}", dt, s);
+        }
     }
 }

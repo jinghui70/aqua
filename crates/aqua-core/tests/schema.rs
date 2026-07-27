@@ -150,3 +150,37 @@ fn test_serde_roundtrip() {
     // 比较两个 JSON Value(serde_json::Value 实现 PartialEq)
     assert_eq!(original_json, serialized_json, "serde 往返应保持 JSON 等价");
 }
+
+#[test]
+fn test_rejects_type_attrs_violations() {
+    // §3.1: length 仅 VARCHAR;precision/scale 仅 DECIMAL;其余类型无属性。
+    // 多余属性应报错,避免脏数据流入生成器。
+    let project_json = serde_json::json!({
+        "version": "1.0.0",
+        "basePackage": "com.example",
+        "bizTypes": [],
+        "groups": [],
+        "tables": [{
+            "code": "T", "name": "T", "group": "core",
+            "fields": [
+                { "prop": "a", "code": "A", "name": "a", "dataType": "INT", "length": 10 },
+                { "prop": "b", "code": "B", "name": "b", "dataType": "INT", "scale": 2 },
+                { "prop": "c", "code": "C", "name": "c", "dataType": "DECIMAL", "length": 10, "precision": 12, "scale": 2 },
+                { "prop": "d", "code": "D", "name": "d", "dataType": "VARCHAR", "length": 8, "scale": 2 },
+                { "prop": "e", "code": "E", "name": "e", "dataType": "DOUBLE", "scale": 2 }
+            ]
+        }]
+    });
+
+    let errors = validate_project_result(project_json).unwrap_err();
+    let has = |substr: &str| errors.iter().any(|e| e.message.contains(substr));
+    assert!(has("INT 不允许 length"), "INT 带 length 应报错: {:?}", errors);
+    assert!(has("INT 不允许 scale"), "INT 带 scale 应报错: {:?}", errors);
+    assert!(has("DECIMAL 不允许 length"), "DECIMAL 带 length 应报错: {:?}", errors);
+    assert!(has("VARCHAR 不允许 scale"), "VARCHAR 带 scale 应报错: {:?}", errors);
+    assert!(has("DOUBLE 不允许 scale"), "DOUBLE 带 scale 应报错: {:?}", errors);
+
+    // path 精确定位到属性级
+    assert!(errors.iter().any(|e| e.path.contains(".length")), "path 应含 .length: {:?}", errors);
+    assert!(errors.iter().any(|e| e.path.contains(".scale")), "path 应含 .scale: {:?}", errors);
+}

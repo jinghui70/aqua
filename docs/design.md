@@ -84,8 +84,8 @@ schema.json -> 生成 H2 DDL(目标项目就地实现)+ 数据集 -> 初始化�
 | TINYINT | - | 小整数(-128~127) |
 | INT | - | 32位整数 |
 | LONG | - | 64位整数 |
-| DECIMAL | precision, scale | 精确小数 |
 | DOUBLE | - | 双精度浮点(非金额物理量,不允许 precision/scale) |
+| DECIMAL | precision, scale | 精确小数 |
 | DATE | - | 日期 |
 | DATETIME | - | 日期时间 |
 | BLOB | - | 二进制 |
@@ -330,7 +330,8 @@ autoGenerate 是应用层生成(@GeneratedValue),DDL 不体现。
 | INT/LONG/DECIMAL/DOUBLE/TINYINT | NUMBER | dataType 粗粒度映射 |
 | VARCHAR/CLOB/BLOB | STRING | dataType 粗粒度映射 |
 | DATE/DATETIME | DATE/DATETIME | 不变 |
-| length/scale | length/scale | 直接使用 |
+| length | length | 仅 VARCHAR 输出(其余类型不输出,§3.1) |
+| scale | scale | DECIMAL 输出原值;TINYINT/INT/LONG 输出 0(整数);其余不输出(DOUBLE §3.1 不允许) |
 | bizType/bizTypeData | bizType/bizTypeData | 直接使用 |
 | isKey/notNull | isKey/notNull | 直接使用 |
 | precision/comment | - | 不输出 |

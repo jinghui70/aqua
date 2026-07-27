@@ -44,13 +44,34 @@ pub fn validate_project(project: &Project) -> Result<(), Vec<ValidationError>> {
     for (table_idx, table) in project.tables.iter().enumerate() {
         // 校验字段
         for (field_idx, field) in table.fields.iter().enumerate() {
-            // 规则: DOUBLE 不允许 precision/scale(IEEE 754 定长,与 DECIMAL 对立)
-            if field.data_type == DataType::Double
-                && (field.precision.is_some() || field.scale.is_some())
-            {
+            // 规则: §3.1 各类型只允许特定属性
+            //   - VARCHAR: length
+            //   - DECIMAL: precision, scale
+            //   - 其余(TINYINT/INT/LONG/DOUBLE/CLOB/BLOB/DATE/DATETIME): 均无
+            // 多余属性报错,避免脏数据流入生成器(DDL/Java/前端 JSON)。
+            let (allow_length, allow_precision, allow_scale) = match field.data_type {
+                DataType::Varchar => (true, false, false),
+                DataType::Decimal => (false, true, true),
+                _ => (false, false, false),
+            };
+            let dt_name = format!("{:?}", field.data_type).to_uppercase();
+            let base = format!("tables[{}].fields[{}]", table_idx, field_idx);
+            if !allow_length && field.length.is_some() {
                 errors.push(ValidationError::new(
-                    format!("tables[{}].fields[{}]", table_idx, field_idx),
-                    "DOUBLE 不允许 precision/scale(如需精度请用 DECIMAL)",
+                    format!("{}.length", base),
+                    format!("{} 不允许 length", dt_name),
+                ));
+            }
+            if !allow_precision && field.precision.is_some() {
+                errors.push(ValidationError::new(
+                    format!("{}.precision", base),
+                    format!("{} 不允许 precision", dt_name),
+                ));
+            }
+            if !allow_scale && field.scale.is_some() {
+                errors.push(ValidationError::new(
+                    format!("{}.scale", base),
+                    format!("{} 不允许 scale", dt_name),
                 ));
             }
 

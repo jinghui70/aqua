@@ -123,6 +123,35 @@ fn test_table_not_found() {
 }
 
 #[test]
+fn test_clob_blob_sql_type_annotation() {
+    // Clob->Types.CLOB, Blob->Types.BLOB(防回归: 此前 Clob 误写成 Types.BLOB)
+    let project_json = serde_json::json!({
+        "version": "1.0.0",
+        "basePackage": "com.example",
+        "bizTypes": [],
+        "groups": [{ "code": "core", "name": "核心" }],
+        "tables": [{
+            "code": "T", "name": "T", "group": "core",
+            "fields": [
+                { "prop": "content", "code": "CONTENT", "name": "内容", "dataType": "CLOB" },
+                { "prop": "data", "code": "DATA", "name": "数据", "dataType": "BLOB" }
+            ]
+        }]
+    });
+    let project = parse_project(project_json).expect("Project 校验失败");
+    let java_code = generate_java_entity(&project, "T", &JavaOptions::default()).expect("生成失败");
+
+    assert!(
+        java_code.contains("@Column(sqlType = Types.CLOB)"),
+        "CLOB 字段应生成 Types.CLOB:\n{}", java_code
+    );
+    assert!(
+        java_code.contains("@Column(sqlType = Types.BLOB)"),
+        "BLOB 字段应生成 Types.BLOB:\n{}", java_code
+    );
+}
+
+#[test]
 fn test_generate_field_with_auto_generate() {
     // autoGenerate 字段应生成 @GeneratedValue,参数等于默认值(strategy=default/timing=INSERT/无 param)即省略
     let value = serde_json::json!({
