@@ -17,7 +17,7 @@ aqua 管理项目所有数据表结构(前后端字段契约的**单源**)。表
 
 ## schema 速览(够读懂 `show` 输出)
 
-- **逻辑类型**(9 种):`VARCHAR` `CLOB` `TINYINT` `INT` `LONG` `DECIMAL` `DATE` `DATETIME` `BLOB`
+- **逻辑类型**(10 种):`VARCHAR` `CLOB` `TINYINT` `INT` `LONG` `DECIMAL` `DOUBLE` `DATE` `DATETIME` `BLOB`
 - **bizType**:业务类型(如 `Bool` 表示布尔,底层 TINYINT),决定前后端语义与校验
 - **分组(group)**:通常对应业务模块;**表**有 `code`(如 `SYS_USER`)与中文 `name`;**字段**有 `code`/`prop`/`name`/逻辑类型/长度/主键/notNull/bizType
 
