@@ -34,6 +34,8 @@ export const useProjectStore = defineStore("project", () => {
   const currentPath = ref<string>("");
   const openedTabs = ref<OpenedTab[]>([]);
   const activeTab = ref<string>("");
+  /** 每个 path 的关闭次数:重开时拼入 :key,让 keep-alive 不命中旧缓存(新实例)。 */
+  const closedCount = ref<Record<string, number>>({});
   /** 有未保存改动(任何对 currentProject 的深层变动)。 */
   const dirty = ref(false);
   /** 项目只读(打开默认只读防误改,新建可编辑,工具栏加/解锁切换)。 */
@@ -169,7 +171,10 @@ export const useProjectStore = defineStore("project", () => {
   function closeTab(key: string): string {
     const idx = openedTabs.value.findIndex((t) => t.key === key);
     if (idx < 0) return "";
+    const tab = openedTabs.value[idx];
     openedTabs.value.splice(idx, 1);
+    // 该 path 关闭计数+1:重开时 :key 拼上 rev,keep-alive 视作不同 key -> 新实例
+    closedCount.value[tab.path] = (closedCount.value[tab.path] ?? 0) + 1;
     if (activeTab.value === key) {
       const next = openedTabs.value[idx] ?? openedTabs.value[idx - 1];
       activeTab.value = next?.key ?? "";
@@ -420,6 +425,7 @@ export const useProjectStore = defineStore("project", () => {
     currentPath,
     openedTabs,
     activeTab,
+    closedCount,
     dirty,
     readOnly,
     toggleReadOnly,
