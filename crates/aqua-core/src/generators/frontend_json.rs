@@ -16,12 +16,11 @@ pub enum JsonUiDataType {
     Datetime,
 }
 
-/// 9 逻辑类型 -> json-ui 4 粗粒度类型。
+/// 10 逻辑类型 -> json-ui 4 粗粒度类型。
 pub fn map_data_type(dt: DataType) -> JsonUiDataType {
     match dt {
-        DataType::Int | DataType::Long | DataType::Decimal | DataType::Tinyint => {
-            JsonUiDataType::Number
-        }
+        DataType::Int | DataType::Long | DataType::Decimal | DataType::Double
+        | DataType::Tinyint => JsonUiDataType::Number,
         DataType::Varchar | DataType::Clob | DataType::Blob => JsonUiDataType::String,
         DataType::Date => JsonUiDataType::Date,
         DataType::Datetime => JsonUiDataType::Datetime,
@@ -135,6 +134,7 @@ mod tests {
         assert_eq!(map_data_type(DataType::Int), JsonUiDataType::Number);
         assert_eq!(map_data_type(DataType::Long), JsonUiDataType::Number);
         assert_eq!(map_data_type(DataType::Decimal), JsonUiDataType::Number);
+        assert_eq!(map_data_type(DataType::Double), JsonUiDataType::Number);
         assert_eq!(map_data_type(DataType::Tinyint), JsonUiDataType::Number);
         assert_eq!(map_data_type(DataType::Varchar), JsonUiDataType::String);
         assert_eq!(map_data_type(DataType::Clob), JsonUiDataType::String);

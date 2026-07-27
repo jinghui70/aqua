@@ -44,6 +44,16 @@ pub fn validate_project(project: &Project) -> Result<(), Vec<ValidationError>> {
     for (table_idx, table) in project.tables.iter().enumerate() {
         // 校验字段
         for (field_idx, field) in table.fields.iter().enumerate() {
+            // 规则: DOUBLE 不允许 precision/scale(IEEE 754 定长,与 DECIMAL 对立)
+            if field.data_type == DataType::Double
+                && (field.precision.is_some() || field.scale.is_some())
+            {
+                errors.push(ValidationError::new(
+                    format!("tables[{}].fields[{}]", table_idx, field_idx),
+                    "DOUBLE 不允许 precision/scale(如需精度请用 DECIMAL)",
+                ));
+            }
+
             // 规则: enum 只支持 VARCHAR
             if field.enum_ref.is_some() && field.data_type != DataType::Varchar {
                 errors.push(ValidationError::new(

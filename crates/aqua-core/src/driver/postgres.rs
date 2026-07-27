@@ -213,6 +213,7 @@ fn map_pg_type(pg_type: &str) -> DataType {
         "integer" | "int4" | "serial" => DataType::Int,
         "bigint" | "int8" | "bigserial" => DataType::Long,
         "numeric" | "decimal" => DataType::Decimal,
+        "double precision" | "float8" | "real" | "float4" => DataType::Double,
         "date" => DataType::Date,
         "timestamp"
         | "timestamp without time zone"
@@ -235,6 +236,8 @@ mod tests {
         assert_eq!(map_pg_type("integer"), DataType::Int);
         assert_eq!(map_pg_type("bigint"), DataType::Long);
         assert_eq!(map_pg_type("numeric"), DataType::Decimal);
+        assert_eq!(map_pg_type("double precision"), DataType::Double);
+        assert_eq!(map_pg_type("float8"), DataType::Double);
         assert_eq!(map_pg_type("date"), DataType::Date);
         assert_eq!(map_pg_type("timestamp"), DataType::Datetime);
         assert_eq!(map_pg_type("bytea"), DataType::Blob);

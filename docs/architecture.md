@@ -91,7 +91,7 @@ aqua v2 = **Tauri 2.x 桌面 + Rust 后端(`aqua-core`) + Vue3/element-plus 前�
 
 ## 7. CLI(已移除)
 - **决策(2026-07-24)**:删除 CLI,Tauri 二进制只保留 GUI 单模式。
-- **原因**:CLI 的唯一独占价值是 generator 封装的**信创库类型映射矩阵**(9 逻辑类型 × 达梦/GBase/KingBase 等方言,AI 现场生成会编错)。但生产场景(json-ui 前台 + springboot/rainbow-dbaccess 后台)只用 H2/MySQL,用不上该矩阵;H2/MySQL 的 DDL、strconst、Java entity 都是简单逻辑(strconst 约 40 行纯字符串搬运,MySQL 类型映射仅 9 分支),在 Java 项目侧就地重写的成本 < 生产引入 aqua(Rust 二进制/进程调用)的依赖成本。
+- **原因**:CLI 的唯一独占价值是 generator 封装的**信创库类型映射矩阵**(10 逻辑类型 × 达梦/GBase/KingBase 等方言,AI 现场生成会编错)。但生产场景(json-ui 前台 + springboot/rainbow-dbaccess 后台)只用 H2/MySQL,用不上该矩阵;H2/MySQL 的 DDL、strconst、Java entity 都是简单逻辑(strconst 约 40 行纯字符串搬运,MySQL 类型映射仅 10 分支),在 Java 项目侧就地重写的成本 < 生产引入 aqua(Rust 二进制/进程调用)的依赖成本。
 - **AI 如何用 aqua 产物**:直接读 `schema.json`(AI 强项,不需 aqua),生成逻辑在目标项目就地实现。generator 逻辑的正确性由 aqua-core 单元测试(`cargo test`)保证,比 CLI 手动跑更直接。
 - 若未来生产需面对信创库/多方言,再评估以 MCP server 或 CLI 暴露 generator(核心已抽为纯函数 `Project → String`,加接口壳即可复用)。
 

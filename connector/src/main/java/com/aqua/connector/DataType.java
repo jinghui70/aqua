@@ -14,6 +14,7 @@ public enum DataType {
     INT,
     LONG,
     DECIMAL,
+    DOUBLE,
     DATE,
     DATETIME,
     BLOB;

@@ -116,6 +116,7 @@ fn map_mysql(
                 "DECIMAL".to_string()
             }
         }
+        DataType::Double => "DOUBLE".to_string(),
         DataType::Date => "DATE".to_string(),
         DataType::Datetime => "DATETIME".to_string(),
         DataType::Blob => "BLOB".to_string(),
@@ -142,6 +143,7 @@ fn map_postgresql(
                 "NUMERIC".to_string()
             }
         }
+        DataType::Double => "DOUBLE PRECISION".to_string(),
         DataType::Date => "DATE".to_string(),
         DataType::Datetime => "TIMESTAMP".to_string(),
         DataType::Blob => "BYTEA".to_string(),
@@ -168,6 +170,7 @@ fn map_oracle(
                 "NUMBER".to_string()
             }
         }
+        DataType::Double => "BINARY_DOUBLE".to_string(),
         DataType::Date => "DATE".to_string(),
         DataType::Datetime => "TIMESTAMP".to_string(),
         DataType::Blob => "BLOB".to_string(),
@@ -194,6 +197,7 @@ fn map_h2(
                 "DECIMAL".to_string()
             }
         }
+        DataType::Double => "DOUBLE".to_string(),
         DataType::Date => "DATE".to_string(),
         DataType::Datetime => "TIMESTAMP".to_string(),
         DataType::Blob => "BLOB".to_string(),
@@ -220,6 +224,7 @@ fn map_dm(
                 "DECIMAL".to_string()
             }
         }
+        DataType::Double => "DOUBLE".to_string(),
         DataType::Date => "DATE".to_string(),
         DataType::Datetime => "DATETIME".to_string(),
         DataType::Blob => "BLOB".to_string(),
@@ -246,6 +251,7 @@ fn map_gbase(
                 "DECIMAL".to_string()
             }
         }
+        DataType::Double => "DOUBLE".to_string(),
         DataType::Date => "DATE".to_string(),
         DataType::Datetime => "DATETIME".to_string(),
         DataType::Blob => "BLOB".to_string(),
@@ -272,6 +278,7 @@ fn map_sqlserver(
                 "DECIMAL".to_string()
             }
         }
+        DataType::Double => "FLOAT".to_string(),
         DataType::Date => "DATE".to_string(),
         DataType::Datetime => "DATETIME2".to_string(),
         DataType::Blob => "VARBINARY(MAX)".to_string(),
@@ -299,6 +306,7 @@ mod tests {
             DataType::Int,
             DataType::Long,
             DataType::Decimal,
+            DataType::Double,
             DataType::Date,
             DataType::Datetime,
             DataType::Blob,

@@ -32,6 +32,7 @@ pub fn map_java_type(data_type: DataType) -> &'static str {
         DataType::Int => "Integer",
         DataType::Long => "Long",
         DataType::Decimal => "BigDecimal",
+        DataType::Double => "Double",
         DataType::Date => "LocalDate",
         DataType::Datetime => "LocalDateTime",
         DataType::Blob => "byte[]",

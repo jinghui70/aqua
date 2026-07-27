@@ -221,6 +221,7 @@ fn map_mysql_type(column_type: &str, length: Option<u32>) -> DataType {
         "INT" | "INTEGER" | "MEDIUMINT" | "SMALLINT" => DataType::Int,
         "BIGINT" => DataType::Long,
         "DECIMAL" | "NUMERIC" => DataType::Decimal,
+        "DOUBLE" | "FLOAT" | "REAL" => DataType::Double,
         "DATE" => DataType::Date,
         "DATETIME" | "TIMESTAMP" => DataType::Datetime,
         "BLOB" | "BINARY" | "VARBINARY" | "TINYBLOB" | "MEDIUMBLOB" | "LONGBLOB" => DataType::Blob,
@@ -247,6 +248,8 @@ mod tests {
         assert_eq!(map_mysql_type("INT", None), DataType::Int);
         assert_eq!(map_mysql_type("BIGINT", None), DataType::Long);
         assert_eq!(map_mysql_type("DECIMAL", None), DataType::Decimal);
+        assert_eq!(map_mysql_type("DOUBLE", None), DataType::Double);
+        assert_eq!(map_mysql_type("FLOAT", None), DataType::Double);
         assert_eq!(map_mysql_type("DATE", None), DataType::Date);
         assert_eq!(map_mysql_type("DATETIME", None), DataType::Datetime);
         assert_eq!(map_mysql_type("BLOB", None), DataType::Blob);

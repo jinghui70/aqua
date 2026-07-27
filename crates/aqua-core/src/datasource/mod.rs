@@ -40,7 +40,7 @@ pub struct DataSourceConfig {
     pub schema: Option<String>,
 }
 
-/// `.dbconfig.json` 文件结构。key = sourceName,BTreeMap 保证稳定排序。
+/// `.aqua.conf` 文件结构。key = sourceName,BTreeMap 保证稳定排序。
 #[derive(Serialize, Deserialize, Default)]
 pub struct DbConfigFile {
     pub sources: BTreeMap<String, DataSourceConfig>,

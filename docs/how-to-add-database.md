@@ -232,7 +232,7 @@ sqlite = ["rusqlite"]
 
 ## 类型映射参考
 
-aqua 定义了 9 种逻辑类型,每种数据库需提供物理类型映射:
+aqua 定义了 10 种逻辑类型,每种数据库需提供物理类型映射:
 
 | aqua 逻辑类型 | MySQL | PostgreSQL | Oracle | 达梦 DM | SQLite |
 |--------------|-------|------------|--------|---------|--------|
@@ -242,6 +242,7 @@ aqua 定义了 9 种逻辑类型,每种数据库需提供物理类型映射:
 | INT          | INT   | INTEGER    | NUMBER(10) | INT   | INTEGER |
 | LONG         | BIGINT | BIGINT    | NUMBER(19) | BIGINT | INTEGER |
 | DECIMAL      | DECIMAL(p,s) | NUMERIC(p,s) | NUMBER(p,s) | DECIMAL(p,s) | REAL |
+| DOUBLE       | DOUBLE | DOUBLE PRECISION | BINARY_DOUBLE | DOUBLE | REAL |
 | DATE         | DATE  | DATE       | DATE   | DATE    | TEXT |
 | DATETIME     | DATETIME | TIMESTAMP | TIMESTAMP | TIMESTAMP | TEXT |
 | BLOB         | BLOB  | BYTEA      | BLOB   | BLOB    | BLOB |

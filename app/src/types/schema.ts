@@ -8,6 +8,7 @@ export enum DataType {
   Int = "INT",
   Long = "LONG",
   Decimal = "DECIMAL",
+  Double = "DOUBLE",
   Date = "DATE",
   Datetime = "DATETIME",
   Blob = "BLOB",

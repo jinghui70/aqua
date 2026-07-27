@@ -48,10 +48,12 @@ public class GenericJdbcDialect extends AbstractJdbcDialect {
                 return DataType.LONG;
             case Types.DECIMAL:
             case Types.NUMERIC:
+                return DataType.DECIMAL;
             case Types.FLOAT:
             case Types.REAL:
             case Types.DOUBLE:
-                return DataType.DECIMAL;
+                // IEEE 754 浮点 -> DOUBLE(float 归 double,见 §3.1)
+                return DataType.DOUBLE;
             case Types.VARCHAR:
             case Types.CHAR:
             case Types.LONGVARCHAR:

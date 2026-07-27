@@ -29,6 +29,10 @@ public final class H2TypeMapping {
             case Types.DECIMAL:
             case Types.NUMERIC:
                 return DataType.DECIMAL;
+            case Types.DOUBLE:
+            case Types.FLOAT:
+            case Types.REAL:
+                return DataType.DOUBLE;
             case Types.DATE:
                 return DataType.DATE;
             case Types.TIMESTAMP:
@@ -50,6 +54,7 @@ public final class H2TypeMapping {
         String upper = typeName.toUpperCase();
         if (upper.contains("CLOB") || upper.contains("TEXT")) return DataType.CLOB;
         if (upper.contains("BLOB") || upper.contains("BINARY")) return DataType.BLOB;
+        if (upper.contains("DOUBLE") || upper.contains("FLOAT")) return DataType.DOUBLE;
         if (upper.contains("DATE") && !upper.contains("TIME")) return DataType.DATE;
         if (upper.contains("TIMESTAMP") || upper.contains("DATETIME")) return DataType.DATETIME;
         return DataType.VARCHAR;

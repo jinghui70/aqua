@@ -40,6 +40,12 @@ public final class OracleTypeMapping {
                     if (precision <= 19) return DataType.LONG;
                 }
                 return DataType.DECIMAL;
+            case Types.DOUBLE:
+            case Types.FLOAT:
+            case Types.REAL:
+                // BINARY_DOUBLE/BINARY_FLOAT(IEEE 754 真浮点)-> DOUBLE
+                // 注:Oracle FLOAT(n) 是 NUMBER 别名(定点),极少用,按 float 归 double 处理
+                return DataType.DOUBLE;
             case Types.DATE:
                 return DataType.DATE;
             case Types.TIMESTAMP:
@@ -60,6 +66,8 @@ public final class OracleTypeMapping {
         String upper = typeName.toUpperCase();
         if (upper.contains("CLOB")) return DataType.CLOB;
         if (upper.contains("BLOB") || upper.contains("BINARY")) return DataType.BLOB;
+        if (upper.contains("BINARY_DOUBLE") || upper.contains("BINARY_FLOAT")
+                || upper.contains("DOUBLE") || upper.contains("FLOAT")) return DataType.DOUBLE;
         if (upper.contains("TIMESTAMP")) return DataType.DATETIME;
         if (upper.contains("DATE")) return DataType.DATE;
         if (upper.contains("NUMBER")) return DataType.DECIMAL;

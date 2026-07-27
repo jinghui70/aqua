@@ -29,7 +29,7 @@
 5. **代码生成**:Java 实体(rainbow-dbaccess 注解)+ 前端 JSON(json-ui 兼容)+ StrConst
 6. **diff + ALTER**:JSON 版本对比,生成 ALTER DDL
 7. **导入**:连库读结构(MySQL/PG 走 Rust native;Oracle/信创/H2 走 Java JDBC)
-8. **数据集管理**:JSON/SQLite 双格式,库↔数据集↔库迁移
+8. **数据集管理**:.data JSONL 格式,库↔数据集↔库迁移
 9. **Undo/Redo**:主文件任何变动可撤销/重做(待实现)
 
 ### 1.3 工作流
@@ -85,11 +85,12 @@ schema.json -> 生成 H2 DDL(目标项目就地实现)+ 数据集 -> 初始化�
 | INT | - | 32位整数 |
 | LONG | - | 64位整数 |
 | DECIMAL | precision, scale | 精确小数 |
+| DOUBLE | - | 双精度浮点(非金额物理量,不允许 precision/scale) |
 | DATE | - | 日期 |
 | DATETIME | - | 日期时间 |
 | BLOB | - | 二进制 |
 
-**不含**:BOOLEAN(跨库不一致,用 TINYINT/VARCHAR+业务类型)、JSON(用 BLOB/CLOB)、DOUBLE(DECIMAL 足够)
+**不含**:BOOLEAN(跨库不一致,用 TINYINT/VARCHAR+业务类型)、JSON(用 BLOB/CLOB)。DOUBLE 仅用于非金额物理量(经纬度/温度/传感器等),金额必须用 DECIMAL(BigDecimal);FLOAT 反解归入 DOUBLE。
 
 ### 3.2 字段模型(Field)
 
@@ -98,7 +99,7 @@ interface Field {
   prop: string                // Java/TS 属性名(驼峰,如 userName)
   code: string                // 数据库字段名(大写蛇形,如 USER_NAME)
   name: string                // 中文名(DDL COMMENT)
-  dataType: DataType          // 逻辑类型(9 种)
+  dataType: DataType          // 逻辑类型(10 种)
   length?: number             // VARCHAR 长度
   precision?: number          // DECIMAL 精度
   scale?: number              // DECIMAL 小数位
@@ -112,7 +113,7 @@ interface Field {
     param?: string
     timing: "INSERT"|"INSERT_UPDATE"
   }
-  enum?: string | InlineEnum  // string=引用全局枚举 code,object=内联枚举
+  enum?: InlineEnum           // 字段内联枚举(选 bizType=Enum 触发,无全局枚举)
   comment?: string            // 详细描述(Java Javadoc 用,不进 DDL;UI 放最后)
 }
 ```
@@ -188,13 +189,11 @@ interface BizTypeDefine {
 
 ### 3.5 Enum(特殊业务类型)
 
-**EnumDefine(全局枚举,schema.json 顶层 enums 数组)**:
+Enum 是特殊 bizType(`bizType==="Enum"`),选中后字段挂内联枚举并强制 VARCHAR。**无全局枚举,统一字段内联**(`field.enum`)。
 
 ```typescript
-interface EnumDefine {
-  code: string                // 枚举标识(如 "EnumGender")
-  name: string                // 中文名(如 "性别")
-  package: string             // 相对子路径,拼到 basePackage 下
+interface InlineEnum {
+  name: string                // 枚举名(如 "性别",派生 Java 枚举类名)
   hasCode?: boolean           // true=CodeEnum 派生存 code,false/无=普通枚举存 id
   values: EnumValue[]
 }
@@ -214,15 +213,7 @@ interface EnumValue {
 - `hasCode=false`:数据库存 id,Java 生成普通枚举 `MALE // 男`
 - 校验:hasCode=true 时每个 value 必须有 code
 
-**字段引用枚举**(二选一):
-- 引用全局:`field.enum = "EnumGender"`(string)
-- 内联:`field.enum = {name, hasCode, values}`(object,无 code/package)
-
-**删除级联**:删除全局枚举时,统计引用该 code 的字段(按表聚合提醒),确认后级联清除 `field.enum`;若字段 `bizType==="Enum"` 一并清 `bizType`(避免无 enum 的不一致)。内联枚举不受影响。
-
-**Java 生成**:
-- 全局枚举:生成独立 enum 类(自身 package)
-- 内联枚举:生成独立 enum 类(共享表的 package)
+**Java 生成**:内联枚举生成独立 enum 类(共享表的 package)。
 
 ### 3.6 项目结构
 
@@ -231,16 +222,14 @@ interface EnumValue {
 ```
 myproject/                        # 项目目录
   myproject.json                  # 主文件(项目名.json,Project 结构)
-  myproject.dev.json              # JSON 数据集(主文件名.数据集名.json,入 Git)
-  myproject.test.db               # SQLite 数据集(主文件名.数据集名.db,.gitignore)
-  .dbconfig.json                  # 数据源配置(.gitignore)
+  myproject.dev.data              # 数据集(主文件名.数据集名.data,JSONL,入 Git)
+  myproject.aqua.conf             # 数据源配置(.gitignore)
   .gitignore
 ```
 
 **.gitignore**:
 ```
-*.db
-.dbconfig.json
+*.aqua.conf
 ```
 
 **schema.json 顶层**:
@@ -251,7 +240,7 @@ interface Project {
   name?: string               // 项目中文名(可选,旧 schema 兼容;显示用)
   basePackage: string         // 全局根 package(如 "com.example")
   bizTypes: BizTypeDefine[]   // 业务类型(自定义;内置单独加载)
-  enums: EnumDefine[]         // 全局枚举
+  autoGenStrategies: AutoGenStrategyDefine[]  // 自动生成策略(自定义;内置 default/now 硬编码不存项目)
   groups: GroupDefine[]       // 分组(显式定义,数组顺序即排序)
   tables: Table[]             // 表结构
 }
@@ -260,9 +249,15 @@ interface GroupDefine {
   code: string                // 分组标识(如 "order")
   name: string                // 中文名(如 "订单模块")
 }
+
+interface AutoGenStrategyDefine {
+  code: string                // 策略标识(如 "default" 雪花,"now" 当前时间)
+  name: string                // 中文名
+  paramDesc?: string          // 参数说明(有参数时作字段编辑 placeholder;无参数省略)
+}
 ```
 
-> **变更**:`Project` 加 `name`(项目中文名)。
+> **变更**:`Project` 加 `name`(项目中文名);加 `autoGenStrategies`(自定义生成策略)。
 
 **分组规则**:
 - 单层分组
@@ -272,9 +267,8 @@ interface GroupDefine {
 
 **数据集文件规则**:
 - 与主文件同目录
-- 命名:`主文件名.数据集名.{json|db}`
+- 命名:`主文件名.数据集名.data`(JSONL)
 - 打开项目时自动扫描同目录,匹配命名规则的数据集,无则空
-- 新建数据集时设定格式(json/sqlite),切换格式是独立功能点
 
 ---
 
@@ -296,6 +290,7 @@ interface GroupDefine {
 | INT | INT | INTEGER | NUMBER(10) | INT | INTEGER | INT | INT |
 | LONG | BIGINT | BIGINT | NUMBER(19) | BIGINT | BIGINT | BIGINT | BIGINT |
 | DECIMAL(p,s) | DECIMAL(p,s) | NUMERIC(p,s) | NUMBER(p,s) | DECIMAL(p,s) | NUMERIC(p,s) | DECIMAL(p,s) | DECIMAL(p,s) |
+| DOUBLE | DOUBLE | DOUBLE PRECISION | BINARY_DOUBLE | DOUBLE | DOUBLE PRECISION | DOUBLE | DOUBLE |
 | DATE | DATE | DATE | DATE | DATE | DATE | DATE | DATE |
 | DATETIME | DATETIME | TIMESTAMP | TIMESTAMP | TIMESTAMP | TIMESTAMP | DATETIME | TIMESTAMP |
 | BLOB | BLOB | BYTEA | BLOB | BLOB | BYTEA | BLOB | BLOB |
@@ -318,10 +313,10 @@ autoGenerate 是应用层生成(@GeneratedValue),DDL 不体现。
 **生成规则**:
 - 类名:表 code 派生 PascalCase(如 `USER_INFO` -> `UserInfo`),可编辑
 - 属性名:field.prop(驼峰)
-- 类型映射:VARCHAR/CLOB->String,TINYINT/INT->Integer,LONG->Long,DECIMAL->BigDecimal,DATE->LocalDate,DATETIME->LocalDateTime,BLOB->byte[]
+- 类型映射:VARCHAR/CLOB->String,TINYINT/INT->Integer,LONG->Long,DECIMAL->BigDecimal,DOUBLE->Double,DATE->LocalDate,DATETIME->LocalDateTime,BLOB->byte[]
 - 注解:`isKey=true` -> `@Id`;`autoGenerate` -> `@GeneratedValue(strategy, param, timing)`;非标准命名 -> `@Column(name)`
 - `comment` -> Javadoc(可开关)
-- 枚举字段:生成对应 enum 类(全局/内联)
+- 枚举字段:生成对应 enum 类(字段内联)
 
 **配置项**(表编辑页 Java Tab):包名 / 类名 / Lombok @Data 开关 / 生成注释开关
 
@@ -332,7 +327,7 @@ autoGenerate 是应用层生成(@GeneratedValue),DDL 不体现。
 | prop | prop | 直接使用 |
 | code | code | 直接使用 |
 | name | name | 直接使用 |
-| INT/LONG/DECIMAL/TINYINT | NUMBER | dataType 粗粒度映射 |
+| INT/LONG/DECIMAL/DOUBLE/TINYINT | NUMBER | dataType 粗粒度映射 |
 | VARCHAR/CLOB/BLOB | STRING | dataType 粗粒度映射 |
 | DATE/DATETIME | DATE/DATETIME | 不变 |
 | length/scale | length/scale | 直接使用 |
@@ -373,7 +368,6 @@ interface DiffResult {
     }>
   }
   bizTypes: { added, removed, changed }
-  enums: { added, removed, changed }
 }
 ```
 
@@ -408,38 +402,24 @@ interface DiffResult {
 
 #### 格式
 
-- **JSON 数据集**(`.json`):可读,入 Git,小数据量
-- **SQLite 数据集**(`.db`):二进制,不入 Git,大数据量
-- 格式从扩展名判断,创建时选
+- **JSONL 数据集**(`.data`):每行一个 JSON 对象,可读,入 Git
+- 单格式;原 SQLite(.db)已移除
 
-#### SQLite 存储规则(保持精度)
+#### JSONL 结构
 
-| 逻辑类型 | SQLite 存储 |
-|---|---|
-| VARCHAR/CLOB | TEXT |
-| TINYINT/INT/LONG | INTEGER |
-| DECIMAL | TEXT(字符串,避免精度丢失) |
-| DATE/DATETIME | TEXT |
-| BLOB | BLOB |
+每行 `{"table":"<表 code>","row":{<字段 code>:<值>,...}}`,不存表结构(结构用主项目 schema.json)。
 
-#### 数据集 JSON 格式
-
-```json
-[
-  {
-    "table": "USER",
-    "data": [
-      {"ID": "001", "USER_NAME": "admin", "AGE": 30, "AMOUNT": "99.50", "REMARK": null}
-    ]
-  }
-]
+```
+{"table":"USER","row":{"ID":1,"USER_NAME":"admin","AGE":30,"AMOUNT":"99.50","REMARK":null}}
+{"table":"USER","row":{"ID":2,"USER_NAME":"guest","AGE":null,"AMOUNT":"0","REMARK":null}}
 ```
 
-- key 用数据库字段名(与表结构 code 一致)
-- DECIMAL 用字符串,INT/LONG/TINYINT 用数字
-- DATE/DATETIME/VARCHAR/CLOB 用字符串
-- BLOB 用 base64
+- key 用数据库字段名(与表结构 code 一致,大写)
+- 保存时按第一个主键字段值排序(数字序/字符串序),保证文件稳定 diff
+- DECIMAL 保精度用字符串;INT/LONG/TINYINT/DOUBLE 用数字
+- DATE/DATETIME/VARCHAR/CLOB 用字符串;BLOB 用 base64
 - 空值用 null(不省略 key)
+- 打开时按项目结构重塑:缺失字段补 null,多余字段丢弃;结构变化返回差异提示
 
 #### 数据集必须匹配项目表结构
 
@@ -477,7 +457,7 @@ CLI 已删除,Tauri 二进制只保留 GUI 单模式。决策理由见 [`archite
 [文件]  [配置]  [导出]  [帮助]
 
 文件: 新建项目 / 打开项目 / 保存 / 另存为 / 最近项目 / 退出
-配置: 项目设置 / 业务类型管理 / 枚举管理 / 数据集管理 / 数据源配置
+配置: 项目设置 / 业务类型管理 / 数据集管理 / 数据源配置
 导出: DDL / diff / StrConst
 帮助: 用户指南 / 关于
 ```
@@ -545,7 +525,7 @@ CLI 已删除,Tauri 二进制只保留 GUI 单模式。决策理由见 [`archite
 #### Tab: 数据(新)
 - 数据集下拉(同目录自动扫描的数据集)+ 刷新 + 保存
 - 该表在该数据集的数据网格(行编辑)
-- 新建/删除数据集、切换格式、复制数据集在配置菜单"数据集管理"弹窗
+- 新建/删除/复制数据集在配置菜单"数据集管理"弹窗
 
 **所有 Tab 内部**:margin-top + 占满空间 + 代码区内部滚动(不撑开页面)。
 
@@ -555,12 +535,11 @@ CLI 已删除,Tauri 二进制只保留 GUI 单模式。决策理由见 [`archite
 
 **配置菜单"数据集管理"弹窗**:
 - 数据集列表(同目录扫描)
-- 新建(设定 json/sqlite 格式)
+- 新建
 - 删除
-- 切换格式(独立功能点)
 - 复制数据集
 
-**文件规则**(见 §3.6):同目录,命名 `主文件名.数据集名.{json|db}`,打开项目自动扫描。
+**文件规则**(见 §3.6):同目录,命名 `主文件名.数据集名.data`,打开项目自动扫描。
 
 > **变更**:删掉原独立"数据集管理页"(两棵树),改为表数据 Tab + 管理弹窗。
 
@@ -571,10 +550,10 @@ CLI 已删除,Tauri 二进制只保留 GUI 单模式。决策理由见 [`archite
 - 内置条目表单 disabled + 顶部提示"内置业务类型只读"
 - 新建自定义 bizType 重名校验含内置
 
-### 6.6 Enum 管理(配置菜单)
+### 6.6 Enum(字段内联,无独立管理页)
 
-- 全局枚举列表 + 编辑(code/name/package/hasCode/values[id/name/code?/color?])
-- 删除级联:统计引用字段(按表聚合提醒),确认后清 field.enum + 若 bizType=Enum 清 bizType
+- 枚举在字段编辑弹窗内联配置(选 bizType=Enum 触发,强制 VARCHAR)
+- 无全局枚举列表/删除级联(字段删则枚举随之删)
 
 ### 6.7 数据源配置(配置菜单)
 
@@ -582,7 +561,7 @@ CLI 已删除,Tauri 二进制只保留 GUI 单模式。决策理由见 [`archite
 - 新增/编辑/删除(增删改后自动落盘)
 - 表单:类型/主机/端口/数据库/用户/密码
 - 测试连接
-- 存 `.dbconfig.json`(密码 AES-256-GCM 加密)
+- 存 `.aqua.conf`(密码 AES-256-GCM 加密)
 - 打开项目时加载,无项目路径时仅内存
 
 ### 6.8 导入(文件菜单/导入)
@@ -604,7 +583,7 @@ CLI 已删除,Tauri 二进制只保留 GUI 单模式。决策理由见 [`archite
 ```
 目标方言: [MySQL ▼]
 范围: ○ 全部表  ○ 按分组  ○ 指定表(弹树选择)
-包含数据集: [无 ▼](可选,JSON 数据集)
+包含数据集: [无 ▼](可选,.data 数据集)
 ☐ 仅表结构
 [预览]  [下载 .sql]
 ```
@@ -626,7 +605,7 @@ CLI 已删除,Tauri 二进制只保留 GUI 单模式。决策理由见 [`archite
 [预览]  [下载 StrConst.java]
 ```
 
-> **变更**:导出选表改弹树选择;DDL/StrConst 导出可勾选 JSON 数据集一起导出。
+> **变更**:导出选表改弹树选择;DDL/StrConst 导出可勾选 .data 数据集一起导出。
 
 ### 6.10 欢迎页 / 新建项目
 
@@ -676,7 +655,7 @@ CLI 已删除,Tauri 二进制只保留 GUI 单模式。决策理由见 [`archite
 
 ## 7. 数据源配置
 
-**存储**:`.dbconfig.json`(项目目录,进 .gitignore)
+**存储**:`.aqua.conf`(项目目录,进 .gitignore)
 
 ```typescript
 {
@@ -715,13 +694,13 @@ CLI 已删除,Tauri 二进制只保留 GUI 单模式。决策理由见 [`archite
 
 - [x] 表结构建模(字段/索引/分组)+ Vue UI 编辑
 - [x] 业务类型系统(内置只读 + 自定义 + 参数默认值)
-- [x] Enum 系统(全局/内联 + 删除级联)
+- [x] Enum 系统(字段内联枚举)
 - [x] DDL 生成(7 方言,大写,含数据集 INSERT)
 - [x] 代码生成(Java 实体 + 前端 JSON + StrConst)
 - [x] diff + 生成 ALTER
 - [x] 导入(连库读结构,native + JDBC 混合)
-- [x] 数据集管理(JSON/SQLite 双格式,核心 CRUD)
-- [x] 数据源配置持久化(.dbconfig.json + AES-256-GCM)
+- [x] 数据集管理(.data JSONL,核心 CRUD)
+- [x] 数据源配置持久化(.aqua.conf + AES-256-GCM)
 - [x] 项目中文名 + 项目设置对话框
 - [x] ~~CLI(Tauri 双模式,generate 内置 4 generator)~~ 已移除(见 §5)
 - [x] 表删除级联提醒(按表聚合)
@@ -738,7 +717,7 @@ CLI 已删除,Tauri 二进制只保留 GUI 单模式。决策理由见 [`archite
 - [ ] 标签统一中文化
 - [ ] 页签布局(margin-top/占满/内部滚动)
 - [ ] 导入入口暴露
-- [ ] 导出选表树选择 + 可勾选 JSON 数据集
+- [ ] 导出选表树选择 + 可勾选 .data 数据集
 - [ ] 关闭项目回欢迎页 + 未保存提醒
 - [ ] Undo/Redo(主文件变动历史,单独规划)
 
@@ -769,7 +748,7 @@ CLI 已删除,Tauri 二进制只保留 GUI 单模式。决策理由见 [`archite
 ### 9.2 json-ui
 
 - DataModelSchema:字段命名完全对齐
-- 前端 JSON 生成:映射粗粒度 DataType(INT/LONG/DECIMAL/TINYINT->NUMBER)
+- 前端 JSON 生成:映射粗粒度 DataType(INT/LONG/DECIMAL/DOUBLE/TINYINT->NUMBER)
 - bizType meta.json:格式对齐(简化为 string/number)
 - 前端 JSON 服务于外部 json-ui 项目(aqua 自身 UI 用 element-plus,不用 json-ui)
 
@@ -782,5 +761,4 @@ CLI 已删除,Tauri 二进制只保留 GUI 单模式。决策理由见 [`archite
 - 内置业务类型清单(当前 Date 示例,后续扩充)
 - DM/KingBase/GBase 的 DDL 方言细节(开发时按文档适配)
 - Oracle 11g 序列+触发器 vs 12c+ IDENTITY 的选择策略
-- 数据集切换格式功能点
 - 表/字段复制粘贴(跨项目/跨表)
