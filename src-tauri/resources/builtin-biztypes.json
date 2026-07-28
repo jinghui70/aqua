@@ -5,9 +5,9 @@
       "name": "布尔",
       "description": "布尔型数据",
       "supportedDataTypes": [
-        { "dataType": "VARCHAR", "defaultLength": 1 },
         { "dataType": "TINYINT" },
-        { "dataType": "INT" }
+        { "dataType": "INT" },
+        { "dataType": "VARCHAR", "defaultLength": 1 }
       ],
       "bizTypeData": {
         "fields": [
