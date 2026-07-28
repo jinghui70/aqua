@@ -1,31 +1,18 @@
 <script setup lang="ts">
-// 字段完整编辑弹窗:补齐行内表格放不下的属性(autoGenerate.param / bizTypeData / enum)。
+// 业务类型编辑弹窗: bizType 下拉 + Enum 内联枚举 / bizTypeData 动态表单。
+// 补齐行内表格放不下的业务类型属性。draft 副本编辑,保存写回。
 import { computed, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { DataType, type Field, type InlineEnum, type BizTypeDefine, type AutoGenStrategyDefine } from "@/types/schema";
+import { DataType, type Field, type InlineEnum, type BizTypeDefine } from "@/types/schema";
 import { useProjectStore } from "@/stores/project";
 import { useBuiltinStore } from "@/stores/builtin";
+import { bizTypeSupports, applyDefaults } from "@/utils/bizType";
 
-const props = defineProps<{ modelValue: boolean; field: Field | null; tableId: string }>();
+const props = defineProps<{ modelValue: boolean; field: Field | null }>();
 const emit = defineEmits<{ "update:modelValue": [boolean] }>();
 
 const store = useProjectStore();
 const builtin = useBuiltinStore();
-const dataTypes = Object.values(DataType);
-
-// 自动生成策略(内置 + 自定义),策略下拉 + param 条件显示
-const autoGenStrategies = computed<AutoGenStrategyDefine[]>(() => [
-  ...builtin.autoGenStrategies,
-  ...(store.currentProject?.autoGenStrategies ?? []),
-]);
-const currentStrategy = computed(() =>
-  autoGenStrategies.value.find((s) => s.code === draft.value?.autoGenerate?.strategy)
-);
-
-const COLORS = [
-  "success", "error", "warning", "info", "primary", "danger",
-  "red", "orange", "yellow", "green", "blue", "purple", "grey",
-];
 
 const visible = computed({
   get: () => props.modelValue,
@@ -35,7 +22,6 @@ const visible = computed({
 // 本地编辑副本(确认时写回)
 const draft = ref<Field | null>(null);
 
-// ===== bizType =====
 const bizTypes = computed<BizTypeDefine[]>(() => [
   ...builtin.bizTypes,
   ...(store.currentProject?.bizTypes ?? []),
@@ -45,7 +31,6 @@ const isEnumBizType = computed(() => draft.value?.bizType === "Enum");
 const currentBizType = computed(() =>
   bizTypes.value.find((b) => b.bizType === draft.value?.bizType)
 );
-// bizType 的参数字段定义(用于动态表单)
 const bizTypeDataFields = computed(
   () => currentBizType.value?.bizTypeData?.fields ?? []
 );
@@ -60,7 +45,6 @@ function getBizTypeDataValue(fieldName: string): unknown {
 }
 function setBizTypeDataValue(field: { name: string; default?: unknown }, value: unknown) {
   if (!draft.value) return;
-  // 输入时正常存(不跳过默认值,避免阻断输入如默认"是"想输"是啊");空/默认在 save 时清理
   if (bizTypeDataFields.value.length === 1) {
     draft.value.bizTypeData = value;
   } else {
@@ -89,55 +73,9 @@ function cleanBizTypeData() {
   }
 }
 
-// ===== enum(无/内联,统一 InlineEnum)=====
-type EnumMode = "none" | "inline";
-const enumMode = ref<EnumMode>("none");
-
-function syncEnumMode() {
-  const e = draft.value?.enum;
-  enumMode.value = e ? "inline" : "none";
-}
-
-// ===== 类型 ↔ bizType 联动(§3.4)=====
-function bizTypeSupports(b: BizTypeDefine, dt: DataType): boolean {
-  return b.supportedDataTypes.some((s) => s.dataType === dt);
-}
-
-// 选 bizType 后 dataType 下拉只显示其支持的类型(Enum 只支持 VARCHAR)
-const availableDataTypes = computed<DataType[]>(() => {
-  const bt = draft.value?.bizType;
-  if (!bt) return dataTypes;
-  if (bt === "Enum") return [DataType.Varchar];
-  const def = bizTypes.value.find((b) => b.bizType === bt);
-  return def ? def.supportedDataTypes.map((s) => s.dataType) : dataTypes;
-});
-
-// bizType 下拉显示所有(不过滤 dataType);选 bizType 后 dataType 须在支持范围
-const availableBizTypes = computed<BizTypeDefine[]>(() => bizTypes.value);
-
-// 填充该 bizType 对指定 dataType 定义的默认 length/precision/scale
-function applyDefaults(def: BizTypeDefine, dt: DataType) {
-  if (!draft.value) return;
-  const s = def.supportedDataTypes.find((x) => x.dataType === dt);
-  if (!s) return;
-  if (s.defaultLength != null) draft.value.length = s.defaultLength;
-  if (s.defaultPrecision != null) draft.value.precision = s.defaultPrecision;
-  if (s.defaultScale != null) draft.value.scale = s.defaultScale;
-}
-
 // 按 bizType 定义初始化 bizTypeData:不预填默认值(默认值作 placeholder,用户输入才存;空/默认不保存)
 function initBizTypeData(_def: BizTypeDefine): unknown {
   return undefined;
-}
-
-// dataType 切换:选了 bizType 时 dataType 下拉已过滤为支持的,这里只填默认值
-function onDataTypeChange(dt: DataType) {
-  if (!draft.value) return;
-  draft.value.dataType = dt;
-  const bt = draft.value.bizType;
-  if (!bt) return;
-  const def = bizTypes.value.find((b) => b.bizType === bt);
-  if (def) applyDefaults(def, dt);
 }
 
 // bizType 切换:选 Enum 默认内联枚举并强制 VARCHAR;选普通 bizType 校正 dataType + 填默认值;离开清空
@@ -147,13 +85,11 @@ function onBizTypeChange(bizType: string | undefined) {
   if (bizType === "Enum") {
     if (!draft.value.enum) {
       draft.value.enum = { name: "", hasCode: false, values: [] } as InlineEnum;
-      enumMode.value = "inline";
     }
     draft.value.bizTypeData = undefined;
     draft.value.dataType = DataType.Varchar;
   } else if (bizType) {
     draft.value.enum = undefined;
-    enumMode.value = "none";
     const def = bizTypes.value.find((b) => b.bizType === bizType);
     if (def) {
       let dt = draft.value.dataType;
@@ -161,31 +97,44 @@ function onBizTypeChange(bizType: string | undefined) {
         dt = def.supportedDataTypes[0]?.dataType ?? dt;
         draft.value.dataType = dt;
       }
-      applyDefaults(def, dt);
+      applyDefaults(draft.value, def, dt);
       draft.value.bizTypeData = initBizTypeData(def) as Field["bizTypeData"];
     }
   } else {
     draft.value.enum = undefined;
-    enumMode.value = "none";
   }
 }
 
-// 打开时重建 draft(深拷贝,取消不污染原对象;同字段再打开也重置为原始数据)
-watch(visible, (v) => {
-  if (v && props.field) {
-    draft.value = JSON.parse(JSON.stringify(props.field));
-    syncEnumMode();
-  }
-});
-
-function onEnumModeChange(mode: EnumMode) {
+// dataType 下拉仅在该 bizType 支持多种类型时显示(Enum 强制 VARCHAR,单类型无选择)
+const showDataTypeSelect = computed(
+  () =>
+    !!draft.value?.bizType &&
+    draft.value.bizType !== "Enum" &&
+    !!currentBizType.value &&
+    currentBizType.value.supportedDataTypes.length > 1
+);
+// 弹窗内切 dataType: 清理不适用属性(§3.1) + 按 bizType 填默认长度精度
+function onDataTypeChange() {
   if (!draft.value) return;
-  if (mode === "none") draft.value.enum = undefined;
-  else draft.value.enum = { name: "", hasCode: false, values: [] } as InlineEnum;
+  switch (draft.value.dataType) {
+    case DataType.Varchar:
+      draft.value.precision = undefined;
+      draft.value.scale = undefined;
+      break;
+    case DataType.Decimal:
+      draft.value.length = undefined;
+      break;
+    default:
+      draft.value.length = undefined;
+      draft.value.precision = undefined;
+      draft.value.scale = undefined;
+      break;
+  }
+  const def = currentBizType.value;
+  if (def) applyDefaults(draft.value, def, draft.value.dataType);
 }
 
 const inlineEnum = computed(() => draft.value?.enum ?? null);
-
 function addInlineValue() {
   inlineEnum.value?.values.push({ id: "", name: "" });
 }
@@ -193,28 +142,22 @@ function removeInlineValue(idx: number) {
   inlineEnum.value?.values.splice(idx, 1);
 }
 
-// code 大写 + 仅留合法字符(大写蛇形,不以数字开头)+ 蛇形转驼峰联动 prop
-function onCodeInput() {
-  if (!draft.value) return;
-  draft.value.code = draft.value.code
-    .toUpperCase()
-    .replace(/[^A-Z0-9_]/g, "")
-    .replace(/^[0-9]+/, "");
-  const parts = draft.value.code.split("_").filter(Boolean);
-  if (parts.length) {
-    draft.value.prop =
-      parts[0].toLowerCase() +
-      parts
-        .slice(1)
-        .map((p) => p[0].toUpperCase() + p.slice(1).toLowerCase())
-        .join("");
+const COLORS = [
+  "success", "error", "warning", "info", "primary", "danger",
+  "red", "orange", "yellow", "green", "blue", "purple", "grey",
+];
+
+// 打开时重建 draft(深拷贝,取消不污染原对象;同字段再打开也重置为原始数据)
+watch(visible, (v) => {
+  if (v && props.field) {
+    draft.value = JSON.parse(JSON.stringify(props.field));
   }
-}
+});
 
 // ===== 保存 =====
 function save() {
   if (!draft.value || !props.field) return;
-  // enum 只支持 VARCHAR
+  // enum 只支持 VARCHAR(onBizTypeChange 已强制,兜底)
   if (draft.value.enum && draft.value.dataType !== DataType.Varchar) {
     ElMessage.error("enum 只支持 VARCHAR 类型");
     return;
@@ -229,97 +172,16 @@ function save() {
   }
   // 保存前清理 bizTypeData(空/默认值不输出)
   cleanBizTypeData();
-  // 写回原字段(保持引用,Object.assign);code 改名级联索引
-  const oldCode = props.field.code;
+  // 写回原字段(保持引用,Object.assign);本弹窗不编辑 code,无 code 级联
   Object.keys(props.field).forEach((k) => delete (props.field as any)[k]);
   Object.assign(props.field, draft.value);
-  if (oldCode !== draft.value.code) {
-    store.renameFieldCode(props.tableId, oldCode, draft.value.code);
-  }
   visible.value = false;
-  ElMessage.success("已保存");
 }
 </script>
 
 <template>
-  <el-dialog v-model="visible" title="字段编辑" width="900px" top="6vh" :close-on-click-modal="false">
+  <el-dialog v-model="visible" title="业务类型" width="720px" top="8vh" :close-on-click-modal="false">
     <div v-if="draft" class="flex flex-col gap-4" style="max-height: 70vh; overflow-y: auto">
-      <!-- 基本 -->
-      <el-form label-width="90px" class="pr-12" :disabled="store.readOnly">
-        <div class="grid grid-cols-2 gap-x-24">
-          <el-form-item label="code">
-            <el-input v-model="draft.code" @input="onCodeInput" />
-          </el-form-item>
-          <el-form-item label="prop">
-            <el-input v-model="draft.prop" />
-          </el-form-item>
-          <el-form-item label="名称">
-            <el-input v-model="draft.name" />
-          </el-form-item>
-          <el-form-item label="默认值">
-            <el-input v-model="draft.defaultValue" placeholder="DDL DEFAULT 子句" />
-          </el-form-item>
-          <el-form-item label="类型">
-            <el-select
-              :model-value="draft.dataType"
-              style="width: 160px"
-              @update:model-value="(v: DataType) => onDataTypeChange(v)"
-            >
-              <el-option v-for="dt in availableDataTypes" :key="dt" :label="dt" :value="dt" />
-            </el-select>
-            <el-input-number
-              v-if="draft.dataType === 'VARCHAR'"
-              v-model="draft.length"
-              :min="1"
-              :controls="false"
-              class="ml-8"
-              style="width: 90px"
-              placeholder="长度"
-            />
-            <template v-if="draft.dataType === 'DECIMAL'">
-              <el-input-number v-model="draft.precision" :min="1" :controls="false" class="ml-8" style="width: 70px" placeholder="精度" />
-              <el-input-number v-model="draft.scale" :min="0" :controls="false" class="ml-4" style="width: 70px" placeholder="小数" />
-            </template>
-          </el-form-item>
-          <el-form-item label="约束">
-            <el-checkbox v-model="draft.isKey" @change="draft.isKey && (draft.notNull = true)">主键</el-checkbox>
-            <el-checkbox v-model="draft.notNull" :disabled="draft.isKey">非空</el-checkbox>
-          </el-form-item>
-        </div>
-      </el-form>
-
-      <!-- 自动生成 -->
-      <el-form label-width="90px" class="pr-12" :disabled="store.readOnly">
-        <el-form-item label="自动生成">
-          <el-switch
-            :model-value="!!draft.autoGenerate"
-            @change="(v: any) => draft && (draft.autoGenerate = v ? { strategy: 'default', timing: 'INSERT' } : undefined)"
-          />
-        </el-form-item>
-        <template v-if="draft.autoGenerate">
-          <div class="grid grid-cols-2 gap-x-24">
-            <el-form-item label="生成策略">
-              <el-select v-model="draft.autoGenerate.strategy">
-                <el-option v-for="s in autoGenStrategies" :key="s.code" :label="s.name" :value="s.code" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="生成时机">
-              <el-select v-model="draft.autoGenerate.timing">
-                <el-option label="INSERT" value="INSERT" />
-                <el-option label="INSERT_UPDATE" value="INSERT_UPDATE" />
-              </el-select>
-            </el-form-item>
-          </div>
-          <el-form-item v-if="currentStrategy?.paramDesc != null" label="策略参数">
-            <el-input
-              v-model="draft.autoGenerate.param"
-              :placeholder="currentStrategy.paramDesc"
-            />
-          </el-form-item>
-        </template>
-      </el-form>
-
-      <!-- 业务类型(Enum 是特殊 bizType)-->
       <el-form label-width="90px" class="pr-12" :disabled="store.readOnly">
         <el-form-item label="业务类型">
           <el-select
@@ -330,13 +192,21 @@ function save() {
             @update:model-value="(v: string | undefined) => onBizTypeChange(v)"
           >
             <el-option label="Enum(枚举)" value="Enum" />
-            <el-option v-for="b in availableBizTypes" :key="b.bizType" :label="b.name" :value="b.bizType" />
+            <el-option v-for="b in bizTypes" :key="b.bizType" :label="b.name" :value="b.bizType" />
+          </el-select>
+          <el-select
+            v-if="showDataTypeSelect"
+            v-model="draft.dataType"
+            size="small"
+            style="width: 140px; margin-left: 12px"
+            @change="onDataTypeChange"
+          >
+            <el-option v-for="s in (currentBizType?.supportedDataTypes ?? [])" :key="s.dataType" :label="s.dataType" :value="s.dataType" />
           </el-select>
         </el-form-item>
 
-        <!-- bizType=Enum: 枚举特殊配置(无/内联)-->
+        <!-- bizType=Enum: 枚举特殊配置(内联)-->
         <template v-if="isEnumBizType">
-          <!-- 选 Enum 自动内联枚举 -->
           <template v-if="inlineEnum">
             <el-form-item label="枚举名">
               <el-input v-model="inlineEnum.name" style="width: 200px" />
@@ -399,13 +269,6 @@ function save() {
             </el-form-item>
           </div>
         </template>
-      </el-form>
-
-      <!-- 备注 -->
-      <el-form label-width="90px" class="pr-12" :disabled="store.readOnly">
-        <el-form-item label="备注">
-          <el-input v-model="draft.comment" type="textarea" :rows="2" />
-        </el-form-item>
       </el-form>
     </div>
 

@@ -1,13 +1,15 @@
 <script setup lang="ts">
-// fields Tab: 字段表格行内编辑 + 增删 + 拖拽排序 + 详情弹窗。
+// fields Tab: 字段表格行内编辑 + 增删 + 拖拽排序 + 业务类型/自动生成单元格弹窗。
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import Sortable from "sortablejs";
 import { DataType, type Field } from "@/types/schema";
 import { useProjectStore } from "@/stores/project";
 import { useClipboardStore } from "@/stores/clipboard";
 import { useBuiltinStore } from "@/stores/builtin";
-import FieldDetailDialog from "./FieldDetailDialog.vue";
+import { bizTypeSupports, applyDefaults } from "@/utils/bizType";
+import BizTypeEditDialog from "./BizTypeEditDialog.vue";
+import AutoGenEditDialog from "./AutoGenEditDialog.vue";
 
 const props = defineProps<{ fields: Field[]; tableId: string }>();
 
@@ -40,7 +42,7 @@ onMounted(() => {
     handle: ".drag-handle",
     animation: 150,
     // 用 JS 模拟拖拽,绕开 HTML5 原生 DnD 与 el-table 自绘 DOM 的竞态
-    // (原生 DnD 的 mouseup 清理与 Vue 重渲染打架 → 视图不更新 + 需二次点击)
+    // (原生 DnD 的 mouseup 清理与 Vue 重渲染打架 -> 视图不更新 + 需二次点击)
     forceFallback: true,
     fallbackOnBody: true,
     disabled: store.readOnly,
@@ -56,13 +58,27 @@ onMounted(() => {
 });
 watch(() => store.readOnly, (ro) => sortableInst?.option("disabled", ro));
 
-// 详情弹窗
-const detailVisible = ref(false);
-const detailField = ref<Field | null>(null);
-function openDetail(field: Field) {
-  detailField.value = field;
-  detailVisible.value = true;
+// 业务类型/自动生成编辑弹窗
+const bizTypeVisible = ref(false);
+const bizTypeField = ref<Field | null>(null);
+function openBizType(field: Field) {
+  bizTypeField.value = field;
+  bizTypeVisible.value = true;
 }
+const autoGenVisible = ref(false);
+const autoGenField = ref<Field | null>(null);
+function openAutoGen(field: Field) {
+  autoGenField.value = field;
+  autoGenVisible.value = true;
+}
+
+// 单元格点击: 业务类型/自动生成列整格可点开弹窗(其余列忽略)
+function onCellClick(row: Field, column: { label?: string }) {
+  if (store.readOnly) return;
+  if (column.label === "业务类型") openBizType(row);
+  else if (column.label === "自动生成策略") openAutoGen(row);
+}
+
 const dataTypes = Object.values(DataType);
 
 // bizType 只读展示: 映射到名称(含内置)
@@ -76,7 +92,7 @@ function bizTypeLabel(field: Field): string {
   return bizTypeOptions.value.find((b) => b.bizType === field.bizType)?.name ?? field.bizType;
 }
 
-// autoGenerate 只读展示: 策略名
+// autoGenerate 只读展示: 策略名(timing 由单元格图标体现,INSERT 不显,INSERT_UPDATE 显 update 图标)
 function autoGenLabel(field: Field): string {
   const ag = field.autoGenerate;
   if (!ag) return "-";
@@ -92,17 +108,24 @@ function onKeyChange(field: Field, isKey: boolean) {
 
 function addField() {
   props.fields.push({
-    prop: "newField",
-    code: "NEW_FIELD",
-    name: "新字段",
+    prop: "",
+    code: "",
+    name: "",
     dataType: DataType.Varchar,
-    length: 64,
+    length: 32,
+  });
+  // 焦点定位到新行(末尾)的 code 输入框(优先 fixed 层,用户可见)
+  nextTick(() => {
+    const root = tableRef.value?.$el as HTMLElement | undefined;
+    let inputs = root?.querySelectorAll<HTMLInputElement>(".el-table__fixed .code-cell input");
+    if (!inputs?.length) inputs = root?.querySelectorAll<HTMLInputElement>(".code-cell input");
+    inputs?.[inputs.length - 1]?.focus();
   });
 }
 
-// 切换类型时清理不适用属性(§3.1):VARCHAR 仅 length,DECIMAL 仅 precision/scale,其余无
-function onDataTypeChange(field: Field) {
-  switch (field.dataType) {
+// 清理不适用属性(§3.1): VARCHAR 仅 length,DECIMAL 仅 precision/scale,其余无
+function cleanupDataType(field: Field, dt: DataType) {
+  switch (dt) {
     case DataType.Varchar:
       field.precision = undefined;
       field.scale = undefined;
@@ -116,6 +139,68 @@ function onDataTypeChange(field: Field) {
       field.scale = undefined;
       break;
   }
+}
+
+// 应用新 dataType: 清理 + bizType 默认值 + 全局默认兜底(VARCHAR 32 / DECIMAL 10,4)
+function applyDataType(field: Field, newDt: DataType) {
+  field.dataType = newDt;
+  cleanupDataType(field, newDt);
+  const bt = field.bizType;
+  if (bt && bt !== "Enum") {
+    const def = bizTypeOptions.value.find((b) => b.bizType === bt);
+    if (def) applyDefaults(field, def, newDt);
+  }
+  // bizType 未定义默认值时,填全局默认
+  if (newDt === DataType.Varchar) {
+    if (field.length == null) field.length = 32;
+  } else if (newDt === DataType.Decimal) {
+    if (field.precision == null) field.precision = 10;
+    if (field.scale == null) field.scale = 4;
+  }
+}
+
+// 切换类型 + bizType 兼容联动(§3.4):
+// 兼容(或无 bizType) -> 应用新类型(含默认值)
+// 不兼容(含 Enum 改非 VARCHAR) -> confirm 让用户决定:
+//   确认 -> 清 bizType 后应用新类型;取消 -> 不动(dataType 保持旧值)
+// 用 :model-value 受控,确认前不写 field.dataType,取消时 dataType 完全不变
+async function onDataTypeChange(field: Field, newDt: DataType) {
+  const bt = field.bizType;
+  // 判断兼容性(field.dataType 仍是旧值)
+  let incompatible = false;
+  let bizName = "";
+  if (bt) {
+    if (bt === "Enum") {
+      if (newDt !== DataType.Varchar) {
+        incompatible = true;
+        bizName = "Enum";
+      }
+    } else {
+      const def = bizTypeOptions.value.find((b) => b.bizType === bt);
+      if (def && !bizTypeSupports(def, newDt)) {
+        incompatible = true;
+        bizName = def.name;
+      }
+    }
+  }
+  if (incompatible) {
+    try {
+      await ElMessageBox.confirm(
+        `数据类型 ${newDt} 与业务类型 ${bizName} 不兼容,切换将清除该业务类型。是否切换?`,
+        "切换数据类型",
+        { type: "warning", confirmButtonText: "切换", cancelButtonText: "取消" }
+      );
+      field.bizType = undefined;
+      field.bizTypeData = undefined;
+      if (bt === "Enum") field.enum = undefined;
+      applyDataType(field, newDt);
+    } catch {
+      // 取消: dataType 保持旧值,不动
+    }
+    return;
+  }
+  // 兼容或无 bizType
+  applyDataType(field, newDt);
 }
 
 // inline 改 code 前 focus 缓存旧值,用于级联索引
@@ -224,20 +309,32 @@ function deleteSelected() {
       </el-button>
     </div>
     <div class="flex-1 min-h-0">
-      <el-table ref="tableRef" :data="fields" :row-key="rowKey" border size="small" height="100%" class="select-none" style="width: 100%" @selection-change="onSelectionChange">
-      <el-table-column type="selection" width="36" />
-      <el-table-column v-if="!store.readOnly" label="" width="36" align="center" key="drag">
+      <el-table
+        ref="tableRef"
+        :data="fields"
+        :row-key="rowKey"
+        border
+        size="small"
+        height="100%"
+        class="select-none"
+        style="width: 100%"
+        @selection-change="onSelectionChange"
+        @cell-click="onCellClick"
+      >
+      <el-table-column type="selection" width="36" fixed="left" />
+      <el-table-column v-if="!store.readOnly" label="" width="36" align="center" key="drag" fixed="left">
         <template #default>
           <span class="drag-handle cursor-move text-gray-400 select-none">⣿</span>
         </template>
       </el-table-column>
-      <el-table-column label="#" width="44" type="index" />
-      <el-table-column label="编码" min-width="150">
+      <el-table-column label="#" width="44" type="index" fixed="left" />
+      <el-table-column label="编码" min-width="150" fixed="left">
         <template #default="{ row }">
           <span v-if="store.readOnly" class="text-13">{{ row.code }}</span>
           <el-input
             v-else
             v-model="row.code"
+            class="code-cell"
             size="small"
             @focus="onCodeFocus(row)"
             @input="onCodeInput(row)"
@@ -261,7 +358,7 @@ function deleteSelected() {
         <template #default="{ row }">
           <span v-if="store.readOnly" class="text-13">{{ row.dataType }}<template v-if="row.dataType === 'VARCHAR' && row.length">({{ row.length }})</template><template v-if="row.dataType === 'DECIMAL' && row.precision">({{ row.precision }},{{ row.scale ?? 0 }})</template></span>
           <div v-else class="flex items-center gap-4">
-            <el-select v-model="row.dataType" size="small" style="width: 100px" @change="onDataTypeChange(row)">
+            <el-select :model-value="row.dataType" size="small" style="width: 100px" @change="(newDt: DataType) => onDataTypeChange(row, newDt)">
               <el-option v-for="dt in dataTypes" :key="dt" :label="dt" :value="dt" />
             </el-select>
             <el-input-number
@@ -294,11 +391,6 @@ function deleteSelected() {
           </div>
         </template>
       </el-table-column>
-      <el-table-column label="业务类型" width="110">
-        <template #default="{ row }">
-          <span class="text-13">{{ bizTypeLabel(row) }}</span>
-        </template>
-      </el-table-column>
       <el-table-column label="主键" width="50" align="center">
         <template #default="{ row }">
           <span v-if="store.readOnly">{{ row.isKey ? "✓" : "" }}</span>
@@ -315,9 +407,18 @@ function deleteSelected() {
           <el-checkbox v-else v-model="row.notNull" :disabled="row.isKey" />
         </template>
       </el-table-column>
-      <el-table-column label="自动生成" width="140">
+      <el-table-column label="业务类型" width="110" :class-name="store.readOnly ? '' : 'cursor-pointer'">
         <template #default="{ row }">
-          <span class="text-13">{{ autoGenLabel(row) }}</span>
+          <span :class="['text-13', store.readOnly ? '' : 'cursor-pointer text-blue-600 hover:underline']">{{ bizTypeLabel(row) }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="自动生成策略" width="140" :class-name="store.readOnly ? '' : 'cursor-pointer'">
+        <template #default="{ row }">
+          <span :class="['text-13', store.readOnly ? '' : 'cursor-pointer text-blue-600 hover:underline']">
+            <span v-if="row.autoGenerate?.timing === 'INSERT'" class="i-mdi-plus text-blue-500 inline-block w-14 h-14 align-middle mr-4" title="仅插入时生成" />
+            <span v-else-if="row.autoGenerate?.timing === 'INSERT_UPDATE'" class="i-mdi-sync text-green-500 inline-block w-14 h-14 align-middle mr-4" title="插入和更新时生成" />
+            {{ autoGenLabel(row) }}
+          </span>
         </template>
       </el-table-column>
       <el-table-column label="默认值" min-width="90">
@@ -332,13 +433,9 @@ function deleteSelected() {
           <el-input v-else v-model="row.comment" size="small" placeholder="-" />
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="80" align="center" fixed="right">
-        <template #default="{ row }">
-          <el-button size="small" link type="primary" @click="openDetail(row)">详情</el-button>
-        </template>
-      </el-table-column>
     </el-table>
     </div>
-    <FieldDetailDialog v-model="detailVisible" :field="detailField" :table-id="tableId" />
+    <BizTypeEditDialog v-model="bizTypeVisible" :field="bizTypeField" />
+    <AutoGenEditDialog v-model="autoGenVisible" :field="autoGenField" />
   </div>
 </template>
