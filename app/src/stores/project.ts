@@ -265,6 +265,11 @@ export const useProjectStore = defineStore("project", () => {
     });
   }
 
+  /** 当前激活页签的路径(无页签回首页 /)。配置/数据集页"返回"用。 */
+  function activeTabPath(): string {
+    return openedTabs.value.find((t) => t.key === activeTab.value)?.path ?? "/";
+  }
+
   // ===== 分组 CRUD =====
 
   function addGroup(code: string, name: string): string | null {
@@ -510,6 +515,7 @@ export const useProjectStore = defineStore("project", () => {
     openTab,
     closeTab,
     openTable,
+    activeTabPath,
     addGroup,
     updateGroup,
     deleteGroup,

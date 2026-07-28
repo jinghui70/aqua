@@ -188,14 +188,14 @@ const treeData = computed(() => {
   if (!p) return [];
   return p.groups.map((g) => ({
     id: `group:${g.code}`,
-    label: g.name,
+    label: `${g.name} (${g.code})`,
     type: "group" as const,
     children: p.tables
       .filter((t) => t.group === g.code)
       .filter((t) => !hideEmpty.value || rowCount(t.code) > 0)
       .map((t) => ({
         id: `table:${t.code}`,
-        label: `${t.name} (${rowCount(t.code)})`,
+        label: `${t.code} ${t.name} (${rowCount(t.code)})`,
         type: "table" as const,
         tableCode: t.code,
       })),
@@ -287,7 +287,7 @@ loadDatasets();
   <div v-if="store.currentProject" class="h-full flex flex-col">
     <!-- 顶部:数据集下拉 + 新建 + dirty 保存/取消 -->
     <div class="flex items-center px-16 h-48 border-b border-gray-200 flex-shrink-0">
-      <el-button size="small" link @click="router.push('/')">← 返回</el-button>
+      <el-button size="small" link @click="router.push(store.activeTabPath())">← 返回</el-button>
       <span class="text-13" style="margin-left: 8px">数据集</span>
       <el-select
         v-model="selectedPath"
@@ -309,56 +309,68 @@ loadDatasets();
       <el-checkbox v-model="hideEmpty">隐藏无数据表</el-checkbox>
     </div>
 
-    <!-- 主体:表树 + 数据网格 -->
-    <div class="flex-1 flex overflow-hidden">
-      <div class="w-240 border-r border-gray-200 overflow-y-auto flex-shrink-0 p-4">
-        <el-tree
-          :data="treeData"
-          :props="{ children: 'children', label: 'label' }"
-          node-key="id"
-          default-expand-all
-          :expand-on-click-node="false"
-          @node-click="onNodeClick"
-        >
-          <template #default="{ data }">
-            <span class="text-13">{{ data.type === "group" ? "📁" : "📄" }} {{ data.label }}</span>
-          </template>
-        </el-tree>
-      </div>
+    <!-- 主体:表树 + 数据网格(splitter 可拖动) -->
+    <el-splitter class="flex-1 min-h-0">
+      <el-splitter-panel :size="240" :min="180" :max="500">
+        <div class="h-full overflow-y-auto p-4">
+          <el-tree
+            :data="treeData"
+            :props="{ children: 'children', label: 'label' }"
+            node-key="id"
+            default-expand-all
+            :expand-on-click-node="false"
+            @node-click="onNodeClick"
+          >
+            <template #default="{ data }">
+              <div class="flex items-center w-full overflow-hidden">
+                <span
+                  class="flex items-center gap-4 min-w-0 flex-1"
+                  :class="data.type === 'table' ? 'text-13' : 'font-bold text-13'"
+                >
+                  <span class="flex-shrink-0">{{ data.type === "group" ? "📁" : "📄" }}</span>
+                  <span class="truncate min-w-0">{{ data.label }}</span>
+                </span>
+              </div>
+            </template>
+          </el-tree>
+        </div>
+      </el-splitter-panel>
 
-      <div class="flex-1 flex flex-col overflow-hidden p-16">
-        <template v-if="currentTable">
-          <div class="flex items-center gap-8 mb-12 flex-shrink-0">
-            <span class="font-bold text-14">{{ currentTable.name }}</span>
-            <span class="text-12 text-gray-400">{{ currentRows.length }} 行</span>
-            <div class="flex-1" />
-            <el-button size="small" type="primary" @click="addRow">新增行</el-button>
-            <el-button size="small" type="danger" @click="clearTable">清空</el-button>
-          </div>
-          <div class="flex-1 min-h-0">
-            <el-table :data="currentRows" border size="small" height="100%" style="width: 100%">
-              <el-table-column label="#" type="index" width="44" />
-              <el-table-column
-                v-for="f in currentTable.fields"
-                :key="f.code"
-                :label="f.name"
-                min-width="140"
-              >
-                <template #default="{ row }">
-                  <el-input v-model="row[f.code.toUpperCase()]" size="small" placeholder="null" />
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" width="60" align="center" fixed="right">
-                <template #default="{ $index }">
-                  <el-button size="small" link type="danger" @click="removeRow($index)">删</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-        </template>
-        <el-empty v-else description="选择左侧的表" />
-      </div>
-    </div>
+      <el-splitter-panel>
+        <div class="h-full flex flex-col overflow-hidden p-16">
+          <template v-if="currentTable">
+            <div class="flex items-center gap-8 mb-12 flex-shrink-0">
+              <span class="font-bold text-14">{{ currentTable.name }}</span>
+              <span class="text-12 text-gray-400">{{ currentRows.length }} 行</span>
+              <div class="flex-1" />
+              <el-button size="small" type="primary" @click="addRow">新增行</el-button>
+              <el-button size="small" type="danger" @click="clearTable">清空</el-button>
+            </div>
+            <div class="flex-1 min-h-0">
+              <el-table :data="currentRows" border size="small" height="100%" style="width: 100%">
+                <el-table-column label="#" type="index" width="44" />
+                <el-table-column
+                  v-for="f in currentTable.fields"
+                  :key="f.code"
+                  :label="f.name"
+                  min-width="140"
+                >
+                  <template #default="{ row }">
+                    <el-input v-model="row[f.code.toUpperCase()]" size="small" placeholder="null" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="60" align="center" fixed="right">
+                  <template #default="{ $index }">
+                    <el-button size="small" link type="danger" @click="removeRow($index)">删</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </template>
+          <el-empty v-else description="选择左侧的表" />
+        </div>
+      </el-splitter-panel>
+    </el-splitter>
 
     <!-- 新建弹窗 -->
     <el-dialog v-model="newVisible" title="新建数据集" width="420px" :close-on-click-modal="false">

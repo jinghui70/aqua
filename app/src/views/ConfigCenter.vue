@@ -2,19 +2,21 @@
 // 配置中心:项目级配置(项目设置/数据源/业务类型)统一管理。左侧返回 + 导航 + 右侧面板。
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { useProjectStore } from "@/stores/project";
 import ProjectSettingsPanel from "./config/ProjectSettingsPanel.vue";
 import DataSourcePanel from "./config/DataSourcePanel.vue";
 import BizTypePanel from "./config/BizTypePanel.vue";
 import AutoGenStrategyPanel from "./config/AutoGenStrategyPanel.vue";
 
 const router = useRouter();
+const store = useProjectStore();
 const activePanel = ref<"settings" | "datasource" | "biztype" | "strategy">("settings");
 </script>
 
 <template>
   <div class="h-full flex flex-col">
     <div class="flex items-center gap-8 px-12 py-6 border-b border-gray-200 flex-shrink-0">
-      <el-button size="small" link @click="router.push('/')">← 返回</el-button>
+      <el-button size="small" link @click="router.push(store.activeTabPath())">← 返回</el-button>
       <span class="text-14 font-bold">配置</span>
     </div>
     <div class="flex-1 min-h-0 flex">

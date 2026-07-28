@@ -30,7 +30,7 @@ const treeData = computed<TreeNode[]>(() => {
   if (!p) return [];
   return p.groups.map((g) => ({
     id: `group:${g.code}`,
-    label: g.name,
+    label: `${g.name} (${g.code})`,
     type: "group" as const,
     groupCode: g.code,
     children: p.tables
