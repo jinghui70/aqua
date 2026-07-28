@@ -1,8 +1,10 @@
 //! 业务校验层 - 独立于 serde 的语义规则校验。
 
 use crate::schema::data_type::DataType;
+use crate::schema::keywords::{is_java_keyword, is_sql_reserved};
 use crate::schema::project::Project;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use thiserror::Error;
 
 /// ValidationError - 带 path + message,对齐 legacy errors 结构,前端可定位字段。
@@ -32,22 +34,76 @@ pub enum ParseError {
 
 /// validate_project - 业务校验,收集所有错误(不短路,对齐 legacy 一次返回全部 errors)。
 ///
-/// 校验规则(§3 数据模型):
+/// 校验规则(§3 数据模型 + 保存时合法性):
+/// - 各类型只允许特定属性(VARCHAR length / DECIMAL precision,scale / 其余无)
 /// - enum 只支持 VARCHAR (field.rs 规则)
 /// - hasCode=true 时每个 value 必须有 code (enum_def.rs 规则)
-/// - values 非空 (已由 serde 保证: Vec 反序列化空数组成功,由此函数校验非空)
-/// - 必填字段非空 (已由 serde 类型层保证: 缺失必填字段无法反序列化)
+/// - values 非空
+/// - code 表内不重复 / code 非 SQL 保留字 / prop 非 Java 关键字
+/// - DECIMAL precision >= scale
+/// - 索引名表内不重复(空名不查,空名自动生成)
 pub fn validate_project(project: &Project) -> Result<(), Vec<ValidationError>> {
     let mut errors = Vec::new();
 
     // 校验表
-    for (table_idx, table) in project.tables.iter().enumerate() {
+    for table in project.tables.iter() {
+        let mut seen_codes: HashSet<&str> = HashSet::new();
+        let mut seen_props: HashSet<&str> = HashSet::new();
+
         // 校验字段
-        for (field_idx, field) in table.fields.iter().enumerate() {
+        for field in table.fields.iter() {
+            let base = format!("{}.{}", table.code, field.code);
+
+            // prop 不能为空
+            if field.prop.is_empty() {
+                errors.push(ValidationError::new(
+                    format!("{}.prop", base),
+                    "不能为空",
+                ));
+            }
+            // name 不能为空
+            if field.name.is_empty() {
+                errors.push(ValidationError::new(
+                    format!("{}.name", base),
+                    "不能为空",
+                ));
+            }
+
+            // code 表内重复(空 code 跳过,空由保存清理处理)
+            if !field.code.is_empty() && !seen_codes.insert(field.code.as_str()) {
+                errors.push(ValidationError::new(
+                    format!("{}.code", base),
+                    format!("重复: {}", field.code),
+                ));
+            }
+            // prop 表内重复(空 prop 跳过)
+            if !field.prop.is_empty() && !seen_props.insert(field.prop.as_str()) {
+                errors.push(ValidationError::new(
+                    format!("{}.prop", base),
+                    format!("重复: {}", field.prop),
+                ));
+            }
+
+            // code SQL 保留字
+            if is_sql_reserved(&field.code) {
+                errors.push(ValidationError::new(
+                    format!("{}.code", base),
+                    format!("code '{}' 是 SQL 保留字", field.code),
+                ));
+            }
+
+            // prop Java 关键字
+            if is_java_keyword(&field.prop) {
+                errors.push(ValidationError::new(
+                    format!("{}.prop", base),
+                    format!("prop '{}' 是 Java 关键字", field.prop),
+                ));
+            }
+
             // 规则: §3.1 各类型只允许特定属性
             //   - VARCHAR: length
             //   - DECIMAL: precision, scale
-            //   - 其余(TINYINT/INT/LONG/DOUBLE/CLOB/BLOB/DATE/DATETIME): 均无
+            //   - 其余: 均无
             // 多余属性报错,避免脏数据流入生成器(DDL/Java/前端 JSON)。
             let (allow_length, allow_precision, allow_scale) = match field.data_type {
                 DataType::Varchar => (true, false, false),
@@ -55,7 +111,6 @@ pub fn validate_project(project: &Project) -> Result<(), Vec<ValidationError>> {
                 _ => (false, false, false),
             };
             let dt_name = format!("{:?}", field.data_type).to_uppercase();
-            let base = format!("tables[{}].fields[{}]", table_idx, field_idx);
             if !allow_length && field.length.is_some() {
                 errors.push(ValidationError::new(
                     format!("{}.length", base),
@@ -75,10 +130,44 @@ pub fn validate_project(project: &Project) -> Result<(), Vec<ValidationError>> {
                 ));
             }
 
+            // VARCHAR length 不能为空; DECIMAL precision/scale 不能为空
+            if field.data_type == DataType::Varchar && field.length.is_none() {
+                errors.push(ValidationError::new(
+                    format!("{}.length", base),
+                    "不能为空",
+                ));
+            }
+            if field.data_type == DataType::Decimal {
+                if field.precision.is_none() {
+                    errors.push(ValidationError::new(
+                        format!("{}.precision", base),
+                        "不能为空",
+                    ));
+                }
+                if field.scale.is_none() {
+                    errors.push(ValidationError::new(
+                        format!("{}.scale", base),
+                        "不能为空",
+                    ));
+                }
+            }
+
+            // DECIMAL precision >= scale(两者都 Some 时)
+            if field.data_type == DataType::Decimal {
+                if let (Some(p), Some(s)) = (field.precision, field.scale) {
+                    if p < s {
+                        errors.push(ValidationError::new(
+                            format!("{}.precision", base),
+                            format!("precision({}) 不能小于 scale({})", p, s),
+                        ));
+                    }
+                }
+            }
+
             // 规则: enum 只支持 VARCHAR
             if field.enum_ref.is_some() && field.data_type != DataType::Varchar {
                 errors.push(ValidationError::new(
-                    format!("tables[{}].fields[{}].enum", table_idx, field_idx),
+                    format!("{}.enum", base),
                     format!("enum 只支持 VARCHAR，当前 dataType={:?}", field.data_type),
                 ));
             }
@@ -88,7 +177,7 @@ pub fn validate_project(project: &Project) -> Result<(), Vec<ValidationError>> {
                 // values 非空
                 if inline_enum.values.is_empty() {
                     errors.push(ValidationError::new(
-                        format!("tables[{}].fields[{}].enum.values", table_idx, field_idx),
+                        format!("{}.enum.values", base),
                         "values 数组不能为空",
                     ));
                 }
@@ -98,14 +187,46 @@ pub fn validate_project(project: &Project) -> Result<(), Vec<ValidationError>> {
                     for (value_idx, value) in inline_enum.values.iter().enumerate() {
                         if value.code.is_none() || value.code.as_ref().unwrap().is_empty() {
                             errors.push(ValidationError::new(
-                                format!(
-                                    "tables[{}].fields[{}].enum.values[{}].code",
-                                    table_idx, field_idx, value_idx
-                                ),
+                                format!("{}.enum.values[{}].code", base, value_idx),
                                 "hasCode=true 时每个 value 必须有 code",
                             ));
                         }
                     }
+                }
+            }
+        }
+
+        // 索引: 名重复(空名不查) + 索引重复(fields 序列 + unique 完全相同)
+        if let Some(indexes) = &table.indexes {
+            let mut seen_names: HashSet<String> = HashSet::new();
+            let mut seen_index: HashSet<(Vec<(String, &str)>, bool)> = HashSet::new();
+            for idx in indexes.iter() {
+                // 索引名不能为空(不自动生成,用户必填)
+                if idx.name.as_deref().map(|n| n.is_empty()).unwrap_or(true) {
+                    errors.push(ValidationError::new(
+                        format!("{}.[{}]", table.code, idx.name.as_deref().unwrap_or("")),
+                        "索引名不能为空",
+                    ));
+                }
+                if let Some(name) = &idx.name {
+                    if !name.is_empty() && !seen_names.insert(name.clone()) {
+                        errors.push(ValidationError::new(
+                            format!("{}.[{}]", table.code, name),
+                            "索引名重复".to_string(),
+                        ));
+                    }
+                }
+                let key: Vec<(String, &str)> = idx
+                    .fields
+                    .iter()
+                    .map(|f| (f.code.clone(), f.direction.as_str()))
+                    .collect();
+                if !seen_index.insert((key, idx.unique)) {
+                    let label = idx.name.as_deref().unwrap_or("自动命名");
+                    errors.push(ValidationError::new(
+                        format!("{}.[{}]", table.code, label),
+                        "索引重复(字段与唯一性与已有索引相同)",
+                    ));
                 }
             }
         }
@@ -129,5 +250,148 @@ impl Project {
     /// from_json - 反序列化(JSON Value -> Project),纯结构层(不含业务校验)。
     pub fn from_json(value: serde_json::Value) -> Result<Self, serde_json::Error> {
         serde_json::from_value(value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn proj_with_table(json: &str) -> Project {
+        serde_json::from_str(json).unwrap()
+    }
+
+    #[test]
+    fn duplicate_code_reported() {
+        let p = proj_with_table(
+            r#"{"version":"1","basePackage":"x","bizTypes":[],"groups":[],"tables":[{"code":"T","name":"T","group":"","fields":[
+                {"code":"A","prop":"a","name":"a","dataType":"VARCHAR","length":32},
+                {"code":"A","prop":"a2","name":"a2","dataType":"VARCHAR","length":32}
+            ]}]}"#,
+        );
+        let errs = validate_project(&p).unwrap_err();
+        assert!(errs.iter().any(|e| e.message.contains("重复")));
+    }
+
+    #[test]
+    fn duplicate_prop_reported() {
+        let p = proj_with_table(
+            r#"{"version":"1","basePackage":"x","bizTypes":[],"groups":[],"tables":[{"code":"T","name":"T","group":"","fields":[
+                {"code":"A","prop":"x","name":"a","dataType":"VARCHAR","length":32},
+                {"code":"B","prop":"x","name":"b","dataType":"VARCHAR","length":32}
+            ]}]}"#,
+        );
+        let errs = validate_project(&p).unwrap_err();
+        assert!(errs.iter().any(|e| e.path.ends_with(".prop") && e.message.contains("重复")));
+    }
+
+    #[test]
+    fn sql_reserved_code_reported() {
+        let p = proj_with_table(
+            r#"{"version":"1","basePackage":"x","bizTypes":[],"groups":[],"tables":[{"code":"T","name":"T","group":"","fields":[
+                {"code":"VALUE","prop":"v","name":"v","dataType":"VARCHAR","length":32}
+            ]}]}"#,
+        );
+        let errs = validate_project(&p).unwrap_err();
+        assert!(errs.iter().any(|e| e.message.contains("SQL 保留字")));
+    }
+
+    #[test]
+    fn java_keyword_prop_reported() {
+        // code=CLASS -> prop=class(Java 关键字)
+        let p = proj_with_table(
+            r#"{"version":"1","basePackage":"x","bizTypes":[],"groups":[],"tables":[{"code":"T","name":"T","group":"","fields":[
+                {"code":"X","prop":"class","name":"x","dataType":"VARCHAR","length":32}
+            ]}]}"#,
+        );
+        let errs = validate_project(&p).unwrap_err();
+        assert!(errs.iter().any(|e| e.message.contains("Java 关键字")));
+    }
+
+    #[test]
+    fn decimal_p_less_than_s_reported() {
+        let p = proj_with_table(
+            r#"{"version":"1","basePackage":"x","bizTypes":[],"groups":[],"tables":[{"code":"T","name":"T","group":"","fields":[
+                {"code":"M","prop":"m","name":"m","dataType":"DECIMAL","precision":2,"scale":4}
+            ]}]}"#,
+        );
+        let errs = validate_project(&p).unwrap_err();
+        assert!(errs.iter().any(|e| e.message.contains("不能小于 scale")));
+    }
+
+    #[test]
+    fn duplicate_index_name_reported() {
+        let p = proj_with_table(
+            r#"{"version":"1","basePackage":"x","bizTypes":[],"groups":[],"tables":[{"code":"T","name":"T","group":"","fields":[
+                {"code":"A","prop":"a","name":"a","dataType":"VARCHAR","length":32}
+            ],"indexes":[
+                {"name":"IDX1","fields":[{"code":"A","direction":"ASC"}],"unique":false},
+                {"name":"IDX1","fields":[{"code":"A","direction":"ASC"}],"unique":false}
+            ]}]}"#,
+        );
+        let errs = validate_project(&p).unwrap_err();
+        assert!(errs.iter().any(|e| e.message.contains("索引名重复")));
+    }
+
+    #[test]
+    fn empty_index_name_reported() {
+        let p = proj_with_table(
+            r#"{"version":"1","basePackage":"x","bizTypes":[],"groups":[],"tables":[{"code":"T","name":"T","group":"","fields":[
+                {"code":"A","prop":"a","name":"a","dataType":"VARCHAR","length":32}
+            ],"indexes":[
+                {"fields":[{"code":"A","direction":"ASC"}],"unique":false}
+            ]}]}"#,
+        );
+        let errs = validate_project(&p).unwrap_err();
+        assert!(errs.iter().any(|e| e.message.contains("索引名不能为空")));
+    }
+
+    #[test]
+    fn duplicate_index_reported() {
+        let p = proj_with_table(
+            r#"{"version":"1","basePackage":"x","bizTypes":[],"groups":[],"tables":[{"code":"T","name":"T","group":"","fields":[
+                {"code":"A","prop":"a","name":"a","dataType":"VARCHAR","length":32}
+            ],"indexes":[
+                {"fields":[{"code":"A","direction":"ASC"}],"unique":false},
+                {"fields":[{"code":"A","direction":"ASC"}],"unique":false}
+            ]}]}"#,
+        );
+        let errs = validate_project(&p).unwrap_err();
+        assert!(errs.iter().any(|e| e.message.contains("索引重复")));
+    }
+
+    #[test]
+    fn empty_length_precision_reported() {
+        let p = proj_with_table(
+            r#"{"version":"1","basePackage":"x","bizTypes":[],"groups":[],"tables":[{"code":"T","name":"T","group":"","fields":[
+                {"code":"A","prop":"a","name":"a","dataType":"VARCHAR"},
+                {"code":"M","prop":"m","name":"m","dataType":"DECIMAL","precision":10}
+            ]}]}"#,
+        );
+        let errs = validate_project(&p).unwrap_err();
+        assert!(errs.iter().any(|e| e.path.ends_with(".length") && e.message.contains("不能为空")));
+        assert!(errs.iter().any(|e| e.path.ends_with(".scale") && e.message.contains("不能为空")));
+    }
+
+    #[test]
+    fn empty_prop_name_reported() {
+        let p = proj_with_table(
+            r#"{"version":"1","basePackage":"x","bizTypes":[],"groups":[],"tables":[{"code":"T","name":"T","group":"","fields":[
+                {"code":"A","prop":"","name":"","dataType":"VARCHAR","length":32}
+            ]}]}"#,
+        );
+        let errs = validate_project(&p).unwrap_err();
+        assert!(errs.iter().any(|e| e.path.ends_with(".prop") && e.message.contains("不能为空")));
+        assert!(errs.iter().any(|e| e.path.ends_with(".name") && e.message.contains("不能为空")));
+    }
+
+    #[test]
+    fn valid_project_no_errors() {
+        let p = proj_with_table(
+            r#"{"version":"1","basePackage":"x","bizTypes":[],"groups":[],"tables":[{"code":"T","name":"T","group":"","fields":[
+                {"code":"USER_NAME","prop":"userName","name":"用户名","dataType":"VARCHAR","length":32}
+            ]}]}"#,
+        );
+        assert!(validate_project(&p).is_ok());
     }
 }

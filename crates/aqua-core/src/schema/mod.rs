@@ -8,6 +8,7 @@ mod biz_type;
 mod data_type;
 mod enum_def;
 mod field;
+mod keywords;
 mod project;
 mod table;
 mod validate;
@@ -18,6 +19,7 @@ pub use biz_type::{BizTypeData, BizTypeDataField, BizTypeDefine, SupportedDataTy
 pub use data_type::DataType;
 pub use enum_def::{EnumColor, EnumValue, InlineEnum};
 pub use field::{AutoGenerate, Field, GenerateTiming};
+pub use keywords::{is_java_keyword, is_sql_reserved};
 pub use project::{GroupDefine, Project};
 pub use table::{Direction, Index, IndexField, Table};
 pub use validate::{parse_project, validate_project, ParseError, ValidationError};

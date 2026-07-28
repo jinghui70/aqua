@@ -92,7 +92,7 @@
         }
       ],
       "indexes": [
-        { "fields": [{ "code": "USER_NAME", "direction": "ASC" }], "unique": true },
+        { "name": "IDX_SYS_USER_USER_NAME", "fields": [{ "code": "USER_NAME", "direction": "ASC" }], "unique": true },
         { "name": "IDX_GENDER", "fields": [{ "code": "GENDER", "direction": "ASC" }], "unique": false }
       ]
     }

@@ -1,6 +1,6 @@
 //! 项目管理 Tauri commands。
 
-use aqua_core::schema::{parse_project, validate_project, ParseError, Project};
+use aqua_core::schema::{validate_project, Project, ValidationError};
 
 /// 读取并解析 schema.json 文件。
 #[tauri::command]
@@ -12,11 +12,7 @@ pub async fn project_open(path: String) -> Result<Project, String> {
     let value: serde_json::Value =
         serde_json::from_str(&json_str).map_err(|e| format!("JSON 解析失败: {}", e))?;
 
-    parse_project(value).map_err(|e| match e {
-        ParseError::Deserialize(err) => format!("schema 结构错误: {}", err),
-        ParseError::Validate(errors) => serde_json::to_string(&errors)
-            .unwrap_or_else(|_| format!("校验失败: {} 个错误", errors.len())),
-    })
+    Project::from_json(value).map_err(|e| format!("schema 结构错误: {}", e))
 }
 
 /// 保存 Project 为 schema.json。
@@ -32,14 +28,12 @@ pub async fn project_save(path: String, project: Project) -> Result<(), String> 
     Ok(())
 }
 
-/// 校验 Project,返回错误列表(JSON 字符串)。
+/// 校验 Project,返回错误列表(空 Vec = 合法)。
 #[tauri::command]
-pub async fn project_validate(project: Project) -> Result<String, String> {
+pub async fn project_validate(project: Project) -> Result<Vec<ValidationError>, String> {
     match validate_project(&project) {
-        Ok(()) => Ok("{}".to_string()),
-        Err(errors) => {
-            serde_json::to_string(&errors).map_err(|_| format!("校验失败: {} 个错误", errors.len()))
-        }
+        Ok(()) => Ok(vec![]),
+        Err(errors) => Ok(errors),
     }
 }
 

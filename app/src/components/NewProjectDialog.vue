@@ -35,7 +35,8 @@ async function confirm() {
   if (!path) return; // 用户取消选保存位置
   store.newProject(name.value, pkg);
   try {
-    await store.saveProject(path);
+    const ok = await store.saveProject(path);
+    if (!ok) return; // 校验取消,不进入项目
     ui.newProjectVisible = false;
     router.push("/");
     ElMessage.success("已新建项目");

@@ -87,7 +87,8 @@ export function useMenuActions() {
       path = picked;
     }
     try {
-      await store.saveProject(path);
+      const ok = await store.saveProject(path);
+      if (!ok) return; // 校验取消
       ElMessage.success(`已保存到 ${path}`);
     } catch (e) {
       ElMessage.error(`保存失败: ${e}`);

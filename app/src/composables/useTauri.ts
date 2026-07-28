@@ -27,7 +27,7 @@ export function useTauri() {
     projectSave: (path: string, project: Project) =>
       invoke<void>("project_save", { path, project }),
     projectValidate: (project: Project) =>
-      invoke<string>("project_validate", { project }),
+      invoke<ValidationError[]>("project_validate", { project }),
     updateGitignore: (projectPath: string) =>
       invoke<void>("update_gitignore", { projectPath }),
 
