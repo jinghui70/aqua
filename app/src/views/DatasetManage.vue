@@ -288,7 +288,7 @@ loadDatasets();
     <!-- 顶部:数据集下拉 + 新建 + dirty 保存/取消 -->
     <div class="flex items-center px-16 h-48 border-b border-gray-200 flex-shrink-0">
       <el-button size="small" link @click="router.push(store.activeTabPath())">← 返回</el-button>
-      <span class="text-13" style="margin-left: 8px">数据集</span>
+      <span class="text-14 font-bold ml-16">数据集</span>
       <el-select
         v-model="selectedPath"
         size="small"
@@ -339,8 +339,8 @@ loadDatasets();
       <el-splitter-panel>
         <div class="h-full flex flex-col overflow-hidden p-16">
           <template v-if="currentTable">
-            <div class="flex items-center gap-8 mb-12 flex-shrink-0">
-              <span class="font-bold text-14">{{ currentTable.name }}</span>
+            <div class="flex items-center mb-12 flex-shrink-0">
+              <span class="font-bold text-14 mr-16">{{ currentTable.name }}</span>
               <span class="text-12 text-gray-400">{{ currentRows.length }} 行</span>
               <div class="flex-1" />
               <el-button size="small" type="primary" @click="addRow">新增行</el-button>

@@ -29,14 +29,27 @@ pub fn generate_strconst(project: &Project, options: &StrConstOptions) -> String
     let class_name = "DatabaseConstants";
     let mut lines = Vec::new();
 
-    // Javadoc(工具生成,请勿手动修改)
-    lines.push("/**".to_string());
-    lines.push(" * 工具生成,请勿手动修改".to_string());
-    lines.push(" */".to_string());
-
-    // Package 声明
+    // Package 声明(最前)
     lines.push(format!("package {};", full_package));
     lines.push(String::new());
+
+    // Javadoc(class 上,含组信息)
+    let group_label = if let Some(g) = &options.group {
+        let name = project
+            .groups
+            .iter()
+            .find(|x| &x.code == g)
+            .map(|x| x.name.as_str())
+            .unwrap_or(g.as_str());
+        format!("{} ({})", name, g)
+    } else {
+        "全部分组".to_string()
+    };
+    lines.push("/**".to_string());
+    lines.push(format!(" * 数据库常量(表名/字段名) -- {}", group_label));
+    lines.push(" *".to_string());
+    lines.push(" * 工具生成,请勿手动修改".to_string());
+    lines.push(" */".to_string());
 
     // 类声明
     lines.push(format!("public class {} {{", class_name));
@@ -53,20 +66,20 @@ pub fn generate_strconst(project: &Project, options: &StrConstOptions) -> String
         lines.push("    // 表名".to_string());
         for table in &tables {
             lines.push(format!(
-                "    public static final String {} = \"{}\";",
-                table.code, table.code
+                "    public static final String {} = \"{}\"; // {}",
+                table.code, table.code, table.name
             ));
         }
     }
 
     // 字段名常量(跨表去重,保持首次出现顺序)
     let mut seen: HashSet<&str> = HashSet::new();
-    let mut field_names: Vec<&str> = Vec::new();
+    let mut field_names: Vec<(&str, &str)> = Vec::new();
     for table in &tables {
         for field in &table.fields {
             let code = field.code.as_str();
             if seen.insert(code) {
-                field_names.push(code);
+                field_names.push((code, field.name.as_str()));
             }
         }
     }
@@ -76,10 +89,10 @@ pub fn generate_strconst(project: &Project, options: &StrConstOptions) -> String
             lines.push(String::new());
         }
         lines.push("    // 字段名".to_string());
-        for name in &field_names {
+        for (code, name) in &field_names {
             lines.push(format!(
-                "    public static final String {} = \"{}\";",
-                name, name
+                "    public static final String {} = \"{}\"; // {}",
+                code, code, name
             ));
         }
     }

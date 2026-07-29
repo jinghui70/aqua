@@ -165,7 +165,7 @@ async function doImport() {
 
     <!-- Step2 -->
     <div v-else-if="step === 1" style="min-height: 260px">
-      <div class="flex items-center gap-8 mb-8">
+      <div class="flex items-center mb-8 gap-8">
         <el-input v-model="tableFilter" size="small" placeholder="搜索表" clearable style="width: 200px" />
         <el-button size="small" @click="toggleAll">全选/反选</el-button>
         <span class="text-12 text-gray-400">已选 {{ selectedTables.length }}</span>

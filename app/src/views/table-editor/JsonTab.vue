@@ -53,8 +53,8 @@ async function saveFile() {
 
 <template>
   <div class="h-full flex flex-col gap-12">
-    <div class="flex items-center gap-8 flex-shrink-0">
-      <span class="text-13 text-gray-500">json-ui 兼容格式</span>
+    <div class="flex items-center flex-shrink-0">
+      <span class="text-13 text-gray-500">JSON-UI DataModel</span>
       <div class="flex-1" />
       <el-button size="small" @click="copy">复制</el-button>
       <el-button size="small" type="primary" @click="saveFile">保存</el-button>

@@ -15,9 +15,9 @@ const activePanel = ref<"settings" | "datasource" | "biztype" | "strategy">("set
 
 <template>
   <div class="h-full flex flex-col">
-    <div class="flex items-center gap-8 px-12 py-6 border-b border-gray-200 flex-shrink-0">
+    <div class="flex items-center px-16 h-48 border-b border-gray-200 flex-shrink-0">
       <el-button size="small" link @click="router.push(store.activeTabPath())">← 返回</el-button>
-      <span class="text-14 font-bold">配置</span>
+      <span class="text-14 font-bold ml-16">配置</span>
     </div>
     <div class="flex-1 min-h-0 flex">
       <div class="w-160 border-r border-gray-200 flex-shrink-0 overflow-auto">

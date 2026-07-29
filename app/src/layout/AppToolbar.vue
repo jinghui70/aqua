@@ -15,7 +15,7 @@ const { doSave, handle } = useMenuActions();
 </script>
 
 <template>
-  <div class="flex items-center gap-6 px-12 py-8 border-b border-gray-200 flex-shrink-0 bg-white">
+  <div class="flex items-center px-12 py-8 border-b border-gray-200 flex-shrink-0 bg-white">
     <!-- 文件组:保存(仅可编辑时显示;无改动置灰;dirty 红点提示) -->
     <el-button
       v-if="!store.readOnly"
@@ -40,7 +40,7 @@ const { doSave, handle } = useMenuActions();
       <span class="i-mdi-database-import w-16 h-16 mr-4" />
       导入
     </el-button>
-    <el-dropdown trigger="click" @command="(k: string) => ui.openExport(k as any)">
+    <el-dropdown class="ml-12" trigger="click" @command="(k: string) => ui.openExport(k as any)">
       <el-button size="default">
         <span class="i-mdi-database-export w-16 h-16 mr-4" />
         导出
