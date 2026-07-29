@@ -183,7 +183,7 @@ function save() {
   <el-dialog v-model="visible" title="业务类型" width="720px" top="8vh" :close-on-click-modal="false">
     <div v-if="draft" class="flex flex-col gap-4" style="max-height: 70vh; overflow-y: auto">
       <el-form label-width="90px" class="pr-12" :disabled="store.readOnly">
-        <el-form-item label="业务类型">
+        <el-form-item label="业务类型" class="mb-0">
           <el-select
             :model-value="draft.bizType"
             clearable
@@ -204,6 +204,8 @@ function save() {
             <el-option v-for="s in (currentBizType?.supportedDataTypes ?? [])" :key="s.dataType" :label="s.dataType" :value="s.dataType" />
           </el-select>
         </el-form-item>
+        <!-- 业务类型描述 -->
+        <div v-if="currentBizType?.description" class="text-12 text-gray-400 ml-90 mb-8">{{ currentBizType.description }}</div>
 
         <!-- bizType=Enum: 枚举特殊配置(内联)-->
         <template v-if="isEnumBizType">

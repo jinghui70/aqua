@@ -41,7 +41,10 @@ async function addBizType() {
       inputPlaceholder: "Date8",
     });
     if (!value) return;
-    const code = value.trim();
+    // 仅字母数字 + 首字符大写字母(去开头数字)
+    const raw = value.trim().replace(/[^A-Za-z0-9]/g, "").replace(/^[0-9]+/, "");
+    if (!raw) { ElMessage.warning("code 需含字母"); return; }
+    const code = raw.charAt(0).toUpperCase() + raw.slice(1);
     // 重名校验含内置
     if (bizTypes.value.some((b) => b.bizType === code)) {
       ElMessage.error(`${code} 已存在`);
@@ -50,7 +53,7 @@ async function addBizType() {
     const biz: BizTypeDefine = {
       bizType: code,
       name: code,
-      supportedDataTypes: [],
+      supportedDataTypes: [{ dataType: DataType.Varchar, defaultLength: 10 }],
     };
     store.currentProject.bizTypes.push(biz);
     selectedCode.value = code;
@@ -94,7 +97,7 @@ async function removeBizType(code: string) {
 
 // supportedDataTypes 子表
 function addSupported() {
-  current.value?.supportedDataTypes.push({ dataType: DataType.Varchar });
+  current.value?.supportedDataTypes.push({ dataType: DataType.Varchar, defaultLength: 10 });
 }
 function removeSupported(idx: number) {
   current.value?.supportedDataTypes.splice(idx, 1);

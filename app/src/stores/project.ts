@@ -121,6 +121,13 @@ export const useProjectStore = defineStore("project", () => {
       }
       t.indexes = (t.indexes ?? []).filter((idx) => idx.fields.length > 0);
     }
+    // 业务类型: 清理空支持类型(dataType 空) + 空参数名
+    for (const b of p.bizTypes) {
+      b.supportedDataTypes = b.supportedDataTypes.filter((s) => (s.dataType as string) !== "");
+      if (b.bizTypeData?.fields) {
+        b.bizTypeData.fields = b.bizTypeData.fields.filter((f) => !!f.name?.trim());
+      }
+    }
   }
 
   /** 格式化错误列表为 HTML(按表分组,path 首段为表 code,转义防注入)。 */

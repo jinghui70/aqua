@@ -27,6 +27,10 @@ const isCurrentBuiltin = computed(() =>
 );
 // 两个只读来源:预置内置 + 全局只读。任一 -> 只读(name/描述用 readonly,表格用 span)
 const isReadonly = computed(() => isCurrentBuiltin.value || store.readOnly);
+// 第一个非空类型的行索引(该行不可删,保证至少留一个类型)
+const firstNonEmptyIdx = computed(
+  () => current.value?.supportedDataTypes.findIndex((s) => (s.dataType as string) !== "") ?? -1
+);
 
 function select(code: string) {
   selectedCode.value = code;
@@ -45,6 +49,13 @@ function addBizType() {
   newName.value = "";
   newBizVisible.value = true;
 }
+function onNewCodeInput() {
+  if (newCode.value) {
+    // 仅字母数字 + 首字符必须大写字母(去开头数字)
+    const filtered = newCode.value.replace(/[^A-Za-z0-9]/g, "").replace(/^[0-9]+/, "");
+    newCode.value = filtered.charAt(0).toUpperCase() + filtered.slice(1);
+  }
+}
 function confirmNewBiz() {
   const code = newCode.value.trim();
   if (!code) {
@@ -58,7 +69,7 @@ function confirmNewBiz() {
   const biz: BizTypeDefine = {
     bizType: code,
     name: newName.value.trim() || code,
-    supportedDataTypes: [],
+    supportedDataTypes: [{ dataType: DataType.Varchar, defaultLength: 10 }],
   };
   store.currentProject!.bizTypes.push(biz);
   selectedCode.value = code;
@@ -98,8 +109,34 @@ async function removeBizType(code: string) {
 }
 
 // supportedDataTypes 子表
+function onSupportedDataTypeChange(row: { dataType: DataType; defaultLength?: number; defaultPrecision?: number; defaultScale?: number }, newDt: DataType) {
+  // 重复检查(其他行已有该类型)
+  if (current.value?.supportedDataTypes.some((s) => s !== row && s.dataType === newDt)) {
+    ElMessage.warning(`${newDt} 已添加`);
+    return;
+  }
+  row.dataType = newDt;
+  switch (newDt) {
+    case DataType.Varchar:
+      row.defaultPrecision = undefined;
+      row.defaultScale = undefined;
+      if (row.defaultLength == null) row.defaultLength = 10;
+      break;
+    case DataType.Decimal:
+      row.defaultLength = undefined;
+      if (row.defaultPrecision == null) row.defaultPrecision = 10;
+      if (row.defaultScale == null) row.defaultScale = 4;
+      break;
+    default:
+      row.defaultLength = undefined;
+      row.defaultPrecision = undefined;
+      row.defaultScale = undefined;
+      break;
+  }
+}
 function addSupported() {
-  current.value?.supportedDataTypes.push({ dataType: DataType.Varchar });
+  // 加空行,用户从下拉选(选项过滤已添加的类型)
+  current.value?.supportedDataTypes.push({ dataType: "" as unknown as DataType });
 }
 function removeSupported(idx: number) {
   current.value?.supportedDataTypes.splice(idx, 1);
@@ -239,32 +276,44 @@ watch(isReadonly, (ro) => {
           <el-table-column label="逻辑类型" width="160">
             <template #default="{ row }">
               <span v-if="isReadonly" class="text-13">{{ row.dataType }}</span>
-              <el-select v-else v-model="row.dataType" size="small">
-                <el-option v-for="dt in dataTypes" :key="dt" :label="dt" :value="dt" />
+              <el-select v-else :model-value="row.dataType" size="small" placeholder="选择类型" @change="(dt: DataType) => onSupportedDataTypeChange(row, dt)">
+                <el-option v-for="dt in dataTypes.filter((d) => !current?.supportedDataTypes?.some((s) => s !== row && s.dataType === d))" :key="dt" :label="dt" :value="dt" />
               </el-select>
             </template>
           </el-table-column>
           <el-table-column label="默认长度" width="140">
             <template #default="{ row }">
-              <span v-if="isReadonly" class="text-13">{{ row.defaultLength ?? "-" }}</span>
-              <el-input-number v-else v-model="row.defaultLength" size="small" :controls="false" :min="1" />
+              <template v-if="row.dataType === 'VARCHAR'">
+                <span v-if="isReadonly" class="text-13">{{ row.defaultLength ?? "-" }}</span>
+                <el-input-number v-else v-model="row.defaultLength" size="small" :controls="false" :min="1" />
+              </template>
             </template>
           </el-table-column>
           <el-table-column label="默认精度" width="140">
             <template #default="{ row }">
-              <span v-if="isReadonly" class="text-13">{{ row.defaultPrecision ?? "-" }}</span>
-              <el-input-number v-else v-model="row.defaultPrecision" size="small" :controls="false" :min="1" />
+              <template v-if="row.dataType === 'DECIMAL'">
+                <span v-if="isReadonly" class="text-13">{{ row.defaultPrecision ?? "-" }}</span>
+                <el-input-number v-else v-model="row.defaultPrecision" size="small" :controls="false" :min="1" />
+              </template>
             </template>
           </el-table-column>
           <el-table-column label="默认小数位" width="140">
             <template #default="{ row }">
-              <span v-if="isReadonly" class="text-13">{{ row.defaultScale ?? "-" }}</span>
-              <el-input-number v-else v-model="row.defaultScale" size="small" :controls="false" :min="0" />
+              <template v-if="row.dataType === 'DECIMAL'">
+                <span v-if="isReadonly" class="text-13">{{ row.defaultScale ?? "-" }}</span>
+                <el-input-number v-else v-model="row.defaultScale" size="small" :controls="false" :min="0" />
+              </template>
             </template>
           </el-table-column>
           <el-table-column v-if="!isReadonly" label="操作" width="70" align="center">
             <template #default="{ $index }">
-              <el-button size="small" link type="danger" @click="removeSupported($index)">删</el-button>
+              <el-button
+                v-if="$index !== firstNonEmptyIdx"
+                size="small"
+                link
+                type="danger"
+                @click="removeSupported($index)"
+              >删</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -332,8 +381,8 @@ watch(isReadonly, (ro) => {
     <!-- 新建业务类型弹窗:录 code + name -->
     <el-dialog v-model="newBizVisible" title="新建业务类型" width="420px" :close-on-click-modal="false">
       <el-form label-width="80px">
-        <el-form-item label="code">
-          <el-input v-model="newCode" placeholder="如 Date8" />
+        <el-form-item label="编码">
+          <el-input v-model="newCode" placeholder="如 Date8" @input="onNewCodeInput" />
         </el-form-item>
         <el-form-item label="名称">
           <el-input v-model="newName" placeholder="如 日期8位" />
