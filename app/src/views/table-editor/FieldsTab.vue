@@ -252,20 +252,25 @@ function copySelected() {
   ElMessage.success(`已拷贝 ${selected.value.length} 个字段`);
 }
 
-// 粘贴:原子冲突检查(目标表 code + 剪贴板内部去重),任一冲突则不执行
+// 粘贴:同名 code 加 _n 后缀(2,3,...),prop 联动重新生成(蛇形转驼峰)
 function paste() {
   if (!clipboard.has) return;
   const copied = clipboard.get();
-  const existing = new Set(props.fields.map((f) => f.code));
-  const seen = new Set<string>();
-  const conflicts: string[] = [];
+  const used = new Set(props.fields.map((f) => f.code));
   for (const f of copied) {
-    if (existing.has(f.code) || seen.has(f.code)) conflicts.push(f.code);
-    seen.add(f.code);
-  }
-  if (conflicts.length) {
-    ElMessage.warning(`code 冲突,未粘贴: ${conflicts.join(", ")}`);
-    return;
+    let code = f.code;
+    let n = 2;
+    while (used.has(code)) {
+      code = `${f.code}_${n++}`;
+    }
+    used.add(code);
+    f.code = code;
+    const parts = code.split("_").filter(Boolean);
+    if (parts.length) {
+      f.prop =
+        parts[0].toLowerCase() +
+        parts.slice(1).map((p) => p[0].toUpperCase() + p.slice(1).toLowerCase()).join("");
+    }
   }
   props.fields.push(...copied);
   ElMessage.success(`已粘贴 ${copied.length} 个字段`);
