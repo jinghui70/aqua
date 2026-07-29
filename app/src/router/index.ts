@@ -19,6 +19,12 @@ const routes = [
     props: true,
   },
   {
+    path: "/group/:code",
+    name: "group",
+    component: () => import("@/views/GroupTablesPage.vue"),
+    props: true,
+  },
+  {
     path: "/biztype",
     name: "biztype",
     component: () => import("@/views/BizTypeManage.vue"),

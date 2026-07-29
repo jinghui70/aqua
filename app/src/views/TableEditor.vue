@@ -2,6 +2,7 @@
 // 表编辑器:表头 + 4 Tab(fields/index/java/json)。
 // 通过 route param id 定位 store 里的表,直接编辑(Pinia 响应式)。
 import { computed, ref, watchEffect } from "vue";
+import { ElMessage } from "element-plus";
 import { useProjectStore } from "@/stores/project";
 import FieldsTab from "./table-editor/FieldsTab.vue";
 import IndexTab from "./table-editor/IndexTab.vue";
@@ -22,6 +23,29 @@ const table = computed(() =>
 watchEffect(() => {
   if (table.value && !table.value.indexes) table.value.indexes = [];
 });
+
+// 表基本信息编辑(code/name/comment;group 拖拽改)
+const tableDialogVisible = ref(false);
+const tableCode = ref("");
+const tableName = ref("");
+const tableComment = ref("");
+function openEditTable() {
+  if (!table.value) return;
+  tableCode.value = table.value.code;
+  tableName.value = table.value.name;
+  tableComment.value = table.value.comment ?? "";
+  tableDialogVisible.value = true;
+}
+function confirmTableDialog() {
+  if (!table.value) return;
+  const code = tableCode.value.trim().toUpperCase();
+  const name = tableName.value.trim();
+  if (!code || !name) { ElMessage.warning("code 和名称不能为空"); return; }
+  const err = store.updateTable(table.value.id, code, name, tableComment.value.trim());
+  if (err) { ElMessage.error(err); return; }
+  ElMessage.success("表已更新");
+  tableDialogVisible.value = false;
+}
 </script>
 
 <template>
@@ -31,6 +55,7 @@ watchEffect(() => {
       <span class="font-bold text-16">{{ table.code }}</span>
       <span class="text-gray-500 text-14">{{ table.name }}</span>
       <span v-if="table.comment" class="text-gray-400 text-12 truncate max-w-400">{{ table.comment }}</span>
+      <el-button v-if="!store.readOnly" size="small" link @click="openEditTable">编辑</el-button>
     </div>
 
     <!-- 4 Tab -->
@@ -51,6 +76,19 @@ watchEffect(() => {
         <JsonTab :table-code="table.code" :active="activeTab === 'json'" />
       </el-tab-pane>
     </el-tabs>
+
+    <!-- 表基本信息编辑弹框 -->
+    <el-dialog v-model="tableDialogVisible" title="编辑表" width="420px" :close-on-click-modal="false">
+      <el-form label-width="80px">
+        <el-form-item label="编码"><el-input v-model="tableCode" /></el-form-item>
+        <el-form-item label="名称"><el-input v-model="tableName" /></el-form-item>
+        <el-form-item label="备注"><el-input v-model="tableComment" type="textarea" :rows="2" /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="tableDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmTableDialog">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
   <el-empty v-else description="表不存在" />
 </template>

@@ -8,6 +8,7 @@ import { useTauri } from "@/composables/useTauri";
 import { ElMessageBox } from "element-plus";
 import { useRecentProjects } from "@/composables/useRecentProjects";
 import { useDataSourceStore } from "@/stores/datasource";
+import { useClipboardStore } from "@/stores/clipboard";
 import { pickSaveFile } from "@/composables/useFileDialog";
 
 /** 取文件所在目录(兼容 / 与 \\)。无分隔符返回空串。 */
@@ -29,6 +30,7 @@ export interface OpenedTab {
 export const useProjectStore = defineStore("project", () => {
   const tauri = useTauri();
   const recent = useRecentProjects();
+  const clipboard = useClipboardStore();
   const datasource = useDataSourceStore();
 
   const currentProject = ref<Project | null>(null);
@@ -270,6 +272,13 @@ export const useProjectStore = defineStore("project", () => {
     return openedTabs.value.find((t) => t.key === activeTab.value)?.path ?? "/";
   }
 
+  /** 打开分组表列表页(页签 key group:code)。 */
+  function openGroup(code: string): string {
+    const g = currentProject.value?.groups.find((x) => x.code === code);
+    const title = g ? `${g.name} (${g.code})` : code;
+    return openTab({ key: `group:${code}`, title, path: `/group/${code}` });
+  }
+
   // ===== 分组 CRUD =====
 
   function addGroup(code: string, name: string): string | null {
@@ -493,6 +502,39 @@ export const useProjectStore = defineStore("project", () => {
     return newCode;
   }
 
+  /** 复制表到剪贴板(跨项目,深拷贝)。 */
+  function copyTables(tables: Table[]) {
+    clipboard.setTables(tables);
+  }
+
+  /** 粘贴剪贴板表到指定分组:新 id,code 冲突 _COPY/_COPYn,深拷贝 fields/indexes。返回新 code 列表。 */
+  function pasteTables(groupCode: string): string[] {
+    const p = currentProject.value;
+    if (!p) return [];
+    const copied = clipboard.getTables();
+    const existing = new Set(p.tables.map((t) => t.code));
+    const newCodes: string[] = [];
+    for (const t of copied) {
+      let code = `${t.code}_COPY`;
+      let n = 2;
+      while (existing.has(code)) {
+        code = `${t.code}_COPY${n++}`;
+      }
+      existing.add(code);
+      p.tables.push({
+        id: crypto.randomUUID(),
+        code,
+        name: t.name,
+        group: groupCode,
+        fields: JSON.parse(JSON.stringify(t.fields)),
+        indexes: t.indexes ? JSON.parse(JSON.stringify(t.indexes)) : undefined,
+        comment: t.comment,
+      });
+      newCodes.push(code);
+    }
+    return newCodes;
+  }
+
   /** 切换项目只读/可编辑(工具栏加/解锁)。 */
   function toggleReadOnly() {
     readOnly.value = !readOnly.value;
@@ -516,6 +558,9 @@ export const useProjectStore = defineStore("project", () => {
     closeTab,
     openTable,
     activeTabPath,
+    openGroup,
+    copyTables,
+    pasteTables,
     addGroup,
     updateGroup,
     deleteGroup,
