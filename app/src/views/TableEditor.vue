@@ -78,7 +78,7 @@ function confirmTableDialog() {
     </el-tabs>
 
     <!-- 表基本信息编辑弹框 -->
-    <el-dialog v-model="tableDialogVisible" title="编辑表" width="420px" :close-on-click-modal="false">
+    <el-dialog draggable v-model="tableDialogVisible" title="编辑表" width="420px" :close-on-click-modal="false">
       <el-form label-width="80px">
         <el-form-item label="编码"><el-input v-model="tableCode" /></el-form-item>
         <el-form-item label="名称"><el-input v-model="tableName" /></el-form-item>

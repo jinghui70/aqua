@@ -13,3 +13,8 @@ createApp(App)
   .use(router)
   .use(ElementPlus)
   .mount("#app");
+
+// 生产环境禁用 webview 右键菜单(Windows 右键出现浏览器菜单)
+if (import.meta.env.PROD) {
+  window.addEventListener("contextmenu", (e) => e.preventDefault());
+}

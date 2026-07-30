@@ -54,7 +54,7 @@ watch(() => ui.diffExportVisible, (v) => {
 </script>
 
 <template>
-  <el-dialog v-model="ui.diffExportVisible" title="导出 diff (ALTER)" width="70%" :close-on-click-modal="false">
+  <el-dialog draggable v-model="ui.diffExportVisible" title="导出 diff (ALTER)" width="70%" :close-on-click-modal="false">
     <div class="flex flex-col gap-12">
       <div class="flex items-center">
         <span class="text-13">方言</span>

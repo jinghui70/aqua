@@ -57,7 +57,7 @@ function cancel() {
 </script>
 
 <template>
-  <el-dialog :model-value="modelValue" title="选择表" width="480px" :close-on-click-modal="false" @update:model-value="emit('update:modelValue', $event)">
+  <el-dialog draggable :model-value="modelValue" title="选择表" width="480px" :close-on-click-modal="false" @update:model-value="emit('update:modelValue', $event)">
     <el-input v-model="filterText" placeholder="过滤表名" clearable size="small" class="mb-8" />
     <div style="max-height: 360px; overflow-y: auto">
       <el-tree

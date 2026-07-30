@@ -47,7 +47,7 @@ function save() {
 </script>
 
 <template>
-  <el-dialog v-model="visible" title="自动生成" width="560px" :close-on-click-modal="false">
+  <el-dialog draggable v-model="visible" title="自动生成" width="560px" :close-on-click-modal="false">
     <el-form v-if="draft" label-width="90px" class="pr-12" :disabled="store.readOnly">
       <el-form-item label="自动生成">
         <el-switch

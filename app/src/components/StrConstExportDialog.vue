@@ -61,7 +61,7 @@ watch([scope, selectedGroup, () => ui.strConstExportVisible], () => {
 </script>
 
 <template>
-  <el-dialog v-model="ui.strConstExportVisible" title="导出字符串变量" width="70%" :close-on-click-modal="false">
+  <el-dialog draggable v-model="ui.strConstExportVisible" title="导出字符串变量" width="70%" :close-on-click-modal="false">
     <div class="flex flex-col gap-12">
       <div class="flex items-center">
         <el-radio-group v-model="scope" size="small">

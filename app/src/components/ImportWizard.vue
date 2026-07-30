@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 导入向导(§6.8):4 步 - 选数据源 -> 选表 -> 选项 -> 确认。
 import { computed, reactive, ref, watch } from "vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { useUiStore } from "@/stores/ui";
 import { useProjectStore } from "@/stores/project";
 import { useDataSourceStore } from "@/stores/datasource";
@@ -43,7 +43,7 @@ const filteredTables = computed(() =>
 );
 
 // Step3: 选项
-const targetGroup = ref("default");
+const targetGroup = ref("");
 const overwrite = ref(true);
 const groups = computed(() => store.currentProject?.groups ?? []);
 
@@ -58,7 +58,7 @@ function reset() {
   allTables.value = [];
   selectedTables.value = [];
   tableFilter.value = "";
-  targetGroup.value = "default";
+  targetGroup.value = groups.value[0]?.code ?? "";
   overwrite.value = true;
   importedProject.value = null;
 }
@@ -118,14 +118,17 @@ async function doImport() {
       tableInfos,
       store.currentProject.basePackage
     );
-    const { added, skipped } = store.mergeImportedTables(
+    const { added, overwritten, skipped } = store.mergeImportedTables(
       importedProject.value,
       selectedTables.value,
       targetGroup.value,
       overwrite.value
     );
-    ElMessage.success(`导入完成: 新增/覆盖 ${added}, 跳过 ${skipped}`);
     ui.importVisible = false;
+    ElMessageBox.alert(`新增 ${added} 个, 覆盖 ${overwritten} 个, 跳过 ${skipped} 个`, "导入完成", {
+      confirmButtonText: "确定",
+      type: "success",
+    });
   } catch {
     /* 已提示 */
   } finally {
@@ -135,7 +138,7 @@ async function doImport() {
 </script>
 
 <template>
-  <el-dialog v-model="ui.importVisible" title="导入向导" width="640px" :close-on-click-modal="false" :close-on-press-escape="!importing" :show-close="!importing">
+  <el-dialog draggable v-model="ui.importVisible" title="导入向导" width="640px" :close-on-click-modal="false" :close-on-press-escape="!importing" :show-close="!importing">
     <el-steps :active="step" finish-status="success" simple class="mb-16">
       <el-step title="数据源" />
       <el-step title="选表" />

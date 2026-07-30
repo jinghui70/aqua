@@ -51,7 +51,7 @@ function basename(path: string): string {
 </script>
 
 <template>
-  <el-dialog v-model="ui.recentVisible" title="最近项目" width="560px" :close-on-click-modal="false">
+  <el-dialog draggable v-model="ui.recentVisible" title="最近项目" width="560px" :close-on-click-modal="false">
     <div v-if="list.length" class="flex flex-col gap-4">
       <div
         v-for="r in list"

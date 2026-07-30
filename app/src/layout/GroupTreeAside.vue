@@ -174,7 +174,7 @@ function confirmGroupDialog() {
     </div>
 
     <!-- 新建分组对话框 -->
-    <el-dialog v-model="groupDialogVisible" title="新建分组" width="420px" :close-on-click-modal="false">
+    <el-dialog draggable v-model="groupDialogVisible" title="新建分组" width="420px" :close-on-click-modal="false">
       <el-form label-width="80px">
         <el-form-item label="编码">
           <el-input v-model="groupCode" placeholder="如:order" />

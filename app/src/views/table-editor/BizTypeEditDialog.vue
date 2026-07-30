@@ -180,7 +180,7 @@ function save() {
 </script>
 
 <template>
-  <el-dialog v-model="visible" title="业务类型" width="720px" top="8vh" :close-on-click-modal="false">
+  <el-dialog draggable v-model="visible" title="业务类型" width="720px" top="8vh" :close-on-click-modal="false">
     <div v-if="draft" class="flex flex-col gap-4" style="max-height: 70vh; overflow-y: auto">
       <el-form label-width="90px" class="pr-12" :disabled="store.readOnly">
         <el-form-item label="业务类型" class="mb-0">

@@ -163,7 +163,7 @@ function confirmTableDialog() {
     <div class="flex items-center px-16 h-48 border-b border-gray-200 flex-shrink-0">
       <span class="font-bold text-14 mr-16">{{ group.name }} ({{ group.code }})</span>
         <el-button v-if="!store.readOnly" size="small" @click="openEditGroup"><span class="i-mdi-pencil w-16 h-16 mr-4" />编辑分组</el-button>
-        <el-button v-if="!store.readOnly" size="small" type="danger" @click="deleteGroup"><span class="i-mdi-delete w-16 h-16 mr-4" />删除分组</el-button>
+        <el-button v-if="!store.readOnly && (store.currentProject?.groups.length ?? 0) > 1" size="small" type="danger" @click="deleteGroup"><span class="i-mdi-delete w-16 h-16 mr-4" />删除分组</el-button>
         <el-divider v-if="!store.readOnly" direction="vertical" />
         <el-button v-if="!store.readOnly" size="small" type="primary" @click="openAddTable"><span class="i-mdi-plus w-16 h-16 mr-4" />新增表</el-button>
         <el-button size="small" :disabled="!selected.length" @click="copySelected"><span class="i-mdi-content-copy w-16 h-16 mr-4" />拷贝</el-button>
@@ -198,7 +198,7 @@ function confirmTableDialog() {
     </div>
 
     <!-- 分组编辑弹框 -->
-    <el-dialog v-model="groupDialogVisible" title="编辑分组" width="420px" :close-on-click-modal="false">
+    <el-dialog draggable v-model="groupDialogVisible" title="编辑分组" width="420px" :close-on-click-modal="false">
       <el-form label-width="80px">
         <el-form-item label="code"><el-input v-model="groupCode" /></el-form-item>
         <el-form-item label="名称"><el-input v-model="groupName" /></el-form-item>
@@ -210,7 +210,7 @@ function confirmTableDialog() {
     </el-dialog>
 
     <!-- 表新增/编辑弹框 -->
-    <el-dialog v-model="tableDialogVisible" :title="tableDialogMode === 'add' ? '新建表' : '编辑表'" width="420px" :close-on-click-modal="false">
+    <el-dialog draggable v-model="tableDialogVisible" :title="tableDialogMode === 'add' ? '新建表' : '编辑表'" width="420px" :close-on-click-modal="false">
       <el-form label-width="80px">
         <el-form-item label="code"><el-input v-model="tableCode" /></el-form-item>
         <el-form-item label="名称"><el-input v-model="tableName" /></el-form-item>

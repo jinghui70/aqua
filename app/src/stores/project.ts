@@ -408,9 +408,10 @@ export const useProjectStore = defineStore("project", () => {
     tableCodes: string[],
     group: string,
     overwrite: boolean
-  ): { added: number; skipped: number } {
-    if (!currentProject.value) return { added: 0, skipped: 0 };
+  ): { added: number; overwritten: number; skipped: number } {
+    if (!currentProject.value) return { added: 0, overwritten: 0, skipped: 0 };
     let added = 0;
+    let overwritten = 0;
     let skipped = 0;
     for (const code of tableCodes) {
       const src = imported.tables.find((t) => t.code === code);
@@ -423,7 +424,7 @@ export const useProjectStore = defineStore("project", () => {
       if (existIdx >= 0) {
         if (overwrite) {
           currentProject.value.tables[existIdx] = table;
-          added++;
+          overwritten++;
         } else {
           skipped++;
         }
@@ -432,7 +433,7 @@ export const useProjectStore = defineStore("project", () => {
         added++;
       }
     }
-    return { added, skipped };
+    return { added, overwritten, skipped };
   }
 
   // ===== 拖拽:分组重排 / 表移动 =====

@@ -7,4 +7,11 @@ body,
 
 body {
   overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* el-input-number 输入靠左(默认居中不好看) */
+.el-input-number .el-input__inner,
+.el-input-number input {
+  text-align: left !important;
 }

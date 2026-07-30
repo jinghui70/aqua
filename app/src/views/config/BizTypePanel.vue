@@ -379,7 +379,7 @@ watch(isReadonly, (ro) => {
     </div>
 
     <!-- 新建业务类型弹窗:录 code + name -->
-    <el-dialog v-model="newBizVisible" title="新建业务类型" width="420px" :close-on-click-modal="false">
+    <el-dialog draggable v-model="newBizVisible" title="新建业务类型" width="420px" :close-on-click-modal="false">
       <el-form label-width="80px">
         <el-form-item label="编码">
           <el-input v-model="newCode" placeholder="如 Date8" @input="onNewCodeInput" />

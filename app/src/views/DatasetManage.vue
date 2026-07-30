@@ -373,7 +373,7 @@ loadDatasets();
     </el-splitter>
 
     <!-- 新建弹窗 -->
-    <el-dialog v-model="newVisible" title="新建数据集" width="420px" :close-on-click-modal="false">
+    <el-dialog draggable v-model="newVisible" title="新建数据集" width="420px" :close-on-click-modal="false">
       <el-form label-width="80px">
         <el-form-item label="数据集名">
           <el-input v-model="newName" placeholder="如 dev / test" />
