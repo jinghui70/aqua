@@ -17,6 +17,7 @@ import com.aqua.connector.meta.ColumnMeta;
 import com.aqua.connector.meta.IndexMeta;
 import com.aqua.connector.meta.QueryResult;
 import com.aqua.connector.meta.TableInfo;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -33,7 +34,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  */
 public class Main {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
     public static void main(String[] args) {
         // Windows 中文系统 System.out 默认 GBK 编码,JSON 响应含中文(如列注释)时输出 GBK 字节,

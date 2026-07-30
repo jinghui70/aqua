@@ -64,5 +64,26 @@ watch(
     <RecentProjectsDialog />
     <NewProjectDialog />
     <ExitConfirmDialog />
+
+    <!-- 校验对话框(draggable) -->
+    <el-dialog
+      v-model="store.validateDialog.visible"
+      :title="store.validateDialog.mode === 'confirm' ? '保存校验' : '校验提示'"
+      draggable
+      width="600px"
+      :close-on-click-modal="false"
+    >
+      <div style="max-height:50vh;overflow:auto">
+        {{ store.validateDialog.mode === 'confirm' ? '校验发现' : '项目存在' }} {{ store.validateDialog.errors.length }} 个问题:
+        <div class="mt-8" v-html="store.formatErrorsHtml(store.validateDialog.errors)"></div>
+      </div>
+      <template #footer>
+        <el-button v-if="store.validateDialog.mode === 'alert'" type="primary" @click="store.closeValidateDialog(false)">知道了</el-button>
+        <template v-else>
+          <el-button @click="store.closeValidateDialog(false)">取消去修</el-button>
+          <el-button type="primary" @click="store.closeValidateDialog(true)">仍保存</el-button>
+        </template>
+      </template>
+    </el-dialog>
   </div>
 </template>

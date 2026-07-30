@@ -437,6 +437,7 @@ fn parse_data_type(s: &str) -> DataType {
         "INT" => DataType::Int,
         "LONG" => DataType::Long,
         "DECIMAL" => DataType::Decimal,
+        "DOUBLE" => DataType::Double,
         "DATE" => DataType::Date,
         "DATETIME" => DataType::Datetime,
         "BLOB" => DataType::Blob,
@@ -454,6 +455,7 @@ mod tests {
         assert_eq!(parse_data_type("CLOB"), DataType::Clob);
         assert_eq!(parse_data_type("INT"), DataType::Int);
         assert_eq!(parse_data_type("LONG"), DataType::Long);
+        assert_eq!(parse_data_type("DOUBLE"), DataType::Double);
         assert_eq!(parse_data_type("DECIMAL"), DataType::Decimal);
         assert_eq!(parse_data_type("DATETIME"), DataType::Datetime);
         assert_eq!(parse_data_type("BLOB"), DataType::Blob);

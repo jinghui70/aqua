@@ -5,7 +5,6 @@ import { nextTick, ref, watch } from "vue";
 import { useUiStore } from "@/stores/ui";
 import type { Project, Table, ValidationError } from "@/types/schema";
 import { useTauri } from "@/composables/useTauri";
-import { ElMessageBox } from "element-plus";
 import { useRecentProjects } from "@/composables/useRecentProjects";
 import { useDataSourceStore } from "@/stores/datasource";
 import { useClipboardStore } from "@/stores/clipboard";
@@ -97,11 +96,7 @@ export const useProjectStore = defineStore("project", () => {
     try {
       const errors = await tauri.projectValidate(p);
       if (errors?.length) {
-        ElMessageBox.alert(
-          `<div style="max-height:50vh;overflow:auto">项目存在 ${errors.length} 个校验问题:<br>${formatErrorsHtml(errors)}</div>`,
-          "校验提示",
-          { dangerouslyUseHTMLString: true, confirmButtonText: "知道了" }
-        );
+        validateDialog.value = { visible: true, errors, mode: "alert" };
       }
     } catch {
       /* 校验失败忽略,不阻止打开 */
@@ -130,6 +125,16 @@ export const useProjectStore = defineStore("project", () => {
     }
   }
 
+  // 校验对话框(替代 ElMessageBox,支持 draggable)
+  const validateDialog = ref<{ visible: boolean; errors: ValidationError[]; mode: "confirm" | "alert" }>({
+    visible: false, errors: [], mode: "alert",
+  });
+  let validateResolve: ((ok: boolean) => void) | null = null;
+  function closeValidateDialog(ok: boolean) {
+    validateDialog.value.visible = false;
+    if (validateResolve) { validateResolve(ok); validateResolve = null; }
+  }
+
   /** 格式化错误列表为 HTML(按表分组,path 首段为表 code,转义防注入)。 */
   function formatErrorsHtml(errors: ValidationError[]): string {
     const esc = (s: string) =>
@@ -155,16 +160,10 @@ export const useProjectStore = defineStore("project", () => {
 
   /** 校验错误列表 confirm: 选"仍保存"返回 true,选"取消去修"返回 false。 */
   async function showValidateErrors(errors: ValidationError[]): Promise<boolean> {
-    try {
-      await ElMessageBox.confirm(
-        `<div style="max-height:50vh;overflow:auto">校验发现 ${errors.length} 个问题:<br>${formatErrorsHtml(errors)}</div>`,
-        "保存校验",
-        { dangerouslyUseHTMLString: true, confirmButtonText: "仍保存", cancelButtonText: "取消去修", type: "warning" }
-      );
-      return true;
-    } catch {
-      return false;
-    }
+    return new Promise((resolve) => {
+      validateResolve = resolve;
+      validateDialog.value = { visible: true, errors, mode: "confirm" };
+    });
   }
 
   /** 保存项目。返回 true=已落盘,false=用户取消校验。 */
@@ -580,6 +579,9 @@ export const useProjectStore = defineStore("project", () => {
     reorderGroups,
     moveTable,
     duplicateTable,
+    formatErrorsHtml,
+    validateDialog,
+    closeValidateDialog,
     mergeImportedTables,
   };
 });
