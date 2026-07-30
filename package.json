@@ -1,6 +1,6 @@
 {
   "name": "aqua",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "private": true,
   "packageManager": "pnpm@11.8.0",
   "scripts": {
@@ -10,7 +10,8 @@
     "build": "tauri build",
     "build:connector": "node scripts/build-connector.mjs",
     "build:connector:if-missing": "node scripts/build-connector.mjs --if-missing",
-    "release": "bumpp"
+    "release": "bumpp",
+    "release:test": "bumpp --no-commit --no-tag --no-push"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
