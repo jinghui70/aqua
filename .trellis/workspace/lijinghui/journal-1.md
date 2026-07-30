@@ -1048,3 +1048,24 @@ AutoGenStrategyDefine(code/name/paramDesc) + Project.autoGenStrategies。内置 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 29: 字段编辑弹窗+校验+表copy/paste+UI修复+release v1.0.1
+
+**Date**: 2026-07-30
+**Task**: 字段编辑弹窗+校验+表copy/paste+UI修复+release v1.0.1
+**Branch**: `main`
+
+### Summary
+
+完成 3 个 Trellis任务并 archive: (1) 字段编辑改列表单元格弹窗 BizTypeEditDialog/AutoGenEditDialog, cell-click 整格可点, bizType↔dataType 双向联动(弹窗 dataType 下拉+行内切类型 confirm), 列固定/timing 图标/addField 默认+focus; (2) 保存时合法性校验 keywords.rs(SQL保留字并集+Java关键字), validate_project 扩展(code/prop 重复与关键字/非空/p<s/索引名空/重复/索引重复), saveProject 清理+confirm 按表分组, project_open 只反序列化不阻断; (3) 表 copy/paste 跨项目 GroupTablesPage 表列表页, clipboard table 槽, 树去 hover 菜单, 删表/删分组关页签。另完成多项 UI 修复: 配置/数据集返回回原表, 分组显示 name(code), 数据集 splitter/树对齐, strconst 注释含组与 name, 业务类型配置增强(默认 VARCHAR 10/切换填默认/code 大驼峰/防重复/删除规则/label 中文), 数据源独立(不受主文件只读/dirty), 导入结果对话框(新增/覆盖/跳过分别), 字段粘贴同名 _n, el-dialog draggable, 最后分组不可删, 导入默认第一分组, Windows 字体, 生产禁右键, 端口默认/靠左。修复 release 配置(bump.config.ts recursive+execute 同步 app/Cargo/tauri), 发布 v1.0.1。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `354163f` | (see git log) |
+
+### Status
+
+[OK] **Completed**
