@@ -401,7 +401,9 @@ function deleteSelected() {
           <span v-if="store.readOnly">{{ row.isKey ? "✓" : "" }}</span>
           <el-checkbox
             v-else
+            :key="`key-${rowKey(row)}`"
             :model-value="row.isKey"
+            :disabled="false"
             @change="(v: boolean) => onKeyChange(row, v)"
           />
         </template>
@@ -409,7 +411,7 @@ function deleteSelected() {
       <el-table-column label="非空" width="50" align="center">
         <template #default="{ row }">
           <span v-if="store.readOnly">{{ row.notNull ? "✓" : "" }}</span>
-          <el-checkbox v-else v-model="row.notNull" :disabled="row.isKey" />
+          <el-checkbox v-else :key="`notnull-${rowKey(row)}`" v-model="row.notNull" :disabled="row.isKey" />
         </template>
       </el-table-column>
       <el-table-column label="业务类型" width="110" :class-name="store.readOnly ? '' : 'cursor-pointer'">
