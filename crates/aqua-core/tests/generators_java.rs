@@ -202,7 +202,7 @@ fn test_generate_field_with_auto_generate() {
     );
     // 三个参数都非默认:全输出
     assert!(
-        java_code.contains("@GeneratedValue(strategy = \"now\", param = \"yyyy\", timing = \"INSERT_UPDATE\")"),
+        java_code.contains("@GeneratedValue(strategy = \"now\", param = \"yyyy\", timing = GenerateTiming.INSERT_UPDATE)"),
         "now 字段应全输出:\n{}", java_code
     );
     // 全默认(strategy=default + timing=INSERT + 无 param):无括号
@@ -218,5 +218,10 @@ fn test_generate_field_with_auto_generate() {
     assert!(
         java_code.matches("@GeneratedValue").count() == 3,
         "enabled=false 不输出,应共 3 个 @GeneratedValue:\n{}", java_code
+    );
+    // timing=INSERT_UPDATE 引用枚举常量,需 import GenerateTiming
+    assert!(
+        java_code.contains("import io.github.jinghui70.rainbow.dbaccess.annotation.GenerateTiming;"),
+        "timing 枚举引用应 import GenerateTiming:\n{}", java_code
     );
 }

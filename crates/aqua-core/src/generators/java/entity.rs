@@ -88,12 +88,17 @@ fn collect_imports(table: &Table, options: &JavaOptions, need_table_anno: bool) 
     let mut use_id = false;
     let mut use_column = false;
     let mut use_generated_value = false;
+    let mut use_generate_timing = false;
     for field in &table.fields {
         if field.is_key.unwrap_or(false) {
             use_id = true;
         }
-        if field.auto_generate.is_some() {
+        if let Some(ag) = &field.auto_generate {
             use_generated_value = true;
+            // timing=INSERT_UPDATE 输出 GenerateTiming 枚举引用,需 import
+            if ag.timing == crate::schema::GenerateTiming::InsertUpdate {
+                use_generate_timing = true;
+            }
         }
         // @Column: 非标准命名 or Clob/Blob(sqlType=Types.CLOB/BLOB)
         let expected_prop = snake_to_camel(&field.code);
@@ -109,6 +114,9 @@ fn collect_imports(table: &Table, options: &JavaOptions, need_table_anno: bool) 
     }
     if use_generated_value {
         imports.insert(format!("{ANNO}.GeneratedValue"));
+    }
+    if use_generate_timing {
+        imports.insert(format!("{ANNO}.GenerateTiming"));
     }
 
     // Lombok
@@ -164,7 +172,7 @@ fn generate_field(field: &Field) -> Vec<String> {
             }
         }
         if ag.timing == crate::schema::GenerateTiming::InsertUpdate {
-            parts.push("timing = \"INSERT_UPDATE\"".to_string());
+            parts.push("timing = GenerateTiming.INSERT_UPDATE".to_string());
         }
         if parts.is_empty() {
             lines.push("    @GeneratedValue".to_string());
