@@ -50,7 +50,7 @@ enum GenWhat {
     Entity {
         /// 表 code
         table: String,
-        /// 自定义包名(默认 {basePackage}.{group}.entity)
+        /// 自定义包名(不传则不生成 package 声明)
         #[arg(long)]
         package: Option<String>,
         /// 自定义类名(默认 table.code 的 PascalCase)
