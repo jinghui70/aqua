@@ -95,8 +95,8 @@ fn collect_imports(table: &Table, options: &JavaOptions, need_table_anno: bool) 
         }
         if let Some(ag) = &field.auto_generate {
             use_generated_value = true;
-            // timing=INSERT_UPDATE 输出 GenerateTiming 枚举引用,需 import
-            if ag.timing == crate::schema::GenerateTiming::InsertUpdate {
+            // timing=INSERT_UPDATE 输出 GenerationTiming 枚举引用,需 import
+            if ag.timing == crate::schema::GenerationTiming::InsertUpdate {
                 use_generate_timing = true;
             }
         }
@@ -116,7 +116,7 @@ fn collect_imports(table: &Table, options: &JavaOptions, need_table_anno: bool) 
         imports.insert(format!("{ANNO}.GeneratedValue"));
     }
     if use_generate_timing {
-        imports.insert(format!("{ANNO}.GenerateTiming"));
+        imports.insert(format!("{ANNO}.GenerationTiming"));
     }
 
     // Lombok
@@ -171,8 +171,8 @@ fn generate_field(field: &Field) -> Vec<String> {
                 parts.push(format!("param = \"{}\"", param));
             }
         }
-        if ag.timing == crate::schema::GenerateTiming::InsertUpdate {
-            parts.push("timing = GenerateTiming.INSERT_UPDATE".to_string());
+        if ag.timing == crate::schema::GenerationTiming::InsertUpdate {
+            parts.push("timing = GenerationTiming.INSERT_UPDATE".to_string());
         }
         if parts.is_empty() {
             lines.push("    @GeneratedValue".to_string());

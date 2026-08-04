@@ -18,7 +18,7 @@ pub use auto_gen_strategy::AutoGenStrategyDefine;
 pub use biz_type::{BizTypeData, BizTypeDataField, BizTypeDefine, SupportedDataType};
 pub use data_type::DataType;
 pub use enum_def::{EnumColor, EnumValue, InlineEnum};
-pub use field::{AutoGenerate, Field, GenerateTiming};
+pub use field::{AutoGenerate, Field, GenerationTiming};
 pub use keywords::{is_java_keyword, is_sql_reserved};
 pub use project::{GroupDefine, Project};
 pub use table::{Direction, Index, IndexField, Table};

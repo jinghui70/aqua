@@ -12,12 +12,12 @@ pub struct AutoGenerate {
     pub strategy: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub param: Option<String>,
-    pub timing: GenerateTiming,
+    pub timing: GenerationTiming,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum GenerateTiming {
+pub enum GenerationTiming {
     Insert,
     InsertUpdate,
 }

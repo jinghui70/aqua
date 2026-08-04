@@ -151,7 +151,7 @@ pub fn generate_frontend_json(project: &Project, options: &FrontendJsonOptions) 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schema::{AutoGenerate, GenerateTiming};
+    use crate::schema::{AutoGenerate, GenerationTiming};
 
     #[test]
     fn test_map_data_type() {
@@ -222,7 +222,7 @@ mod tests {
             auto_generate: Some(AutoGenerate {
                 strategy: "default".to_string(),
                 param: None,
-                timing: GenerateTiming::Insert,
+                timing: GenerationTiming::Insert,
             }),
             default_value: None,
             enum_ref: None,
