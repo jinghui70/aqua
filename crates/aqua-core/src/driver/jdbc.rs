@@ -90,11 +90,16 @@ async fn platform_java_candidates() -> Vec<PathBuf> {
         // Apple 的 /usr/bin/java stub 在 GUI 环境下不可靠,显式列 homebrew 路径。
         for base in ["/opt/homebrew/opt", "/usr/local/opt"] {
             for name in newest_first_subdirs(base, "openjdk") {
-                candidates.push(Path::new(base).join(name).join("bin").join("java"));
+                candidates.extend(homebrew_java_paths(&Path::new(base).join(name)));
             }
         }
         for p in ["/opt/homebrew/bin/java", "/usr/local/bin/java"] {
             candidates.push(PathBuf::from(p));
+        }
+        // 兜底:登录 shell 的 PATH 复刻(GUI 进程不加载 .zprofile/.zshrc,
+        // 终端能找到的 sdkman/jenv/asdf 等自定义位置只有这里能覆盖)。
+        if let Some(p) = java_from_login_shell().await {
+            candidates.push(p);
         }
     }
 
@@ -129,6 +134,55 @@ async fn platform_java_candidates() -> Vec<PathBuf> {
 
     // 平台无候选(如非上述系统)时返回空,调用方回退 PATH
     candidates
+}
+
+/// homebrew openjdk formula 的 java 路径(按优先级)。
+///
+/// 版本化 formula(openjdk@21 等)是 keg-only,真 JDK Home 嵌在
+/// `libexec/openjdk.jdk/Contents/Home/`(brew 也不给 bin/ 建完整链接);
+/// 主 formula(openjdk)则直接在 bin/ 下。两种布局都试。
+fn homebrew_java_paths(formula_dir: &Path) -> Vec<PathBuf> {
+    vec![
+        formula_dir
+            .join("libexec/openjdk.jdk/Contents/Home/bin/java"),
+        formula_dir.join("bin/java"),
+    ]
+}
+
+/// 用登录 shell 解析 java(GUI 进程的通用兜底)。
+///
+/// GUI 启动的进程不加载 `.zprofile`/`.zshrc`,PATH 与终端不同——这正是
+/// "dev 能用、打包版找不到"的根因。`$SHELL -lic` 会加载登录+交互配置,
+/// `command -v java` 等价于终端里的 which,覆盖 sdkman/jenv/asdf 等任意
+/// 自定义安装位置。带超时,失败静默返回 None 走后续候选。
+async fn java_from_login_shell() -> Option<PathBuf> {
+    let shell = std::env::var("SHELL").ok()?;
+    let output = tokio::time::timeout(
+        Duration::from_secs(5),
+        tokio::process::Command::new(&shell)
+            .arg("-lic")
+            .arg("command -v java")
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .output(),
+    )
+    .await
+    .ok()?
+    .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+    // shell 配置可能往 stdout 打噪音(nvm 等);只认绝对路径行,从后往前取
+    String::from_utf8(output.stdout)
+        .ok()?
+        .lines()
+        .rev()
+        .map(|l| l.trim())
+        .filter(|l| l.starts_with('/'))
+        .map(PathBuf::from)
+        .find(|p| p.is_file())
 }
 
 /// 执行 `/usr/libexec/java_home`,返回最新注册 JDK Home(带超时,失败返回 None)。
@@ -672,6 +726,20 @@ mod tests {
     fn test_newest_first_subdirs_missing_dir() {
         // 目录不存在 -> 空(不 panic)
         assert!(newest_first_subdirs("/nonexistent/path/for/aqua-test", "openjdk").is_empty());
+    }
+
+    #[test]
+    fn test_homebrew_java_paths_both_layouts() {
+        let formula = Path::new("/opt/homebrew/opt/openjdk@21");
+        let paths = homebrew_java_paths(formula);
+        // 版本化 formula(keg-only)的 libexec 布局优先,主 formula 的 bin/ 布局其次
+        assert_eq!(
+            paths,
+            vec![
+                PathBuf::from("/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin/java"),
+                PathBuf::from("/opt/homebrew/opt/openjdk@21/bin/java"),
+            ]
+        );
     }
 
     #[test]
