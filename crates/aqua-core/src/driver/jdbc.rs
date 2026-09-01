@@ -7,8 +7,9 @@ use crate::driver::{ColumnMeta, DbConfig, Driver, DriverError, IndexMeta, TableI
 use crate::schema::DataType;
 use async_trait::async_trait;
 use serde_json::{json, Map, Value};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::time::Duration;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::sync::OnceCell;
@@ -20,13 +21,166 @@ use std::os::windows::process::CommandExt;
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
+/// 解析出的 java 可执行路径(进程生命周期内解析一次;None = 未找到显式路径,回退 PATH)。
+static JAVA_BIN: OnceCell<Option<PathBuf>> = OnceCell::const_new();
+
 /// 构造 java 子进程 Command(Windows 下禁用控制台黑窗口)。
-fn java_command() -> Command {
+///
+/// 不直接依赖 PATH:GUI 启动的打包进程(macOS Finder/Dock、Windows 资源管理器)
+/// 环境极简,PATH 里往往没有真 JDK(macOS 上还会命中 `/usr/bin/java` stub,
+/// 输出 "No Java runtime present" 之类无法解析的内容)。先走 [resolve_java_path]
+/// 显式解析,失败才回退 PATH(保持 `pnpm dev` 终端环境行为)。
+async fn java_command() -> Command {
+    let java = JAVA_BIN.get_or_init(resolve_java_path).await;
     #[allow(unused_mut)] // windows 下 creation_flags 需要 mut,其他平台不修改
-    let mut cmd = Command::new("java");
+    let mut cmd = match java {
+        Some(path) => Command::new(path),
+        None => Command::new("java"),
+    };
     #[cfg(windows)]
     cmd.creation_flags(CREATE_NO_WINDOW);
     cmd
+}
+
+/// 报错排查用:当前实际使用的 java 路径描述。
+async fn java_display() -> String {
+    match JAVA_BIN.get_or_init(resolve_java_path).await {
+        Some(path) => path.display().to_string(),
+        None => "\"java\"(PATH 查找)".to_string(),
+    }
+}
+
+/// 按优先级解析 java 可执行文件绝对路径:
+///
+/// 1. `JAVA_HOME/bin/java`(用户显式配置,三平台通用;报错文案一直承诺它,这里补上)
+/// 2. 平台标准安装位置(macOS: `/usr/libexec/java_home` + homebrew;Windows:
+///    Program Files 下常见发行版目录;Linux: `/usr/lib/jvm/*`)
+/// 3. 都没有 -> None,由调用方回退 PATH
+async fn resolve_java_path() -> Option<PathBuf> {
+    if let Some(p) = java_from_env_home() {
+        return Some(p);
+    }
+    platform_java_candidates()
+        .await
+        .into_iter()
+        .find(|p| p.is_file())
+}
+
+fn java_exe_name() -> &'static str {
+    if cfg!(windows) { "java.exe" } else { "java" }
+}
+
+fn java_from_env_home() -> Option<PathBuf> {
+    let home = std::env::var("JAVA_HOME").ok()?;
+    let candidate = Path::new(home.trim()).join("bin").join(java_exe_name());
+    candidate.is_file().then_some(candidate)
+}
+
+/// 平台标准安装位置候选,按优先级排列(同族目录内新版本优先)。
+async fn platform_java_candidates() -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+
+    #[cfg(target_os = "macos")]
+    {
+        // macOS 官方机制:返回已注册到 /Library/Java/JavaVirtualMachines 的最新 JDK Home。
+        // 纯 homebrew 安装的 JDK 不注册,靠下面的 homebrew 目录枚举兜底。
+        if let Some(home) = macos_java_home().await {
+            candidates.push(home.join("bin").join("java"));
+        }
+        // Apple 的 /usr/bin/java stub 在 GUI 环境下不可靠,显式列 homebrew 路径。
+        for base in ["/opt/homebrew/opt", "/usr/local/opt"] {
+            for name in newest_first_subdirs(base, "openjdk") {
+                candidates.push(Path::new(base).join(name).join("bin").join("java"));
+            }
+        }
+        for p in ["/opt/homebrew/bin/java", "/usr/local/bin/java"] {
+            candidates.push(PathBuf::from(p));
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        // 发行版 JDK 惯例:/usr/lib/jvm/java-21-openjdk-amd64 等
+        for name in newest_first_subdirs("/usr/lib/jvm", "") {
+            candidates.push(Path::new("/usr/lib/jvm").join(name).join("bin").join("java"));
+        }
+    }
+
+    #[cfg(windows)]
+    {
+        // 常见发行版默认安装根目录(Oracle / Temurin / Microsoft / Zulu / Corretto / Liberica),
+        // 每个发行版目录内取最新版本
+        let program_files =
+            std::env::var("ProgramFiles").unwrap_or_else(|_| r"C:\Program Files".to_string());
+        for vendor in [
+            "Java",
+            "Eclipse Adoptium",
+            "Microsoft",
+            "Zulu",
+            "Amazon Corretto",
+            r"BellSoft\Liberica",
+        ] {
+            let vendor_dir = Path::new(&program_files).join(vendor);
+            for name in newest_first_subdirs(&vendor_dir.to_string_lossy(), "") {
+                candidates.push(vendor_dir.join(name).join("bin").join("java.exe"));
+            }
+        }
+    }
+
+    // 平台无候选(如非上述系统)时返回空,调用方回退 PATH
+    candidates
+}
+
+/// 执行 `/usr/libexec/java_home`,返回最新注册 JDK Home(带超时,失败返回 None)。
+async fn macos_java_home() -> Option<PathBuf> {
+    let output = tokio::time::timeout(
+        Duration::from_secs(3),
+        tokio::process::Command::new("/usr/libexec/java_home")
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .output(),
+    )
+    .await
+    .ok()?
+    .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+    let home = String::from_utf8(output.stdout).ok()?;
+    let home = home.trim();
+    (!home.is_empty()).then(|| PathBuf::from(home))
+}
+
+/// 枚举 base 下名字以 prefix 开头的子目录,按版本号新 -> 旧排序返回目录名。
+/// 目录不存在/不可读返回空。
+fn newest_first_subdirs(base: &str, prefix: &str) -> Vec<String> {
+    let mut names: Vec<String> = match std::fs::read_dir(base) {
+        Ok(entries) => entries
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
+            .filter_map(|e| e.file_name().into_string().ok())
+            .filter(|n| prefix.is_empty() || n.starts_with(prefix))
+            .collect(),
+        Err(_) => Vec::new(),
+    };
+    sort_newest_first(&mut names);
+    names
+}
+
+/// 目录名按版本号新 -> 旧排序(原地)。
+fn sort_newest_first(names: &mut [String]) {
+    names.sort_by_key(|n| std::cmp::Reverse(version_key(n)));
+}
+
+/// 提取名字中的数字序列作为版本比较键:"jdk-17.0.2" -> [17, 0, 2]。
+/// 逐段比较使 21 排在 17 前、17 排在 1.8 前。
+fn version_key(name: &str) -> Vec<u64> {
+    name.split(|c: char| !c.is_ascii_digit())
+        .filter(|s| !s.is_empty())
+        .filter_map(|s| s.parse().ok())
+        .collect()
 }
 
 /// 连接 Java 数据源所需的最低 JDK 版本。
@@ -106,7 +260,7 @@ impl JdbcDriver {
             }
         }
 
-        let mut cmd = java_command();
+        let mut cmd = java_command().await;
         cmd.arg("-jar")
             .arg(&connector_path)
             .stdin(Stdio::piped())
@@ -201,7 +355,8 @@ fn decode_console(bytes: &[u8]) -> String {
 ///
 /// `java -version` 将版本信息输出到 stderr。缺失或版本不足返回带明确指引的 `DriverError`。
 async fn check_java_once() -> Result<(), DriverError> {
-    let mut cmd = java_command();
+    let java_desc = java_display().await;
+    let mut cmd = java_command().await;
     cmd.arg("-version")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -210,10 +365,10 @@ async fn check_java_once() -> Result<(), DriverError> {
         .output()
         .await
         .map_err(|e| {
-            log::error!("spawn java -version 失败: {}", e);
+            log::error!("spawn java -version 失败({}): {}", java_desc, e);
             DriverError::ConnectionFailed(format!(
-                "未检测到 Java 运行时(连接 JDBC 数据源需 JDK 17+,请安装并配置 JAVA_HOME/PATH): {}",
-                e
+                "未检测到 Java 运行时(连接 JDBC 数据源需 JDK 17+,请安装并配置 JAVA_HOME/PATH)。尝试执行: {}: {}",
+                java_desc, e
             ))
         })?;
 
@@ -225,10 +380,13 @@ async fn check_java_once() -> Result<(), DriverError> {
     );
 
     let major = parse_java_major_version(&combined).ok_or_else(|| {
-        log::warn!("无法解析 Java 版本,原始输出: {}", combined);
-        DriverError::ConnectionFailed(
-            "无法解析 Java 版本(连接 JDBC 数据源需 JDK 17+,请检查 JAVA_HOME/PATH 配置)".to_string(),
-        )
+        // 典型场景:GUI 环境命中 macOS /usr/bin/java stub,输出 "No Java runtime present"
+        log::warn!("无法解析 Java 版本(java: {}),原始输出: {}", java_desc, combined);
+        DriverError::ConnectionFailed(format!(
+            "无法解析 Java 版本(连接 JDBC 数据源需 JDK 17+,请检查 JAVA_HOME/PATH 配置)。java: {}, java -version 输出: {}",
+            java_desc,
+            combined.trim()
+        ))
     })?;
 
     if major < MIN_JAVA_MAJOR {
@@ -480,6 +638,40 @@ mod tests {
 
         // 无法解析
         assert_eq!(parse_java_major_version("no version here"), None);
+    }
+
+    #[test]
+    fn test_version_key() {
+        assert_eq!(version_key("jdk-17.0.2"), vec![17, 0, 2]);
+        assert_eq!(version_key("openjdk@21"), vec![21]);
+        assert_eq!(version_key("java-1.8.0-openjdk"), vec![1, 8, 0]);
+        assert_eq!(version_key("no-digits"), Vec::<u64>::new());
+    }
+
+    #[test]
+    fn test_sort_newest_first() {
+        let mut names = vec![
+            "java-1.8.0-openjdk".to_string(),
+            "java-21-openjdk".to_string(),
+            "java-17-openjdk".to_string(),
+        ];
+        sort_newest_first(&mut names);
+        // 新版本优先:21 > 17 > 1.8
+        assert_eq!(
+            names,
+            vec!["java-21-openjdk", "java-17-openjdk", "java-1.8.0-openjdk"]
+        );
+
+        // homebrew 命名:openjdk@17 / openjdk@21
+        let mut brew = vec!["openjdk@17".to_string(), "openjdk@21".to_string()];
+        sort_newest_first(&mut brew);
+        assert_eq!(brew, vec!["openjdk@21", "openjdk@17"]);
+    }
+
+    #[test]
+    fn test_newest_first_subdirs_missing_dir() {
+        // 目录不存在 -> 空(不 panic)
+        assert!(newest_first_subdirs("/nonexistent/path/for/aqua-test", "openjdk").is_empty());
     }
 
     #[test]
