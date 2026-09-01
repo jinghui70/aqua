@@ -9,6 +9,7 @@ import { useRecentProjects } from "@/composables/useRecentProjects";
 import { useDataSourceStore } from "@/stores/datasource";
 import { useClipboardStore } from "@/stores/clipboard";
 import { pickSaveFile } from "@/composables/useFileDialog";
+import { APP_VERSION } from "@/version";
 
 /** 取文件所在目录(兼容 / 与 \\)。无分隔符返回空串。 */
 function dirOf(path: string): string {
@@ -57,7 +58,7 @@ export const useProjectStore = defineStore("project", () => {
   function newProject(name: string, basePackage: string) {
     suppressDirty = true;
     currentProject.value = {
-      version: "1.0.0",
+      version: APP_VERSION,
       basePackage: basePackage.trim() || "com.example",
       name: name.trim() || undefined,
       bizTypes: [],
