@@ -1069,3 +1069,24 @@ AutoGenStrategyDefine(code/name/paramDesc) + Project.autoGenStrategies。内置 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 30: Java 枚举类型完整生成与引用体系
+
+**Date**: 2026-09-08
+**Task**: Java 枚举类型完整生成与引用体系
+**Branch**: `main`
+
+### Summary
+
+实现枚举定义(内联)与引用(跨表)双模式,CodeEnum 类生成,跨组 import,表级 javaPackage 持久化,前端枚举配置对话框(定义/引用切换,级联选择,自动反写字段属性),引用一致性校验,12 项测试全过
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `16a8800` | (see git log) |
+
+### Status
+
+[OK] **Completed**
