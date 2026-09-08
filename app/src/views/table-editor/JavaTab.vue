@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // java Tab: 配置(包名/类名/Lombok/注释)+ 实时预览 + 复制/保存。
+// 多文件:实体 + 本表定义枚举,切换文件预览,逐个保存。
 import { ref, computed, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { invoke } from "@tauri-apps/api/core";
@@ -7,6 +8,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { useTauri } from "@/composables/useTauri";
 import { useProjectStore } from "@/stores/project";
 import { snakeToPascal } from "@/composables/useNaming";
+import type { JavaFile } from "@/types/schema";
 
 const props = defineProps<{ tableCode: string; active: boolean }>();
 
@@ -16,7 +18,11 @@ const store = useProjectStore();
 const useLombok = ref(true);
 const pkg = ref(""); // 完整包名,空则不生成 package 声明
 const className = ref("");
-const preview = ref("");
+const files = ref<JavaFile[]>([]);
+const activeFile = ref(""); // 当前预览文件名(path)
+const preview = computed(
+  () => files.value.find((f) => f.path === activeFile.value)?.content ?? ""
+);
 
 // 默认包名 = basePackage.{group}.entity(basePackage 为空则 {group}.entity)
 const defaultPackage = computed(() => {
@@ -26,13 +32,21 @@ const defaultPackage = computed(() => {
   const suffix = group ? `${group}.entity` : "entity";
   return base ? `${base}.${suffix}` : suffix;
 });
+// 当前表(schema 内)
+const currentTable = computed(() =>
+  store.currentProject?.tables.find((t) => t.code === props.tableCode)
+);
 // 类名占位符:表 code 派生的大驼峰(为空时显示,提示默认值)
 const classNamePlaceholder = computed(() => snakeToPascal(props.tableCode));
 
 async function refresh() {
   if (!store.currentProject) return;
+  // 持久化包名:把当前输入写回表 javaPackage(与生成同步,引用枚举 import 按它取)
+  if (currentTable.value) {
+    currentTable.value.javaPackage = pkg.value || undefined;
+  }
   try {
-    preview.value = await tauri.generateJava(
+    const list = await tauri.generateJava(
       store.currentProject,
       props.tableCode,
       {
@@ -41,17 +55,23 @@ async function refresh() {
         className: className.value || undefined,
       }
     );
+    files.value = list;
+    // 保留当前选中文件,否则默认首个(实体)
+    if (!list.some((f) => f.path === activeFile.value)) {
+      activeFile.value = list[0]?.path ?? "";
+    }
   } catch {
-    /* 已提示 */
+    files.value = [];
   }
 }
 
-// 切表:包名预填该表默认值(可改可清空),类名清空(用 placeholder 提示)
+// 切表:包名优先用该表持久化的 javaPackage(改过则记住),否则默认值;类名清空
 watch(
   () => props.tableCode,
   () => {
-    pkg.value = defaultPackage.value;
+    pkg.value = currentTable.value?.javaPackage || defaultPackage.value;
     className.value = "";
+    activeFile.value = "";
   },
   { immediate: true }
 );
@@ -70,15 +90,15 @@ async function copy() {
 }
 
 async function saveFile() {
-  // 类名默认派生 PascalCase(与后端生成的 class 名一致),而非裸表名
-  const cls = className.value || snakeToPascal(props.tableCode);
+  const file = files.value.find((f) => f.path === activeFile.value);
+  if (!file) return;
   const path = await save({
     filters: [{ name: "Java", extensions: ["java"] }],
-    defaultPath: `${cls}.java`,
+    defaultPath: file.path,
   });
   if (!path) return;
   try {
-    await invoke<void>("write_text_file", { path, content: preview.value });
+    await invoke<void>("write_text_file", { path, content: file.content });
     ElMessage.success("已保存");
   } catch (e) {
     ElMessage.error(`保存失败: ${e}`);
@@ -88,7 +108,7 @@ async function saveFile() {
 
 <template>
   <div class="h-full flex flex-col gap-12">
-    <div class="flex items-center gap-16 flex-wrap flex-shrink-0">
+    <div class="flex items-center gap-12 flex-wrap flex-shrink-0">
       <span class="text-13">
         包名
         <el-input
@@ -113,9 +133,22 @@ async function saveFile() {
       <el-button size="small" @click="copy">复制</el-button>
       <el-button size="small" type="primary" @click="saveFile">保存</el-button>
     </div>
+    <!-- 多文件切换(实体 + 枚举) -->
+    <div v-if="files.length > 1" class="flex gap-8 flex-shrink-0">
+      <el-check-tag
+        v-for="f in files"
+        :key="f.path"
+        :checked="f.path === activeFile"
+        @change="activeFile = f.path"
+        class="cursor-pointer"
+      >
+        {{ f.path }}
+      </el-check-tag>
+      <span class="text-12 text-gray-400 self-center">{{ files.length }} 个文件</span>
+    </div>
     <div class="flex-1 min-h-0">
       <el-input
-        v-model="preview"
+        :model-value="preview"
         type="textarea"
         resize="none"
         readonly

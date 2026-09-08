@@ -31,6 +31,7 @@ fn test_diff_added_table() {
         name: "新表".to_string(),
         group: "core".to_string(),
         fields: vec![],
+        java_package: None,
         indexes: None,
         comment: None,
     });

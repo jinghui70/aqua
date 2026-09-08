@@ -192,6 +192,7 @@ mod tests {
                         comment: None,
                     },
                 ],
+                java_package: None,
                 indexes: None,
                 comment: None,
             }],

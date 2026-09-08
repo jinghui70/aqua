@@ -25,6 +25,16 @@ pub fn snake_to_pascal(code: &str) -> String {
         .collect::<String>()
 }
 
+/// 驼峰 prop → PascalCase (gender → Gender, userName → UserName)。
+/// 枚举类名派生源为字段 prop(驼峰),语义是"首字母大写",保留其余大小写。
+pub fn prop_to_pascal(prop: &str) -> String {
+    if prop.is_empty() {
+        return String::new();
+    }
+    let first = prop[..1].to_uppercase();
+    first + &prop[1..]
+}
+
 /// 首字母大写,其余小写。
 fn capitalize_first(s: &str) -> String {
     let mut chars = s.chars();
@@ -54,5 +64,13 @@ mod tests {
         assert_eq!(snake_to_pascal("USER_INFO"), "UserInfo");
         assert_eq!(snake_to_pascal("SYS_USER"), "SysUser");
         assert_eq!(snake_to_pascal("ID"), "Id");
+    }
+
+    #[test]
+    fn test_prop_to_pascal() {
+        assert_eq!(prop_to_pascal("gender"), "Gender");
+        assert_eq!(prop_to_pascal("userName"), "UserName");
+        assert_eq!(prop_to_pascal("status"), "Status");
+        assert_eq!(prop_to_pascal(""), "");
     }
 }

@@ -3,8 +3,9 @@
 use crate::schema::data_type::DataType;
 use crate::schema::keywords::{is_java_keyword, is_sql_reserved};
 use crate::schema::project::Project;
+use crate::schema::Field;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
 /// ValidationError - 带 path + message,对齐 legacy errors 结构,前端可定位字段。
@@ -174,15 +175,15 @@ pub fn validate_project(project: &Project) -> Result<(), Vec<ValidationError>> {
 
             // 校验内联枚举
             if let Some(inline_enum) = &field.enum_ref {
-                // values 非空
-                if inline_enum.values.is_empty() {
+                // 引用型(enum.ref=Some):不强制 values(无副本);定义型才要求 values 非空
+                if inline_enum.r#ref.is_none() && inline_enum.values.is_empty() {
                     errors.push(ValidationError::new(
                         format!("{}.enum.values", base),
                         "values 数组不能为空",
                     ));
                 }
 
-                // hasCode=true 时每个 value 必须有 code
+                // hasCode=true 时每个 value 必须有 code(定义型才有 values)
                 if inline_enum.has_code.unwrap_or(false) {
                     for (value_idx, value) in inline_enum.values.iter().enumerate() {
                         if value.code.is_none() || value.code.as_ref().unwrap().is_empty() {
@@ -227,6 +228,57 @@ pub fn validate_project(project: &Project) -> Result<(), Vec<ValidationError>> {
                         format!("{}.[{}]", table.code, label),
                         "索引重复(字段与唯一性与已有索引相同)",
                     ));
+                }
+            }
+        }
+    }
+
+    // ===== 枚举引用第二遍校验(跨表):需先收集全项目定义索引 =====
+    // 定义方 = 有 enum 且 enum.ref=None;引用方 enum.ref=Some(code,prop) 必须指向定义方。
+    let mut defs: HashMap<(String, String), &Field> = HashMap::new();
+    for table in project.tables.iter() {
+        for field in table.fields.iter() {
+            if let Some(e) = &field.enum_ref {
+                if e.r#ref.is_none() {
+                    defs.insert((table.code.clone(), field.prop.clone()), field);
+                }
+            }
+        }
+    }
+    for table in project.tables.iter() {
+        for field in table.fields.iter() {
+            let Some(e) = &field.enum_ref else { continue };
+            let Some(r) = &e.r#ref else { continue };
+            let base = format!("{}.{}", table.code, field.code);
+            let target = defs.get(&(r.code.clone(), r.prop.clone()));
+            match target {
+                None => {
+                    // 目标不存在或目标本身是引用方(引用方不入 defs)
+                    errors.push(ValidationError::new(
+                        format!("{}.enum.ref", base),
+                        format!("引用的枚举不存在: {}.{}", r.code, r.prop),
+                    ));
+                }
+                Some(tf) => {
+                    // 类型一致性:引用方与定义方 dataType 必须一致,length 必须一致
+                    if tf.data_type != field.data_type {
+                        errors.push(ValidationError::new(
+                            format!("{}.enum.ref", base),
+                            format!(
+                                "引用的枚举类型不一致: 定义方 {:?}, 引用方 {:?}",
+                                tf.data_type, field.data_type
+                            ),
+                        ));
+                    }
+                    if tf.length != field.length {
+                        errors.push(ValidationError::new(
+                            format!("{}.enum.ref", base),
+                            format!(
+                                "引用的枚举长度不一致: 定义方 length={:?}, 引用方 length={:?}",
+                                tf.length, field.length
+                            ),
+                        ));
+                    }
                 }
             }
         }
@@ -393,5 +445,60 @@ mod tests {
             ]}]}"#,
         );
         assert!(validate_project(&p).is_ok());
+    }
+
+    #[test]
+    fn enum_ref_self_defined_ok() {
+        // 引用方字段与定义方类型/长度一致 -> 通过
+        let p = proj_with_table(
+            r#"{"version":"1","basePackage":"x","bizTypes":[],"groups":[],"tables":[{"code":"T","name":"T","group":"","fields":[
+                {"code":"GENDER","prop":"gender","name":"性别","dataType":"VARCHAR","length":8,
+                 "enum":{"name":"性别","hasCode":true,"values":[{"id":"MALE","name":"男","code":"M"}]}},
+                {"code":"GENDER2","prop":"gender2","name":"性别2","dataType":"VARCHAR","length":8,
+                 "enum":{"name":"性别","ref":{"code":"T","prop":"gender"}}}
+            ]}]}"#,
+        );
+        assert!(validate_project(&p).is_ok());
+    }
+
+    #[test]
+    fn enum_ref_missing_target_reported() {
+        let p = proj_with_table(
+            r#"{"version":"1","basePackage":"x","bizTypes":[],"groups":[],"tables":[{"code":"T","name":"T","group":"","fields":[
+                {"code":"GENDER","prop":"gender","name":"性别","dataType":"VARCHAR","length":8,
+                 "enum":{"name":"性别","ref":{"code":"NOPE","prop":"gender"}}}
+            ]}]}"#,
+        );
+        let errs = validate_project(&p).unwrap_err();
+        assert!(errs.iter().any(|e| e.message.contains("引用的枚举不存在")));
+    }
+
+    #[test]
+    fn enum_ref_target_not_enum_reported() {
+        // 目标字段无 enum(非枚举) -> 引用不合法
+        let p = proj_with_table(
+            r#"{"version":"1","basePackage":"x","bizTypes":[],"groups":[],"tables":[{"code":"T","name":"T","group":"","fields":[
+                {"code":"X","prop":"x","name":"x","dataType":"VARCHAR","length":8},
+                {"code":"Y","prop":"y","name":"y","dataType":"VARCHAR","length":8,
+                 "enum":{"name":"x","ref":{"code":"T","prop":"x"}}}
+            ]}]}"#,
+        );
+        let errs = validate_project(&p).unwrap_err();
+        assert!(errs.iter().any(|e| e.message.contains("引用的枚举不存在")));
+    }
+
+    #[test]
+    fn enum_ref_length_mismatch_reported() {
+        // 引用方 length 与定义方不一致 -> 报错
+        let p = proj_with_table(
+            r#"{"version":"1","basePackage":"x","bizTypes":[],"groups":[],"tables":[{"code":"T","name":"T","group":"","fields":[
+                {"code":"GENDER","prop":"gender","name":"性别","dataType":"VARCHAR","length":8,
+                 "enum":{"name":"性别","hasCode":true,"values":[{"id":"MALE","name":"男","code":"M"}]}},
+                {"code":"X","prop":"x","name":"x","dataType":"VARCHAR","length":16,
+                 "enum":{"name":"性别","ref":{"code":"T","prop":"gender"}}}
+            ]}]}"#,
+        );
+        let errs = validate_project(&p).unwrap_err();
+        assert!(errs.iter().any(|e| e.message.contains("长度不一致")));
     }
 }

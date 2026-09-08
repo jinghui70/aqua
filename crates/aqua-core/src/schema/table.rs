@@ -77,6 +77,10 @@ pub struct Table {
     pub indexes: Option<Vec<Index>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub comment: Option<String>,
+    /// 该表 Java 实体/枚举的持久化包名(JavaTab 手动改过后记住);
+    /// None = 未存,按默认规则 {basePackage}.{group}.entity。
+    #[serde(rename = "javaPackage", skip_serializing_if = "Option::is_none", default)]
+    pub java_package: Option<String>,
 }
 
 #[cfg(test)]

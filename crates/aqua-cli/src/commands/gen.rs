@@ -8,7 +8,7 @@ use anyhow::{anyhow, Result};
 use aqua_core::generators::frontend_json::{generate_frontend_json, FrontendJsonOptions};
 use aqua_core::generators::java::{generate_java_entity, JavaOptions};
 
-/// 生成 dba 规范 entity Java。
+/// 生成 dba 规范 entity Java(多文件:实体 + 本表定义枚举)。
 /// package: None -> 不生成 package 声明;Some -> 全路径包名
 /// class_name: None -> PascalCase(table.code);Some -> 自定义类名
 pub fn entity(file: &str, table: &str, package: Option<String>, class_name: Option<String>) -> Result<()> {
@@ -18,9 +18,11 @@ pub fn entity(file: &str, table: &str, package: Option<String>, class_name: Opti
         package,
         class_name,
     };
-    let code = generate_java_entity(&project, table, &options)
+    let files = generate_java_entity(&project, table, &options)
         .map_err(|e| anyhow!("生成 entity 失败: {e}"))?;
-    print!("{code}");
+    for f in files {
+        println!("// ===== {} =====\n{}", f.path, f.content);
+    }
     Ok(())
 }
 

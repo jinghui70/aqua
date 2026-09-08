@@ -1,7 +1,7 @@
 //! generate 命令实现(Tauri commands)。
 
 use aqua_core::generators::ddl::{generate_ddl, DdlOptions, Dialect};
-use aqua_core::generators::java::{generate_java_entity, JavaOptions};
+use aqua_core::generators::java::{generate_java_entity, JavaFile, JavaOptions};
 use aqua_core::schema::Project;
 
 /// Tauri command: 生成 DDL。
@@ -38,6 +38,7 @@ pub async fn generate_ddl_command(
 }
 
 /// Tauri command: 生成 Java 实体类(支持配置: 包名/类名/Lombok,注释始终生成)。
+/// 返回多文件(实体 + 本表定义枚举),path 为相对文件名。
 #[tauri::command]
 pub async fn generate_java_command(
     project: Project,
@@ -45,7 +46,7 @@ pub async fn generate_java_command(
     use_lombok: Option<bool>,
     package: Option<String>,
     class_name: Option<String>,
-) -> Result<String, String> {
+) -> Result<Vec<JavaFile>, String> {
     let options = JavaOptions {
         use_lombok: use_lombok.unwrap_or(true),
         package,

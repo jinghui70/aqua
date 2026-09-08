@@ -2,7 +2,7 @@
 
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { ElMessage } from "element-plus";
-import type { Project, DbConfig, DatabaseInfo, ValidationError, DatasetEntry, SchemaDiff, BizTypeDefine } from "@/types/schema";
+import type { Project, DbConfig, DatabaseInfo, ValidationError, DatasetEntry, SchemaDiff, BizTypeDefine, JavaFile } from "@/types/schema";
 
 /** 表信息(表名 + 注释),listTables 返回,对齐 Rust TableInfo。 */
 export interface TableInfo {
@@ -75,7 +75,7 @@ export function useTauri() {
       table: string,
       opts?: { useLombok?: boolean; package?: string; className?: string }
     ) =>
-      invoke<string>("generate_java_command", {
+      invoke<JavaFile[]>("generate_java_command", {
         project,
         table,
         useLombok: opts?.useLombok,

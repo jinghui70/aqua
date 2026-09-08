@@ -196,6 +196,7 @@ mod tests {
                     Field { prop: "userName".into(), code: "USER_NAME".into(), name: "用户名".into(), data_type: DataType::Varchar, length: Some(64), precision: None, scale: None, biz_type: None, biz_type_data: None, is_key: None, not_null: Some(true), auto_generate: None, default_value: None, enum_ref: None, comment: None },
                     Field { prop: "amount".into(), code: "AMOUNT".into(), name: "金额".into(), data_type: DataType::Decimal, length: None, precision: Some(12), scale: Some(2), biz_type: None, biz_type_data: None, is_key: None, not_null: None, auto_generate: None, default_value: None, enum_ref: None, comment: None },
                 ],
+                java_package: None,
                 indexes: None,
                 comment: None,
             }],

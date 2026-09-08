@@ -64,6 +64,7 @@ fn build_table(table: &TableInfo, meta: TableMeta) -> Table {
             .unwrap_or_else(|| table.name.clone()),
         group: "default".to_string(),
         fields,
+        java_package: None,
         indexes: if indexes.is_empty() {
             None
         } else {

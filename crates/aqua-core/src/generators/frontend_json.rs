@@ -3,8 +3,9 @@
 //! 移植自 `~/work/aqua-legacy/packages/core/src/generators/frontend-json/`。
 //! 规则见 `docs/design.md` §4.2.2。
 
-use crate::schema::{DataType, Field, Project, Table};
+use crate::schema::{DataType, EnumDefine, Field, Project, Table};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// json-ui 粗粒度数据类型(4 种)。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -101,8 +102,23 @@ fn normalize_length_scale(
 }
 
 /// Field -> JsonUiField 转换(排除 precision/comment)。
-pub fn transform_field(field: &Field) -> JsonUiField {
+/// defs 为全项目枚举定义索引;枚举字段(定义或引用)输出 bizType="Options" + bizTypeData=[{id,name}]。
+pub fn transform_field(
+    field: &Field,
+    defs: &HashMap<(String, String), EnumDefine>,
+) -> JsonUiField {
     let (length, scale) = normalize_length_scale(field.data_type, field.length, field.scale);
+
+    // 枚举字段 -> Options + bizTypeData(引用方解析到定义方取值)
+    let (biz_type, biz_type_data) = enum_to_options(field, defs)
+        .map(|vals| {
+            (
+                Some("Options".to_string()),
+                Some(serde_json::json!(vals)),
+            )
+        })
+        .unwrap_or((field.biz_type.clone(), field.biz_type_data.clone()));
+
     JsonUiField {
         prop: field.prop.clone(),
         code: field.code.clone(),
@@ -110,21 +126,46 @@ pub fn transform_field(field: &Field) -> JsonUiField {
         data_type: map_data_type(field.data_type),
         length,
         scale,
-        biz_type: field.biz_type.clone(),
-        biz_type_data: field.biz_type_data.clone(),
+        biz_type,
+        biz_type_data,
         is_key: field.is_key.unwrap_or(false),
         not_null: field.not_null.unwrap_or(false),
         auto_generate: field.auto_generate.is_some().then_some(true),
     }
 }
 
+/// 枚举字段的 Options 值列表[{id,name,color?}](定义方 or 引用方解析);非枚举返回 None。
+/// color 仅在定义了时输出;code 不输出(仅 Java 用)。
+fn enum_to_options(
+    field: &Field,
+    defs: &HashMap<(String, String), EnumDefine>,
+) -> Option<Vec<serde_json::Value>> {
+    let e = field.enum_ref.as_ref()?;
+    let values = if let Some(r) = &e.r#ref {
+        // 引用方:解析到定义方取值
+        &defs.get(&(r.code.clone(), r.prop.clone()))?.r#enum.values
+    } else {
+        // 定义方:直接取本地 values
+        &e.values
+    };
+    Some(
+        values
+            .iter()
+            .map(|v| match &v.color {
+                Some(c) => serde_json::json!({ "id": v.id, "name": v.name, "color": c }),
+                None => serde_json::json!({ "id": v.id, "name": v.name }),
+            })
+            .collect(),
+    )
+}
+
 /// Table -> JsonUiModel 转换(JsonModelSchema,type 固定 "model")。
-pub fn transform_table(table: &Table) -> JsonUiModel {
+pub fn transform_table(table: &Table, defs: &HashMap<(String, String), EnumDefine>) -> JsonUiModel {
     JsonUiModel {
         type_: "model",
         code: table.code.clone(),
         name: table.name.clone(),
-        fields: table.fields.iter().map(transform_field).collect(),
+        fields: table.fields.iter().map(|f| transform_field(f, defs)).collect(),
     }
 }
 
@@ -144,14 +185,21 @@ pub fn generate_frontend_json(project: &Project, options: &FrontendJsonOptions) 
             .expect("项目无表,无法生成 model")
     };
 
+    let defs = project.enum_defs();
     // 直接序列化 struct 保持字段顺序;经 serde_json::Value 会被 BTreeMap 重排成字母序
-    serde_json::to_string_pretty(&transform_table(table)).unwrap()
+    serde_json::to_string_pretty(&transform_table(table, &defs)).unwrap()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::schema::{AutoGenerate, GenerationTiming};
+    use std::collections::HashMap;
+
+    /// 空枚举索引(测试中无枚举字段)。
+    fn no_defs() -> HashMap<(String, String), EnumDefine> {
+        HashMap::new()
+    }
 
     #[test]
     fn test_map_data_type() {
@@ -187,7 +235,7 @@ mod tests {
             comment: Some("备注".to_string()),
         };
 
-        let json = transform_field(&field);
+        let json = transform_field(&field, &no_defs());
         let serialized = serde_json::to_string(&json).unwrap();
 
         // 包含核心字段
@@ -228,7 +276,7 @@ mod tests {
             enum_ref: None,
             comment: None,
         };
-        let serialized = serde_json::to_string(&transform_field(&with_ag)).unwrap();
+        let serialized = serde_json::to_string(&transform_field(&with_ag, &no_defs())).unwrap();
         assert!(
             serialized.contains("\"autoGenerate\":true"),
             "有 auto_generate 应输出 \"autoGenerate\":true:\n{}",
@@ -240,7 +288,7 @@ mod tests {
             auto_generate: None,
             ..with_ag.clone()
         };
-        let serialized2 = serde_json::to_string(&transform_field(&without_ag)).unwrap();
+        let serialized2 = serde_json::to_string(&transform_field(&without_ag, &no_defs())).unwrap();
         assert!(
             !serialized2.contains("autoGenerate"),
             "无 auto_generate 不应输出 autoGenerate:\n{}",
@@ -278,6 +326,7 @@ mod tests {
                 name: "表".to_string(),
                 group: "g".to_string(),
                 fields: vec![field],
+                java_package: None,
                 indexes: None,
                 comment: None,
             }],
@@ -330,14 +379,14 @@ mod tests {
             DataType::Varchar,
             Some(8),
             Some(2),
-        )))
+        ), &no_defs()))
         .unwrap();
         assert!(s.contains("\"length\":8"), "VARCHAR 应输出 length:\n{}", s);
         assert!(!s.contains("scale"), "VARCHAR 不应输出 scale:\n{}", s);
 
         // TINYINT/INT/LONG: 不输出 length(即便有脏值), 输出 scale:0
         for dt in [DataType::Tinyint, DataType::Int, DataType::Long] {
-            let s = serde_json::to_string(&transform_field(&mk_field(dt, Some(10), None)))
+            let s = serde_json::to_string(&transform_field(&mk_field(dt, Some(10), None), &no_defs()))
                 .unwrap();
             assert!(!s.contains("length"), "{:?} 不应输出 length:\n{}", dt, s);
             assert!(
@@ -353,7 +402,7 @@ mod tests {
             DataType::Decimal,
             Some(10),
             Some(2),
-        )))
+        ), &no_defs()))
         .unwrap();
         assert!(!s.contains("length"), "DECIMAL 不应输出 length:\n{}", s);
         assert!(s.contains("\"scale\":2"), "DECIMAL 应输出原 scale:\n{}", s);
@@ -363,7 +412,7 @@ mod tests {
             DataType::Double,
             Some(10),
             Some(2),
-        )))
+        ), &no_defs()))
         .unwrap();
         assert!(!s.contains("length"), "DOUBLE 不应输出 length:\n{}", s);
         assert!(!s.contains("scale"), "DOUBLE 不应输出 scale:\n{}", s);
@@ -375,10 +424,103 @@ mod tests {
             DataType::Date,
             DataType::Datetime,
         ] {
-            let s = serde_json::to_string(&transform_field(&mk_field(dt, Some(10), Some(2))))
+            let s = serde_json::to_string(&transform_field(&mk_field(dt, Some(10), Some(2)), &no_defs()))
                 .unwrap();
             assert!(!s.contains("length"), "{:?} 不应输出 length:\n{}", dt, s);
             assert!(!s.contains("scale"), "{:?} 不应输出 scale:\n{}", dt, s);
         }
+    }
+
+    #[test]
+    fn test_enum_field_emits_options() {
+        // 枚举字段 -> bizType="Options" + bizTypeData=[{id,name}](不含 code/color)
+        let mut field = mk_field(DataType::Varchar, Some(8), None);
+        field.enum_ref = Some(crate::schema::InlineEnum {
+            name: "性别".into(),
+            has_code: Some(true),
+            class_name: None,
+            r#ref: None,
+            values: vec![
+                crate::schema::EnumValue {
+                    id: "MALE".into(),
+                    name: "男".into(),
+                    code: Some("M".into()),
+                    color: Some(crate::schema::EnumColor::Blue),
+                },
+                crate::schema::EnumValue {
+                    id: "FEMALE".into(),
+                    name: "女".into(),
+                    code: Some("F".into()),
+                    color: Some(crate::schema::EnumColor::Red),
+                },
+            ],
+        });
+        let defs = {
+            let mut m = HashMap::new();
+            // 定义方:键 = (表code, 字段prop)——此处 transform_field 定义方能直接取本地 values,
+            // 不需在 defs 中出现;但为了构造走 defs 路径,这里放一个定义。
+            let d = crate::schema::EnumDefine {
+                table_code: "T".into(),
+                field_prop: "gender".into(),
+                field: field.clone(),
+                r#enum: field.enum_ref.clone().unwrap(),
+            };
+            m.insert(("T".to_string(), "gender".to_string()), d);
+            m
+        };
+        let json = serde_json::to_string(&transform_field(&field, &defs)).unwrap();
+        assert!(json.contains("\"bizType\":\"Options\""), "枚举字段应输出 bizType=Options:\n{}", json);
+        // 定义了 color 的项输出 color;code 不输出
+        assert!(
+            json.contains("[{\"id\":\"MALE\",\"name\":\"男\",\"color\":\"blue\"},{\"id\":\"FEMALE\",\"name\":\"女\",\"color\":\"red\"}]"),
+            "bizTypeData 应含已定义的 color:\n{}", json
+        );
+        let data_seg = &json[json.find("bizTypeData").unwrap()..];
+        assert!(!data_seg.contains("\"code\""), "bizTypeData 不应含 code:\n{}", data_seg);
+    }
+
+    #[test]
+    fn test_enum_reference_field_emits_options() {
+        // 引用方枚举字段: 解析到定义方取值 -> Options
+        let mut ref_field = mk_field(DataType::Varchar, Some(8), None);
+        ref_field.enum_ref = Some(crate::schema::InlineEnum {
+            name: "性别".into(),
+            has_code: None,
+            class_name: None,
+            r#ref: Some(crate::schema::InlineEnumRef {
+                code: "A".into(),
+                prop: "gender".into(),
+            }),
+            values: vec![],
+        });
+        let defs = {
+            let mut m = HashMap::new();
+            let d = crate::schema::EnumDefine {
+                table_code: "A".into(),
+                field_prop: "gender".into(),
+                field: mk_field(DataType::Varchar, Some(8), None),
+                r#enum: crate::schema::InlineEnum {
+                    name: "性别".into(),
+                    has_code: Some(true),
+                    class_name: None,
+                    r#ref: None,
+                    values: vec![crate::schema::EnumValue {
+                        id: "MALE".into(),
+                        name: "男".into(),
+                        code: Some("M".into()),
+                        color: Some(crate::schema::EnumColor::Green),
+                    }],
+                },
+            };
+            m.insert(("A".to_string(), "gender".to_string()), d);
+            m
+        };
+        let json = serde_json::to_string(&transform_field(&ref_field, &defs)).unwrap();
+        assert!(json.contains("\"bizType\":\"Options\""), "引用方应输出 bizType=Options:\n{}", json);
+        // 引用方解析定义方取值,含 color(定义方有);code 仍不输出
+        assert!(
+            json.contains("[{\"id\":\"MALE\",\"name\":\"男\",\"color\":\"green\"}]"),
+            "引用方 bizTypeData 解析定义方(含 color):\n{}", json
+        );
     }
 }

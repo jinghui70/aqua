@@ -30,7 +30,17 @@ export interface InlineEnumValue {
 export interface InlineEnum {
   name: string;
   hasCode?: boolean;
+  /** 显式枚举类名,缺省按定义字段 prop 派生 PascalCase */
+  className?: string;
+  /** 引用型:指向定义方(表 code + 字段 prop),引用方不带 values 副本 */
+  ref?: { code: string; prop: string };
   values: InlineEnumValue[];
+}
+
+/** Java 生成产物(实体 + 枚举,多文件)。 */
+export interface JavaFile {
+  path: string;
+  content: string;
 }
 
 export interface Field {
@@ -71,6 +81,8 @@ export interface Table {
   fields: Field[];
   indexes?: Index[];
   comment?: string;
+  /** Java 实体/枚举包名(JavaTab 改过后持久化);未存则按默认规则 {basePackage}.{group}.entity */
+  javaPackage?: string;
 }
 
 export interface GroupDefine {

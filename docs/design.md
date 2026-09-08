@@ -193,9 +193,11 @@ Enum 是特殊 bizType(`bizType==="Enum"`),选中后字段挂内联枚举并强�
 
 ```typescript
 interface InlineEnum {
-  name: string                // 枚举名(如 "性别",派生 Java 枚举类名)
+  name: string                // 枚举名(如 "性别")
   hasCode?: boolean           // true=CodeEnum 派生存 code,false/无=普通枚举存 id
-  values: EnumValue[]
+  className?: string          // 显式类名,缺省按定义字段 prop 派生 PascalCase
+  ref?: { code: string; prop: string }  // 引用型:指向定义方(表 code + 字段 prop)
+  values: EnumValue[]         // 定义方非空;引用方可空(无副本)
 }
 
 interface EnumValue {
@@ -209,11 +211,28 @@ interface EnumValue {
 **color 预置列表**(写死代码):success / error / warning / info / primary / danger / red / orange / yellow / green / blue / purple / grey
 
 **hasCode 行为**:
-- `hasCode=true`:数据库存 code,Java 生成 `MALE("M","男") implements CodeEnum`
+- `hasCode=true`:数据库存 code,Java 生成 `MALE("M") implements CodeEnum`(描述作行尾注释)
 - `hasCode=false`:数据库存 id,Java 生成普通枚举 `MALE // 男`
 - 校验:hasCode=true 时每个 value 必须有 code
 
-**Java 生成**:内联枚举生成独立 enum 类(共享表的 package)。
+**字段扩展**:
+- `className?: string`:显式枚举类名,缺省按定义字段 prop 派生 PascalCase(`gender`→`Gender`)
+- `ref?: { code, prop }`:引用型枚举——指向一个定义方字段(表 code + 字段 prop),引用方不携带 values 副本,生成时不产枚举代码,字段类型指向目标类名。定义方 = 字段有 enum 且无 ref。
+
+**Java 生成**:内联枚举生成独立 enum 类(与实体共享 package)。枚举字段的实体属性类型 = 枚举类名(非 String)。引用方字段类型指向目标定义方枚举类,跨引用不重复生成。
+
+```java
+// 定义方(hasCode=true)
+public enum Gender implements io.github.jinghui70.rainbow.dbaccess.object.CodeEnum {
+    MALE("M"), // 男
+    FEMALE("F"); // 女
+    private final String code;
+    Gender(String code) { this.code = code; }
+    @Override public String code() { return code; }
+}
+```
+
+**DataModel(前端 JSON)映射**:枚举字段(定义或引用)输出 `bizType:"Options"` + `bizTypeData:[{id,name},…]`(仅 id+name,不含 code/color);引用方解析到定义方取值。
 
 ### 3.6 项目结构
 
