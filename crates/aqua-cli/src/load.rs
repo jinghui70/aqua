@@ -4,14 +4,16 @@
 
 use anyhow::{anyhow, Context, Result};
 use aqua_core::schema::{parse_project, ParseError, Project};
+use aqua_core::version::{check_version_compatibility, VersionCheck};
 
-/// 读文件 → JSON Value → parse_project(校验)。错误分类为可读文本。
+/// 读文件 → JSON Value → parse_project(校验) + 版本兼容性检查。
 pub fn load(path: &str) -> Result<Project> {
     let content =
         std::fs::read_to_string(path).with_context(|| format!("读取文件失败: {path}"))?;
     let value: serde_json::Value =
         serde_json::from_str(&content).with_context(|| format!("JSON 解析失败: {path}"))?;
-    parse_project(value).map_err(|e| match e {
+
+    let project = parse_project(value).map_err(|e| match e {
         ParseError::Deserialize(err) => anyhow!("schema 结构错误: {err}"),
         ParseError::Validate(errors) => {
             let mut msg = format!("schema 校验失败（{} 个错误）：", errors.len());
@@ -20,5 +22,23 @@ pub fn load(path: &str) -> Result<Project> {
             }
             anyhow!(msg)
         }
-    })
+    })?;
+
+    // 版本兼容性检查
+    match check_version_compatibility(&project.version) {
+        VersionCheck::Compatible => Ok(project),
+        VersionCheck::CanOpen { file_version } => {
+            eprintln!(
+                "警告: 文件由旧版本({})创建,当前 CLI 版本({}),已兼容打开（CLI 只读,不涉及保存升级）。",
+                file_version,
+                aqua_core::version::AQUA_VERSION
+            );
+            Ok(project)
+        }
+        VersionCheck::NeedUpgrade { file_version } => Err(anyhow!(
+            "文件版本({})高于当前 CLI 版本({}),请升级 aqua-cli 后重试。",
+            file_version,
+            aqua_core::version::AQUA_VERSION
+        )),
+    }
 }

@@ -9,6 +9,7 @@ import { useRouter } from "vue-router";
 import { useProjectStore } from "@/stores/project";
 import { useUiStore } from "@/stores/ui";
 import { pickOpenFile, pickSaveFile } from "@/composables/useFileDialog";
+import { APP_VERSION } from "@/version";
 
 export function useMenuActions() {
   const router = useRouter();
@@ -54,9 +55,14 @@ export function useMenuActions() {
         );
         break;
       case "help.about":
-        ElMessageBox.alert("aqua v2 — JSON-SSOT 数据库结构管理工具", "关于", {
-          confirmButtonText: "确定",
-        });
+        ElMessageBox.alert(
+          `aqua v2 — JSON-SSOT 数据库结构管理工具<br/><br/>版本: ${APP_VERSION}`,
+          "关于",
+          {
+            confirmButtonText: "确定",
+            dangerouslyUseHTMLString: true,
+          }
+        );
         break;
       default:
         break;

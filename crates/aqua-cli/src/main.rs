@@ -13,7 +13,8 @@ use clap::{Parser, Subcommand};
 #[command(
     name = "aqua-cli",
     about = "aqua 数据表结构工具 -- 读结构 + 生成 entity/DataModel",
-    long_about = None
+    long_about = None,
+    version
 )]
 struct Cli {
     /// .aqua 文件路径

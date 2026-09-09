@@ -31,8 +31,12 @@ async function doPreview() {
     return;
   }
   try {
-    const oldProject = await tauri.projectOpen(oldProjectPath.value);
-    preview.value = await tauri.generateAlter(oldProject as Project, store.currentProject, dialect.value);
+    const result = await tauri.projectOpen(oldProjectPath.value);
+    if (result.status === "needUpgrade") {
+      ElMessage.error(`旧项目文件版本过高(${result.fileVersion})，无法比对`);
+      return;
+    }
+    preview.value = await tauri.generateAlter(result.project, store.currentProject, dialect.value);
   } catch { /* 已提示 */ }
 }
 

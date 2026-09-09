@@ -2,7 +2,7 @@
 
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { ElMessage } from "element-plus";
-import type { Project, DbConfig, DatabaseInfo, ValidationError, DatasetEntry, SchemaDiff, BizTypeDefine, JavaFile } from "@/types/schema";
+import type { Project, ProjectOpenResult, DbConfig, DatabaseInfo, ValidationError, DatasetEntry, SchemaDiff, BizTypeDefine, JavaFile } from "@/types/schema";
 
 /** 表信息(表名 + 注释),listTables 返回,对齐 Rust TableInfo。 */
 export interface TableInfo {
@@ -23,7 +23,7 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
 export function useTauri() {
   return {
     // 项目管理
-    projectOpen: (path: string) => invoke<Project>("project_open", { path }),
+    projectOpen: (path: string) => invoke<ProjectOpenResult>("project_open", { path }),
     projectSave: (path: string, project: Project) =>
       invoke<void>("project_save", { path, project }),
     projectValidate: (project: Project) =>

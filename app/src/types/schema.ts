@@ -122,6 +122,12 @@ export interface Project {
   tables: Table[];
 }
 
+/** 项目打开结果(含版本检查) */
+export type ProjectOpenResult =
+  | { status: "success"; project: Project }
+  | { status: "canOpen"; project: Project; fileVersion: string; currentVersion: string }
+  | { status: "needUpgrade"; fileVersion: string; currentVersion: string };
+
 export interface ValidationError {
   path: string;
   message: string;

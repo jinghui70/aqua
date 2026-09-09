@@ -2,6 +2,7 @@
 
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { nextTick, ref, watch } from "vue";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { useUiStore } from "@/stores/ui";
 import type { Project, Table, ValidationError } from "@/types/schema";
 import { useTauri } from "@/composables/useTauri";
@@ -80,7 +81,18 @@ export const useProjectStore = defineStore("project", () => {
   /** 打开项目文件。调用方应先 confirmIfDirty。 */
   async function openProject(path: string) {
     suppressDirty = true;
-    const p = await tauri.projectOpen(path);
+    const result = await tauri.projectOpen(path);
+
+    // 处理版本检查结果
+    if (result.status === "needUpgrade") {
+      ElMessage.error(
+        `文件版本(${result.fileVersion})高于当前应用版本(${result.currentVersion})，请升级 aqua 后重试。`
+      );
+      suppressDirty = false;
+      return;
+    }
+
+    const p = result.project;
     p.tables.forEach((t) => (t.id = crypto.randomUUID()));
     currentProject.value = p;
     currentPath.value = path;
@@ -90,6 +102,15 @@ export const useProjectStore = defineStore("project", () => {
     readOnly.value = true; // 打开已有项目默认只读
     recent.record(path, currentProject.value?.name ?? undefined);
     await datasource.load(path);
+
+    // 低版本文件提示(保存时会升级)
+    if (result.status === "canOpen") {
+      ElMessage.info({
+        message: `文件由旧版本(${result.fileVersion})创建，已兼容打开。保存时将升级为当前版本(${result.currentVersion})。`,
+        duration: 5000,
+      });
+    }
+
     void nextTick(() => {
       suppressDirty = false;
     });
