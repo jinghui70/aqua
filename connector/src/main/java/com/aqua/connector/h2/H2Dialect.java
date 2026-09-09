@@ -28,6 +28,9 @@ public class H2Dialect extends AbstractJdbcDialect {
         // H2 TCP:    jdbc:h2:tcp://<host>:<port>/<database>
         if (config.host == null || config.host.isEmpty() || "mem".equalsIgnoreCase(config.host)) {
             return "jdbc:h2:mem:" + config.database + ";DB_CLOSE_DELAY=-1";
+        } else if ("file".equalsIgnoreCase(config.host)) {
+            // AUTO_SERVER 允许文件库被多进程并发打开(桌面工具场景)
+            return "jdbc:h2:file:" + config.database + ";AUTO_SERVER=TRUE";
         } else {
             return "jdbc:h2:tcp://" + config.host + ":" + config.port + "/" + config.database;
         }

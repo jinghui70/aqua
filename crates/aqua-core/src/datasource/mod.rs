@@ -29,6 +29,7 @@ pub enum DataSourceError {
 
 /// 单个数据源配置。password 在内存态为明文,文件态为密文。
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct DataSourceConfig {
     pub dialect: String,
     pub host: String,
@@ -38,6 +39,9 @@ pub struct DataSourceConfig {
     pub database: String,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub schema: Option<String>,
+    /// JDBC URL 直填模式(仅 Jdbc 类 dialect;非空时 connector 跳过 buildUrl)
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub jdbc_url: Option<String>,
 }
 
 /// `.aqua.conf` 文件结构。key = sourceName,BTreeMap 保证稳定排序。
@@ -202,6 +206,7 @@ mod tests {
                 password: pwd.into(),
                 database: "mydb".into(),
                 schema: None,
+                jdbc_url: None,
             },
         )
     }
@@ -348,5 +353,27 @@ mod tests {
         assert_eq!(back.len(), 2);
         assert_eq!(back[0].0, "dev");
         assert_eq!(back[0].1.database, "mydb");
+    }
+
+    /// jdbcUrl 字段:驼峰命名落盘,旧文件(无该字段)反序列化为 None。
+    #[test]
+    fn test_jdbc_url_field_compat() {
+        let cfg = DataSourceConfig {
+            jdbc_url: Some("jdbc:h2:file:/data/db".into()),
+            ..sample("h2file", "p").1
+        };
+        let json = serde_json::to_value(&cfg).unwrap();
+        // 驼峰命名对齐前端
+        assert_eq!(json["jdbcUrl"], "jdbc:h2:file:/data/db");
+        // None 时不落盘字段(skip_serializing_if)
+        let none_json = serde_json::to_value(sample("x", "p").1).unwrap();
+        assert!(none_json.get("jdbcUrl").is_none());
+        // 旧格式(无该字段)反序列化为 None
+        let legacy = serde_json::json!({
+            "dialect": "h2", "host": "mem", "port": 9092,
+            "user": "sa", "password": "", "database": "test"
+        });
+        let cfg: DataSourceConfig = serde_json::from_value(legacy).unwrap();
+        assert!(cfg.jdbc_url.is_none());
     }
 }

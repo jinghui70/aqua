@@ -108,6 +108,37 @@ class H2DialectTest {
                 "主键索引(单列 ID)应被跳过,实际: " + indexes);
     }
 
+    @Test
+    void testBuildUrlFileMode() {
+        // host=file -> 文件库 URL(AUTO_SERVER 允许多进程并发打开)
+        DbConfig config = new DbConfig();
+        config.dialect = "h2";
+        config.host = "file";
+        config.database = "/tmp/aqua_test_file";
+        assertEquals("jdbc:h2:file:/tmp/aqua_test_file;AUTO_SERVER=TRUE", dialect.buildUrl(config));
+    }
+
+    @Test
+    void testConnectWithJdbcUrlOverride() throws Exception {
+        // jdbcUrl 直填模式:跳过 buildUrl,直接用完整 URL 连接(内存库,测试后自动回收)
+        DbConfig config = new DbConfig();
+        config.dialect = "h2";
+        config.host = "localhost"; // 应被忽略
+        config.port = 9092;        // 应被忽略
+        config.database = "should_be_ignored";
+        config.user = "sa";
+        config.password = "";
+        config.jdbcUrl = "jdbc:h2:mem:aqua_url_test;DB_CLOSE_DELAY=-1";
+        try (Connection urlConn = dialect.connect(config)) {
+            try (Statement st = urlConn.createStatement()) {
+                st.execute("CREATE TABLE URL_MODE_TEST (ID INT PRIMARY KEY)");
+            }
+            List<TableInfo> tables = dialect.listTables(urlConn, null);
+            assertTrue(tables.stream().anyMatch(t -> t.name.equals("URL_MODE_TEST")),
+                    "jdbcUrl 直连的内存库应可见建表结果: " + tables);
+        }
+    }
+
     private ColumnMeta find(List<ColumnMeta> columns, String name) {
         return columns.stream()
                 .filter(c -> name.equalsIgnoreCase(c.name))

@@ -28,6 +28,7 @@ const config = computed<DbConfig | null>(() => {
     password: ds.password,
     database: ds.database,
     schema: ds.schema,
+    jdbcUrl: ds.jdbcUrl,
   };
 });
 

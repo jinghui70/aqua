@@ -141,6 +141,8 @@ export interface DbConfig {
   password: string;
   database: string;
   schema?: string;
+  /** JDBC URL 直填模式(仅 jdbc 类库;非空时后端跳过 host/port 拼接) */
+  jdbcUrl?: string;
 }
 
 /** 数据库支持信息(清单 + hidden/installed 状态,供配置页与下拉)。 */

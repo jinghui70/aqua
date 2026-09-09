@@ -68,7 +68,8 @@ pub static ALL_DATABASES: &[DialectInfo] = &[
         name: "h2",
         label: "H2",
         category: DbCategory::Jdbc,
-        default_port: 8082,
+        // tcp server 端口(8082 是 web console)
+        default_port: 9092,
         needs_schema: false,
         generate_as: None,
         driver_class: Some("org.h2.Driver"),
@@ -156,6 +157,12 @@ mod tests {
     fn test_find_dialect() {
         assert_eq!(find_dialect("oracle").unwrap().default_port, 1521);
         assert!(find_dialect("nonexistent").is_none());
+    }
+
+    #[test]
+    fn test_h2_default_port_is_tcp() {
+        // H2 tcp server 端口是 9092(8082 是 web console,接 tcp URL 连不通)
+        assert_eq!(find_dialect("h2").unwrap().default_port, 9092);
     }
 
     #[test]

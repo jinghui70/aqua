@@ -18,6 +18,8 @@ public class DbConfig {
     public String password;
     public String database;
     public String schema;
+    /** JDBC URL 直填模式(Rust 侧透传;非空时跳过 buildUrl 直接用该 URL 连接) */
+    public String jdbcUrl;
     /** getColumns/listIndexes/queryRows 用的表名 */
     public String table;
     /** importTables 用的表名列表(批量导入,一条连接反解多表) */

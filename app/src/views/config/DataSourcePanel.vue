@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 数据源配置面板(§6.7):列表 + 表单 + 测试连接。常驻配置中心右侧,非弹窗。
-import { reactive, ref } from "vue";
+// jdbc 类库支持"主机+端口 / URL"两种配置方式(URL 模式直填完整 JDBC URL)。
+import { computed, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { useDataSourceStore, type DataSource } from "@/stores/datasource";
 import { useDatabaseStore } from "@/stores/database";
@@ -23,22 +24,19 @@ const form = reactive<DataSource>({
   database: "",
 });
 
-// 各 dialect 默认端口(切换类型时自动填)
-const DEFAULT_PORTS: Record<string, number> = {
-  mysql: 3306,
-  postgres: 5432,
-  postgresql: 5432,
-  oracle: 1521,
-  h2: 9092,
-  sqlserver: 1433,
-  dm: 5236,
-  kingbase: 54321,
-  gaussdb: 25308,
-  oceanbase: 2881,
-};
+// URL 直填模式(仅 jdbc 类库;host/port/database 与 jdbcUrl 并存于 form,切换不丢值)
+const urlMode = ref(false);
+
+// 当前 dialect 是否为 jdbc 类(native 类不提供 URL 模式,它们不认 JDBC 语法)
+const isJdbcDialect = computed(
+  () => dbStore.databases.find((d) => d.name === form.dialect)?.category === "jdbc"
+);
+
+// 切换类型:默认端口取后端清单(消除前端硬编码副本),切回 native 时退出 URL 模式
 function onDialectChange() {
-  const port = DEFAULT_PORTS[form.dialect.toLowerCase()];
-  if (port) form.port = port;
+  const info = dbStore.databases.find((d) => d.name === form.dialect);
+  if (info) form.port = info.defaultPort;
+  if (!isJdbcDialect.value) urlMode.value = false;
 }
 
 function resetForm() {
@@ -50,7 +48,9 @@ function resetForm() {
     user: "",
     password: "",
     database: "",
+    jdbcUrl: undefined,
   });
+  urlMode.value = false;
   editing.value = false;
   originalName.value = "";
 }
@@ -61,7 +61,9 @@ function newSource() {
 }
 
 function editSource(ds: DataSource) {
-  Object.assign(form, ds);
+  // jdbcUrl 显式赋值:ds 无该键时 Object.assign 不覆盖,会残留上一条数据源的 URL
+  Object.assign(form, ds, { jdbcUrl: ds.jdbcUrl });
+  urlMode.value = Boolean(ds.jdbcUrl);
   originalName.value = ds.sourceName;
   editing.value = true;
 }
@@ -71,7 +73,13 @@ function save() {
     ElMessage.warning("请填写数据源名称");
     return;
   }
+  if (urlMode.value && !form.jdbcUrl?.trim()) {
+    ElMessage.warning("请填写 JDBC URL");
+    return;
+  }
   const ds: DataSource = { ...form };
+  // 主机模式下清掉残留的 jdbcUrl,避免重新编辑时误还原为 URL 模式
+  if (!urlMode.value) ds.jdbcUrl = undefined;
   if (originalName.value) {
     dsStore.update(originalName.value, ds);
     ElMessage.success("已更新");
@@ -93,6 +101,10 @@ function removeSource(name: string) {
 
 const testing = ref(false);
 async function testConnection() {
+  if (urlMode.value && !form.jdbcUrl?.trim()) {
+    ElMessage.warning("请填写 JDBC URL");
+    return;
+  }
   testing.value = true;
   try {
     const msg = await tauri.testConnection({
@@ -102,6 +114,7 @@ async function testConnection() {
       user: form.user,
       password: form.password,
       database: form.database,
+      jdbcUrl: urlMode.value ? form.jdbcUrl : undefined,
     });
     ElMessage.success(msg);
   } catch {
@@ -146,20 +159,33 @@ async function testConnection() {
               <el-option v-for="d in dbStore.reversible" :key="d.name" :label="d.label" :value="d.name" />
             </el-select>
           </el-form-item>
-          <el-form-item label="主机">
-            <el-input v-model="form.host" />
+          <el-form-item v-if="isJdbcDialect" label="配置方式">
+            <el-radio-group v-model="urlMode">
+              <el-radio-button :value="false">主机 + 端口</el-radio-button>
+              <el-radio-button :value="true">URL</el-radio-button>
+            </el-radio-group>
           </el-form-item>
-          <el-form-item label="端口">
-            <el-input-number v-model="form.port" :min="1" :max="65535" :controls="false" style="width: 120px" />
-          </el-form-item>
+          <template v-if="urlMode">
+            <el-form-item label="JDBC URL">
+              <el-input v-model="form.jdbcUrl" placeholder="jdbc:h2:file:/data/db;AUTO_SERVER=TRUE" />
+            </el-form-item>
+          </template>
+          <template v-else>
+            <el-form-item label="主机">
+              <el-input v-model="form.host" />
+            </el-form-item>
+            <el-form-item label="端口">
+              <el-input-number v-model="form.port" :min="1" :max="65535" :controls="false" style="width: 120px" />
+            </el-form-item>
+            <el-form-item label="数据库">
+              <el-input v-model="form.database" />
+            </el-form-item>
+          </template>
           <el-form-item label="用户名">
             <el-input v-model="form.user" />
           </el-form-item>
           <el-form-item label="密码">
             <el-input v-model="form.password" type="password" show-password />
-          </el-form-item>
-          <el-form-item label="数据库">
-            <el-input v-model="form.database" />
           </el-form-item>
           <el-form-item>
             <el-button :loading="testing" @click="testConnection">测试连接</el-button>

@@ -57,7 +57,10 @@ public abstract class AbstractJdbcDialect implements Dialect {
 
     @Override
     public final Connection connect(DbConfig config) throws SQLException {
-        String url = buildUrl(config);
+        // URL 直填模式:jdbcUrl 非空时跳过 buildUrl,直接用用户提供的完整 URL
+        String url = (config.jdbcUrl != null && !config.jdbcUrl.isBlank())
+                ? config.jdbcUrl
+                : buildUrl(config);
         try {
             ClassLoader cl = Thread.currentThread().getContextClassLoader();
             if (cl == null) cl = getClass().getClassLoader();

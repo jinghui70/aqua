@@ -94,6 +94,17 @@ public abstract class AbstractJdbcDialect implements Dialect {
 2. **类型映射**(如 Oracle NUMBER 按 precision 反解为 TINYINT/INT/LONG,H2/MySQL 无此特例)
 3. **schema 来源**(大部分库用传入值,Oracle schema=用户名需从连接读)
 
+### URL 直填模式(jdbcUrl 短路)
+
+`DbConfig.jdbcUrl` 非空时,`AbstractJdbcDialect.connect` **跳过 `buildUrl`**,直接用该完整 URL 连接
+(用户/密码仍走 `Properties`,不解析 URL 内嵌凭据)。前端仅对 jdbc 类 dialect 开放此模式
+(native mysql/pg 走 Rust builder,不认 JDBC 语法)。
+
+**契约**: `buildUrl` 只在 jdbcUrl 为空时被调用。子类写 buildUrl 时无需感知 jdbcUrl;
+Rust 侧 `build_request`(`driver/jdbc.rs`)仅在 jdbcUrl 非空时透传该字段。
+
+**用途**: 三元组表达不了的连接形态(如 H2 文件库 `jdbc:h2:file:/path;AUTO_SERVER=TRUE`)。
+
 ### Good Case: H2Dialect 子类
 
 ```java
@@ -106,8 +117,12 @@ public class H2Dialect extends AbstractJdbcDialect {
     
     @Override
     protected String buildUrl(DbConfig config) {
-        if (config.host == null || "mem".equalsIgnoreCase(config.host)) {
+        // host 约定: 空/mem -> 内存库; file -> 文件库(database 为路径); 其他 -> TCP
+        if (config.host == null || config.host.isEmpty() || "mem".equalsIgnoreCase(config.host)) {
             return "jdbc:h2:mem:" + config.database + ";DB_CLOSE_DELAY=-1";
+        } else if ("file".equalsIgnoreCase(config.host)) {
+            // AUTO_SERVER 允许文件库被多进程并发打开(桌面工具场景)
+            return "jdbc:h2:file:" + config.database + ";AUTO_SERVER=TRUE";
         } else {
             return "jdbc:h2:tcp://" + config.host + ":" + config.port + "/" + config.database;
         }
@@ -119,6 +134,10 @@ public class H2Dialect extends AbstractJdbcDialect {
     }
 }
 ```
+
+**注意**: H2 默认端口是 **9092**(tcp server);8082 是 web console 端口,接 tcp URL 连不通。
+Rust `dialects.rs` 的 `default_port` 已对齐为 9092,前端默认端口从 `DatabaseInfo.defaultPort` 取值,
+勿再在前端硬编码端口表(曾有双份漂移:h2 8082/9092 不一致、gaussdb/oceanbase 死配置)。
 
 ### Good Case: OracleDialect 子类(覆写 resolveSchema)
 

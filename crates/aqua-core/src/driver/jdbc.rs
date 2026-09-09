@@ -240,6 +240,31 @@ fn version_key(name: &str) -> Vec<u64> {
 /// 连接 Java 数据源所需的最低 JDK 版本。
 const MIN_JAVA_MAJOR: u32 = 17;
 
+/// 构造发往 connector 的基础请求 payload(不含 driversDir 等路径参数)。
+/// `jdbc_url` 非空时带 `jdbcUrl` 字段,connector 侧据此跳过 buildUrl 直连。
+fn build_request(config: &DbConfig, action: &str, extra: Option<&Value>) -> Value {
+    let mut request = json!({
+        "action": action,
+        "dialect": config.dialect,
+        "host": config.host,
+        "port": config.port,
+        "user": config.user,
+        "password": config.password,
+        "database": config.database,
+    });
+    if let Some(ref url) = config.jdbc_url {
+        if !url.is_empty() {
+            request["jdbcUrl"] = json!(url);
+        }
+    }
+    if let Some(extra_val) = extra {
+        if let (Some(req_map), Some(extra_map)) = (request.as_object_mut(), extra_val.as_object()) {
+            req_map.extend(extra_map.clone());
+        }
+    }
+    request
+}
+
 /// JDBC 驱动(spawn connector.jar)。
 pub struct JdbcDriver {
     config: DbConfig,
@@ -281,15 +306,7 @@ impl JdbcDriver {
         // 连接前确保 java >= 17(首次检测后缓存)
         self.check_java().await?;
 
-        let mut request = json!({
-            "action": action,
-            "dialect": self.config.dialect,
-            "host": self.config.host,
-            "port": self.config.port,
-            "user": self.config.user,
-            "password": self.config.password,
-            "database": self.config.database,
-        });
+        let mut request = build_request(&self.config, action, None);
 
         // Windows: Tauri resource_dir/app_data_dir 返回带 `\\?\` verbatim 前缀的路径
         // (绕过 MAX_PATH 限制)。但 Java launcher 无法打开带此前缀的 jar,报
@@ -671,6 +688,37 @@ mod tests {
         assert_eq!(parse_data_type("DECIMAL"), DataType::Decimal);
         assert_eq!(parse_data_type("DATETIME"), DataType::Datetime);
         assert_eq!(parse_data_type("BLOB"), DataType::Blob);
+    }
+
+    fn test_config(jdbc_url: Option<&str>) -> DbConfig {
+        DbConfig {
+            dialect: "h2".into(),
+            host: "localhost".into(),
+            port: 9092,
+            user: "sa".into(),
+            password: "".into(),
+            database: "test".into(),
+            schema: None,
+            jdbc_url: jdbc_url.map(|s| s.to_string()),
+        }
+    }
+
+    #[test]
+    fn test_build_request_jdbc_url_passthrough() {
+        // URL 直填:非空时透传 jdbcUrl
+        let req = build_request(&test_config(Some("jdbc:h2:file:/data/db")), "listTables", None);
+        assert_eq!(req["jdbcUrl"], "jdbc:h2:file:/data/db");
+        assert_eq!(req["action"], "listTables");
+
+        // 空串视同未配置(不透传)
+        let req = build_request(&test_config(Some("")), "listTables", None);
+        assert!(req.get("jdbcUrl").is_none());
+
+        // None:payload 形态与旧行为一致
+        let req = build_request(&test_config(None), "listTables", None);
+        assert!(req.get("jdbcUrl").is_none());
+        assert_eq!(req["dialect"], "h2");
+        assert_eq!(req["host"], "localhost");
     }
 
     #[test]

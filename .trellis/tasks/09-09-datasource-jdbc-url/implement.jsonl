@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/connector/backend/dialect-extension.md", "reason": "Dialect 三钩子模板方法契约、buildUrl 范例、Rust↔Java 清单同步规则——改 AbstractJdbcDialect.connect 与 H2Dialect 前必读"}
+{"file": ".trellis/spec/connector/backend/subprocess-io-contract.md", "reason": "Rust↔Java stdin/stdout JSON 契约、UTF-8 与 Windows verbatim 规则——jdbc.rs 透传新字段要遵守"}
+{"file": ".trellis/spec/aqua-core/backend/database-guidelines.md", "reason": "aqua-core driver 层编码规范——改 DbConfig/jdbc.rs/dialects.rs 前读"}
+{"file": ".trellis/tasks/09-09-datasource-jdbc-url/prd.md", "reason": "需求与验收标准(R1-R5 / AC1-AC6)"}
+{"file": ".trellis/tasks/09-09-datasource-jdbc-url/design.md", "reason": "字段契约、连接短路点、前端切换逻辑、兼容性矩阵——实现的技术蓝图"}

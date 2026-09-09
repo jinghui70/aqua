@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 /// 数据库连接配置。
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DbConfig {
     /// 数据库方言: "mysql" | "postgresql" | "oracle" | "dm" | ...
     pub dialect: String,
@@ -20,6 +21,9 @@ pub struct DbConfig {
     pub database: String,
     /// schema 名(可选,部分数据库需要)
     pub schema: Option<String>,
+    /// JDBC URL 直填模式(仅 Jdbc 类 dialect;非空时 connector 跳过 buildUrl)
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub jdbc_url: Option<String>,
 }
 
 /// 列元数据(反解结果)。

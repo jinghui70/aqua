@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/app/frontend/type-safety.md", "reason": "前端 TS 类型与 DbConfig 新增字段检查依据"}
+{"file": ".trellis/spec/app/frontend/state-management.md", "reason": "pinia store / 表单状态模式检查依据(urlMode 属组件局部状态,不入 store)"}
+{"file": ".trellis/tasks/09-09-datasource-jdbc-url/prd.md", "reason": "验收标准 AC1-AC6 逐条核对"}
+{"file": ".trellis/tasks/09-09-datasource-jdbc-url/design.md", "reason": "对照设计验证:serde 兼容性、连接短路位置、DEFAULT_PORTS 去重"}

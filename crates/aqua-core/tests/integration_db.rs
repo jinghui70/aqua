@@ -52,6 +52,7 @@ fn mysql_config() -> DbConfig {
         password: "root".to_string(),
         database: "aqua_test".to_string(),
         schema: None,
+        jdbc_url: None,
     }
 }
 
@@ -65,6 +66,7 @@ fn pg_config() -> DbConfig {
         password: "root".to_string(),
         database: "aqua_test".to_string(),
         schema: Some("public".to_string()),
+        jdbc_url: None,
     }
 }
 
@@ -284,6 +286,7 @@ fn h2_config() -> DbConfig {
         password: "".to_string(),
         database: "aqua_test".to_string(),
         schema: None,
+        jdbc_url: None,
     }
 }
 
@@ -301,4 +304,22 @@ async fn h2_test_connection() {
     // 全链路:create_driver(connector_path) -> JdbcDriver::call -> check_java -> spawn connector.jar
     let driver = create_driver(h2_config(), None, &connector_jar()).expect("创建 H2 驱动失败");
     driver.test_connection().await.expect("H2 连接应成功");
+}
+
+#[tokio::test]
+#[ignore]
+async fn h2_test_connection_jdbc_url_mode() {
+    // URL 直填模式:jdbcUrl 非空时 connector 跳过 buildUrl(host/port/database 均不参与)
+    let config = DbConfig {
+        dialect: "h2".to_string(),
+        host: "should_be_ignored".to_string(),
+        port: 1,
+        user: "sa".to_string(),
+        password: "".to_string(),
+        database: "ignored".to_string(),
+        schema: None,
+        jdbc_url: Some("jdbc:h2:mem:aqua_url_it;DB_CLOSE_DELAY=-1".to_string()),
+    };
+    let driver = create_driver(config, None, &connector_jar()).expect("创建 H2 驱动失败");
+    driver.test_connection().await.expect("URL 模式 H2 连接应成功");
 }
