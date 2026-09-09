@@ -1090,3 +1090,24 @@ AutoGenStrategyDefine(code/name/paramDesc) + Project.autoGenStrategies。内置 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 31: 版本兼容性管理体系
+
+**Date**: 2026-09-09
+**Task**: 版本兼容性管理体系
+**Branch**: `main`
+
+### Summary
+
+实现 .aqua 文件版本兼容性管理:version.rs 核心逻辑(semver 比较+兼容性检查),CLI --version 参数+高版本拒绝/低版本警告,GUI project_open 返回版本检查结果+project_save 自动升级版本+打开时 toast 提示+关于对话框显示版本,保存时升级策略(选项 A)保证单向兼容,130 项测试全过
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `722c6ef` | (see git log) |
+
+### Status
+
+[OK] **Completed**
