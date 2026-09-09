@@ -39,6 +39,17 @@ function onDialectChange() {
   if (!isJdbcDialect.value) urlMode.value = false;
 }
 
+// URL 模式提示示例(按当前 dialect;与 connector 侧 buildUrl 模板对齐)
+const JDBC_URL_PLACEHOLDERS: Record<string, string> = {
+  h2: "jdbc:h2:tcp://localhost:9092/db 或 jdbc:h2:file:/data/db",
+  oracle: "jdbc:oracle:thin:@//localhost:1521/orcl",
+};
+const jdbcUrlPlaceholder = computed(
+  () =>
+    JDBC_URL_PLACEHOLDERS[form.dialect] ??
+    `jdbc:${form.dialect}://localhost:${form.port}/${form.database || "db"}`
+);
+
 function resetForm() {
   Object.assign(form, {
     sourceName: "",
@@ -167,7 +178,7 @@ async function testConnection() {
           </el-form-item>
           <template v-if="urlMode">
             <el-form-item label="JDBC URL">
-              <el-input v-model="form.jdbcUrl" placeholder="jdbc:h2:file:/data/db;AUTO_SERVER=TRUE" />
+              <el-input v-model="form.jdbcUrl" :placeholder="jdbcUrlPlaceholder" />
             </el-form-item>
           </template>
           <template v-else>
