@@ -1133,3 +1133,28 @@ AutoGenStrategyDefine(code/name/paramDesc) + Project.autoGenStrategies。内置 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 33: JDBC 数据源 URL 直填配置模式
+
+**Date**: 2026-09-09
+**Task**: JDBC 数据源 URL 直填配置模式
+**Branch**: `main`
+
+### Summary
+
+为 jdbc 类数据源新增 URL 直填模式:全链路(DsConfig/DbConfig Rust+TS+Java)加可选字段 jdbcUrl,AbstractJdbcDialect.connect 非空时短路 buildUrl;前端 DataSourcePanel 提供 主机+端口/URL 切换(native 类不开放),URL 模式预填可编辑示例、切回清空、落盘只保留 jdbcUrl 单套配置。顺带修复:H2 默认端口 8082→9092、H2Dialect 补 file 分支(AUTO_SERVER)、前端硬编码 DEFAULT_PORTS 去重、ImportWizard 拷贝丢字段。spec 沉淀 dialect-extension.md(URL 短路契约 + H2 端口陷阱)。cargo/mvn/vue-tsc 全绿,H2 全链路集成测试通过。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `43280be` | (see git log) |
+| `ae97ea9` | (see git log) |
+| `eaa7a06` | (see git log) |
+| `48d2afd` | (see git log) |
+| `7ddd38e` | (see git log) |
+
+### Status
+
+[OK] **Completed**

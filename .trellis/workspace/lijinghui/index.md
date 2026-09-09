@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 32
+- **Total Sessions**: 33
 - **Last Active**: 2026-09-09
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1135 | Active |
+| `journal-1.md` | ~1160 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 33 | 2026-09-09 | JDBC 数据源 URL 直填配置模式 | `43280be`, `ae97ea9`, `eaa7a06`, `48d2afd`, `7ddd38e` | `main` |
 | 32 | 2026-09-09 | 打包版 GUI 进程 java 路径解析修复 | `b84de76`, `c200dab` | `main` |
 | 31 | 2026-09-09 | 版本兼容性管理体系 | `722c6ef` | `main` |
 | 30 | 2026-09-08 | Java 枚举类型完整生成与引用体系 | `16a8800` | `main` |
