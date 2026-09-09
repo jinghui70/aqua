@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 数据源配置面板(§6.7):列表 + 表单 + 测试连接。常驻配置中心右侧,非弹窗。
 // jdbc 类库支持"主机+端口 / URL"两种配置方式(URL 模式直填完整 JDBC URL)。
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { useDataSourceStore, type DataSource } from "@/stores/datasource";
 import { useDatabaseStore } from "@/stores/database";
@@ -39,13 +39,13 @@ function onDialectChange() {
   if (!isJdbcDialect.value) urlMode.value = false;
 }
 
-// URL 模式提示示例(按当前 dialect;与 connector 侧 buildUrl 模板对齐,主机跟表单值联动)
-const jdbcUrlPlaceholder = computed(() => {
+// URL 模式预填值(按当前 dialect;与 connector 侧 buildUrl 模板对齐,主机跟表单值联动)
+function suggestJdbcUrl(): string {
   const host = form.host || "localhost";
   const db = form.database || "db";
   switch (form.dialect) {
     case "h2":
-      return `jdbc:h2:tcp://${host}:${form.port}/${db} 或 jdbc:h2:file:/data/${db}`;
+      return `jdbc:h2:tcp://${host}:${form.port}/${db}`;
     case "oracle":
       // Oracle thin 格式与通用模板不同:@//host:port/service
       return `jdbc:oracle:thin:@//${host}:${form.port}/${db}`;
@@ -53,7 +53,34 @@ const jdbcUrlPlaceholder = computed(() => {
       // GenericJdbcDialect 统一模板(dm/kingbase/gbase/sqlserver 等)
       return `jdbc:${form.dialect}://${host}:${form.port}/${db}`;
   }
+}
+
+// 最近一次预填的 URL(未被用户手改时,dialect 切换后跟随更新)
+let lastSuggested = "";
+
+// 切到 URL 模式预填示例 URL(可改);切回主机模式删掉,避免残留误还原
+watch(urlMode, (isUrl) => {
+  if (isUrl) {
+    if (!form.jdbcUrl) {
+      form.jdbcUrl = suggestJdbcUrl();
+      lastSuggested = form.jdbcUrl;
+    }
+  } else {
+    form.jdbcUrl = undefined;
+    lastSuggested = "";
+  }
 });
+
+// URL 模式下切换 dialect:预填值未被手改时按新 dialect 重新生成,避免格式错配
+watch(
+  () => form.dialect,
+  () => {
+    if (urlMode.value && form.jdbcUrl && form.jdbcUrl === lastSuggested) {
+      form.jdbcUrl = suggestJdbcUrl();
+      lastSuggested = form.jdbcUrl;
+    }
+  }
+);
 
 function resetForm() {
   Object.assign(form, {
@@ -183,7 +210,7 @@ async function testConnection() {
           </el-form-item>
           <template v-if="urlMode">
             <el-form-item label="JDBC URL">
-              <el-input v-model="form.jdbcUrl" :placeholder="jdbcUrlPlaceholder" />
+              <el-input v-model="form.jdbcUrl" placeholder="jdbc:h2:tcp://host:port/db" />
             </el-form-item>
           </template>
           <template v-else>
