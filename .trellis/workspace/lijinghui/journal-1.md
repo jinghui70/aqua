@@ -1111,3 +1111,25 @@ AutoGenStrategyDefine(code/name/paramDesc) + Project.autoGenStrategies。内置 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 32: 打包版 GUI 进程 java 路径解析修复
+
+**Date**: 2026-09-09
+**Task**: 打包版 GUI 进程 java 路径解析修复
+**Branch**: `main`
+
+### Summary
+
+修复打包版(Finder/launchd 启动,PATH 仅 /usr/bin:/bin)解析到 Apple java stub 导致 JDBC 全功能不可用:java_command() 不再裸依赖 PATH,resolve_java_path() 按 JAVA_HOME/bin/java → 平台候选(macOS /usr/libexec/java_home + homebrew 两种布局 + 登录 shell 兜底;Windows Program Files/Adoptium;Linux /usr/lib/jvm)→ PATH fallback 优先级解析,OnceCell 缓存且失败不缓存。报错文案补实际解析路径 + java -version 原始输出。130 项测试全过。工作实际完成于 2026-09-01(已随 v1.0.4 发布),本次为补归档与补记录。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b84de76` | (see git log) |
+| `c200dab` | (see git log) |
+
+### Status
+
+[OK] **Completed**
