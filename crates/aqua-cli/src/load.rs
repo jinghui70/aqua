@@ -24,17 +24,9 @@ pub fn load(path: &str) -> Result<Project> {
         }
     })?;
 
-    // 版本兼容性检查
+    // 版本兼容性检查(CLI 面向 AI,低版本静默打开,仅高版本拒绝)
     match check_version_compatibility(&project.version) {
-        VersionCheck::Compatible => Ok(project),
-        VersionCheck::CanOpen { file_version } => {
-            eprintln!(
-                "警告: 文件由旧版本({})创建,当前 CLI 版本({}),已兼容打开（CLI 只读,不涉及保存升级）。",
-                file_version,
-                aqua_core::version::AQUA_VERSION
-            );
-            Ok(project)
-        }
+        VersionCheck::Compatible | VersionCheck::CanOpen { .. } => Ok(project),
         VersionCheck::NeedUpgrade { file_version } => Err(anyhow!(
             "文件版本({})高于当前 CLI 版本({}),请升级 aqua-cli 后重试。",
             file_version,
