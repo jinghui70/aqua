@@ -39,16 +39,21 @@ function onDialectChange() {
   if (!isJdbcDialect.value) urlMode.value = false;
 }
 
-// URL 模式提示示例(按当前 dialect;与 connector 侧 buildUrl 模板对齐)
-const JDBC_URL_PLACEHOLDERS: Record<string, string> = {
-  h2: "jdbc:h2:tcp://localhost:9092/db 或 jdbc:h2:file:/data/db",
-  oracle: "jdbc:oracle:thin:@//localhost:1521/orcl",
-};
-const jdbcUrlPlaceholder = computed(
-  () =>
-    JDBC_URL_PLACEHOLDERS[form.dialect] ??
-    `jdbc:${form.dialect}://localhost:${form.port}/${form.database || "db"}`
-);
+// URL 模式提示示例(按当前 dialect;与 connector 侧 buildUrl 模板对齐,主机跟表单值联动)
+const jdbcUrlPlaceholder = computed(() => {
+  const host = form.host || "localhost";
+  const db = form.database || "db";
+  switch (form.dialect) {
+    case "h2":
+      return `jdbc:h2:tcp://${host}:${form.port}/${db} 或 jdbc:h2:file:/data/${db}`;
+    case "oracle":
+      // Oracle thin 格式与通用模板不同:@//host:port/service
+      return `jdbc:oracle:thin:@//${host}:${form.port}/${db}`;
+    default:
+      // GenericJdbcDialect 统一模板(dm/kingbase/gbase/sqlserver 等)
+      return `jdbc:${form.dialect}://${host}:${form.port}/${db}`;
+  }
+});
 
 function resetForm() {
   Object.assign(form, {
