@@ -121,8 +121,15 @@ function save() {
     return;
   }
   const ds: DataSource = { ...form };
-  // 主机模式下清掉残留的 jdbcUrl,避免重新编辑时误还原为 URL 模式
-  if (!urlMode.value) ds.jdbcUrl = undefined;
+  if (urlMode.value) {
+    // URL 模式落盘只体现 jdbcUrl:主机/库名是三元组模式的值,并存会与 URL 不一致、误导后续编辑
+    ds.jdbcUrl = form.jdbcUrl;
+    ds.host = "";
+    ds.database = "";
+  } else {
+    // 主机模式下清掉残留的 jdbcUrl,避免重新编辑时误还原为 URL 模式
+    ds.jdbcUrl = undefined;
+  }
   if (originalName.value) {
     dsStore.update(originalName.value, ds);
     ElMessage.success("已更新");
