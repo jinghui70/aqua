@@ -29,18 +29,20 @@ aqua 管理项目所有数据表结构(前后端字段契约的**单源**)。表
 aqua-cli <file.aqua> groups                    # 列所有表组:code  name
 aqua-cli <file.aqua> tables [--group <code>]   # 列表(可按组过滤):code  name
 aqua-cli <file.aqua> show <table>              # 单表结构(JSON:字段 + 索引)
-aqua-cli <file.aqua> gen entity <table> [--package <包名>] [--class-name <类名>]  # → stdout:dba 规范 entity Java
+aqua-cli <file.aqua> gen entity <table> [--package <包名>] [--class-name <类名>]  # → stdout:dba 规范 entity Java + 本表定义的枚举类(多文件)
 aqua-cli <file.aqua> gen datamodel <table>     # → stdout:json-ui DataModel JSON
 ```
 
 `<table>` 用表 code(如 `SYS_USER`)。`gen entity`:`--package` 不传则不生成 package 声明(你自行补),传则用全路径包名(如 `cn.com.yusys.frs.sys.user.entity`);`--class-name` 不传则默认 PascalCase(table.code)。
+
+`gen entity` 输出**多文件**:实体类 + 本表**定义**的枚举类,各文件以一行 `// ===== <path> =====` 分隔,你按分隔逐个落盘。若字段**引用**其它表定义的枚举,entity 只 `import` 该枚举类、不带出其源码——需另跑一次**定义表**的 `gen entity` 获取枚举类文件。
 
 ## 典型用法
 
 - **不知项目有哪些模块** → `aqua-cli <file.aqua> groups`
 - **看某模块下有哪些表** → `aqua-cli <file.aqua> tables --group sys`
 - **写业务代码要了解某表字段** → `aqua-cli <file.aqua> show SYS_USER`(JSON 输出,比读整份 .aqua 省 token)
-- **要 entity / DataModel** → `aqua-cli <file.aqua> gen entity SYS_USER` / `aqua-cli <file.aqua> gen datamodel SYS_USER`,把 stdout 产物写到项目规范的位置(entity 进对应功能包、DataModel 进前端页面目录)
+- **要 entity / DataModel** → `aqua-cli <file.aqua> gen entity SYS_USER` / `aqua-cli <file.aqua> gen datamodel SYS_USER`,把 stdout 产物写到项目规范的位置(entity 进对应功能包、DataModel 进前端页面目录);`gen entity` 若输出多文件(实体 + 枚举类),按 `// ===== <path> =====` 分隔逐个落盘
 
 ## 说明
 
