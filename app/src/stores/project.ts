@@ -434,7 +434,10 @@ export const useProjectStore = defineStore("project", () => {
     let added = 0;
     let overwritten = 0;
     let skipped = 0;
-    for (const code of tableCodes) {
+    for (const name of tableCodes) {
+      // 后端导入统一把表 code 转大写(Windows MySQL lower_case_table_names=1 时表名小写),
+      // 传入的是原始表名,须大写化后再匹配,否则全部找不到 -> 导入 0 张
+      const code = name.toUpperCase();
       const src = imported.tables.find((t) => t.code === code);
       if (!src) continue;
       // 导入表来自反解(后端 Table 无运行时 id),须生成新 id,否则页签/route key 缺失
