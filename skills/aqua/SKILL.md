@@ -12,6 +12,7 @@ aqua 管理项目所有数据表结构(前后端字段契约的**单源**)。表
 ## 调用方式
 
 本 skill 的二进制在 `bin/` 下,按你的平台选一个,下文命令用 `aqua-cli` 代指:
+
 - **mac**:`./bin/aqua-cli-mac-arm64`(Apple Silicon)/ `./bin/aqua-cli-mac-x64`(Intel)
 - **windows**:`.\bin\aqua-cli-win-x64.exe`
 
@@ -49,3 +50,12 @@ aqua-cli <file.aqua> gen datamodel <table>     # → stdout:json-ui DataModel JS
 - 命令**只读**:不会修改 `.aqua`。新增/修改表当前在 aqua 桌面应用里做。
 - 出错(表不存在、文件缺失、schema 非法)会打印到 stderr 并非零退出。
 - 何时该建表、表放哪个模块等**流程**问题,遵循本项目自己的开发规范,本 skill 只负责"怎么用 aqua 工具"。
+
+## entity 落盘后的手工增强(允许)
+
+`gen entity` 产物是**起点而非终稿**,落盘后允许手工增强,常见形态:
+
+- **实现运行时接口**:如树形表 entity 实现 dba 的 `ITreeNode<T>`(加 `children` 字段 + implements),支撑 `queryForTree`。
+- **加辅助字段/方法/构造器**:不映射表列的辅助成员。
+
+约束:**增强部分不进 `.aqua`**,表结构变化触发 `gen entity` 再生成时,手工增强会被覆盖——再生成后需按 git diff 把增强补回。改动若动了 aqua 已生成的字段映射(列名/类型/主键),属于改表,回 aqua 桌面应用改 `.aqua` 源,不在 entity 上改。
