@@ -332,7 +332,7 @@ autoGenerate 是应用层生成(@GeneratedValue),DDL 不体现。
 **生成规则**:
 - 类名:表 code 派生 PascalCase(如 `USER_INFO` -> `UserInfo`),可编辑
 - 属性名:field.prop(驼峰)
-- 类型映射:VARCHAR/CLOB->String,TINYINT/INT->Integer,LONG->Long,DECIMAL->BigDecimal,DOUBLE->Double,DATE->LocalDate,DATETIME->LocalDateTime,BLOB->byte[]
+- 类型映射:VARCHAR/CLOB->String,TINYINT/INT->Integer,LONG->Long,DECIMAL->BigDecimal,DOUBLE->Double,DATE->LocalDate,DATETIME->LocalDateTime,BLOB->byte[];`notNull=true` 的整型(TINYINT/INT/LONG)与 Bool 字段用基本类型(int/long/boolean),可空用包装类型(Integer/Long/Boolean)
 - 注解:`isKey=true` -> `@Id`;`autoGenerate` -> `@GeneratedValue(strategy, param, timing)`;非标准命名 -> `@Column(name)`
 - `comment` -> Javadoc(可开关)
 - 枚举字段:生成对应 enum 类(字段内联)

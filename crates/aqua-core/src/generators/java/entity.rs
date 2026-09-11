@@ -199,7 +199,8 @@ fn collect_imports(
         }
         // @Column: 非标准命名 or Clob/Blob(sqlType=Types.CLOB/BLOB)
         let expected_prop = snake_to_camel(&field.code);
-        if field.prop != expected_prop || matches!(field.data_type, DataType::Clob | DataType::Blob) {
+        if field.prop != expected_prop || matches!(field.data_type, DataType::Clob | DataType::Blob)
+        {
             use_column = true;
         }
     }
@@ -242,13 +243,12 @@ fn enum_type_name(field: &Field, defs: &HashMap<(String, String), EnumDefine>) -
     let e = field.enum_ref.as_ref()?;
     if let Some(r) = &e.r#ref {
         // 引用方:解析目标定义方类名
-        defs.get(&(r.code.clone(), r.prop.clone()))
-            .map(|d| {
-                d.r#enum
-                    .class_name
-                    .clone()
-                    .unwrap_or_else(|| prop_to_pascal(&d.field_prop))
-            })
+        defs.get(&(r.code.clone(), r.prop.clone())).map(|d| {
+            d.r#enum
+                .class_name
+                .clone()
+                .unwrap_or_else(|| prop_to_pascal(&d.field_prop))
+        })
     } else {
         // 定义方:自身类名
         Some(
@@ -259,19 +259,38 @@ fn enum_type_name(field: &Field, defs: &HashMap<(String, String), EnumDefine>) -
     }
 }
 
-/// 字段 Java 类型:bizType=Bool -> boolean(基本类型),否则按 data_type 映射。
+/// 字段 Java 类型:notNull=true -> 基本类型(boolean/int/long),可空 -> 包装类型(Boolean/Integer/Long)。
+/// bizType=Bool 不限物理类型(TINYINT/INT/VARCHAR),统一按此规则映射 boolean/Boolean。
 /// 枚举字段 -> 枚举类名。
-fn java_type_for(
-    field: &Field,
-    defs: &HashMap<(String, String), EnumDefine>,
-) -> String {
+fn java_type_for(field: &Field, defs: &HashMap<(String, String), EnumDefine>) -> String {
     if let Some(enum_type) = enum_type_name(field, defs) {
         return enum_type;
     }
+    let primitive = field.not_null.unwrap_or(false);
     if field.biz_type.as_deref() == Some("Bool") {
-        "boolean".to_string()
+        if primitive {
+            "boolean".to_string()
+        } else {
+            "Boolean".to_string()
+        }
     } else {
-        map_java_type(field.data_type).to_string()
+        match field.data_type {
+            DataType::Tinyint | DataType::Int => {
+                if primitive {
+                    "int".to_string()
+                } else {
+                    "Integer".to_string()
+                }
+            }
+            DataType::Long => {
+                if primitive {
+                    "long".to_string()
+                } else {
+                    "Long".to_string()
+                }
+            }
+            _ => map_java_type(field.data_type).to_string(),
+        }
     }
 }
 

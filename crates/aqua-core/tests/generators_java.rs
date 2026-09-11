@@ -14,11 +14,7 @@ fn load_fixture(name: &str) -> aqua_core::schema::Project {
 
 /// 取生成产物中的实体(首项)内容。
 fn entity_content(files: &[aqua_core::generators::java::JavaFile]) -> String {
-    files
-        .first()
-        .expect("应有实体文件")
-        .content
-        .clone()
+    files.first().expect("应有实体文件").content.clone()
 }
 
 #[test]
@@ -32,11 +28,16 @@ fn test_generate_java_entity_with_lombok() {
     let java_code = entity_content(&files);
 
     // 验证 package
-    assert!(java_code.contains("package com.example.core.entity;"), "应包含 package 声明");
+    assert!(
+        java_code.contains("package com.example.core.entity;"),
+        "应包含 package 声明"
+    );
 
     // 验证 import(默认类名 SysUser 能反推 SYS_USER → 省略 @Table,故不 import Table)
-    assert!(!java_code.contains("io.github.jinghui70.rainbow.dbaccess.annotation.Table"),
-        "默认类名省略 @Table,不应 import Table");
+    assert!(
+        !java_code.contains("io.github.jinghui70.rainbow.dbaccess.annotation.Table"),
+        "默认类名省略 @Table,不应 import Table"
+    );
     assert!(java_code.contains("import lombok.Data"));
     assert!(
         java_code.contains("import java.time.LocalDateTime"),
@@ -58,8 +59,8 @@ fn test_generate_java_entity_with_lombok() {
         "类名应为 SysUser"
     );
 
-    // 验证字段
-    assert!(java_code.contains("private Long id"), "应有 Long id 字段");
+    // 验证字段(notNull=true 的 LONG 主键 -> 基本类型 long)
+    assert!(java_code.contains("private long id"), "应有 long id 字段");
     assert!(
         java_code.contains("private String userName"),
         "应有 String userName 字段"
@@ -96,8 +97,8 @@ fn test_generate_java_entity_without_lombok() {
     assert!(!java_code.contains("import lombok.Data"));
 
     // 应有 getter/setter
-    assert!(java_code.contains("public Long getId()"));
-    assert!(java_code.contains("public void setId(Long id)"));
+    assert!(java_code.contains("public long getId()"));
+    assert!(java_code.contains("public void setId(long id)"));
     assert!(java_code.contains("public String getUserName()"));
     assert!(java_code.contains("public void setUserName(String userName)"));
 }
@@ -117,9 +118,14 @@ fn test_custom_package_and_class_name() {
     assert!(java_code.contains("package com.example.entity;"));
     assert!(java_code.contains("public class User {"));
     // 自定义类名 User 不能反推 SYS_USER → 必须写 @Table + import
-    assert!(java_code.contains("@Table(name = \"SYS_USER\")"), "自定义类名应写 @Table");
-    assert!(java_code.contains("io.github.jinghui70.rainbow.dbaccess.annotation.Table"),
-        "写 @Table 时应 import Table");
+    assert!(
+        java_code.contains("@Table(name = \"SYS_USER\")"),
+        "自定义类名应写 @Table"
+    );
+    assert!(
+        java_code.contains("io.github.jinghui70.rainbow.dbaccess.annotation.Table"),
+        "写 @Table 时应 import Table"
+    );
 }
 
 #[test]
@@ -129,6 +135,62 @@ fn test_table_not_found() {
 
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Table not found"));
+}
+
+#[test]
+fn test_not_null_primitive_type() {
+    // notNull=true -> 基本类型(boolean/int/long);可空 -> 包装类型(Boolean/Integer/Long)
+    let project_json = serde_json::json!({
+        "version": "1.0.0",
+        "basePackage": "com.example",
+        "bizTypes": [],
+        "groups": [{ "code": "core", "name": "核心" }],
+        "tables": [{
+            "code": "T", "name": "T", "group": "core",
+            "fields": [
+                { "prop": "flagOn", "code": "FLAG_ON", "name": "必填开关", "dataType": "TINYINT", "bizType": "Bool", "notNull": true },
+                { "prop": "flagOff", "code": "FLAG_OFF", "name": "可空开关", "dataType": "TINYINT", "bizType": "Bool" },
+                { "prop": "countOn", "code": "COUNT_ON", "name": "必填计数", "dataType": "INT", "notNull": true },
+                { "prop": "countOff", "code": "COUNT_OFF", "name": "可空计数", "dataType": "INT" },
+                { "prop": "idOn", "code": "ID_ON", "name": "必填ID", "dataType": "LONG", "notNull": true },
+                { "prop": "idOff", "code": "ID_OFF", "name": "可空ID", "dataType": "LONG" }
+            ]
+        }]
+    });
+    let project = parse_project(project_json).expect("Project 校验失败");
+    let files = generate_java_entity(&project, "T", &JavaOptions::default()).expect("生成失败");
+    let java_code = entity_content(&files);
+
+    assert!(
+        java_code.contains("private boolean flagOn"),
+        "notNull Bool 应为 boolean:\n{}",
+        java_code
+    );
+    assert!(
+        java_code.contains("private Boolean flagOff"),
+        "可空 Bool 应为 Boolean:\n{}",
+        java_code
+    );
+    assert!(
+        java_code.contains("private int countOn"),
+        "notNull INT 应为 int:\n{}",
+        java_code
+    );
+    assert!(
+        java_code.contains("private Integer countOff"),
+        "可空 INT 应为 Integer:\n{}",
+        java_code
+    );
+    assert!(
+        java_code.contains("private long idOn"),
+        "notNull LONG 应为 long:\n{}",
+        java_code
+    );
+    assert!(
+        java_code.contains("private Long idOff"),
+        "可空 LONG 应为 Long:\n{}",
+        java_code
+    );
 }
 
 #[test]
@@ -153,11 +215,13 @@ fn test_clob_blob_sql_type_annotation() {
 
     assert!(
         java_code.contains("@Column(sqlType = Types.CLOB)"),
-        "CLOB 字段应生成 Types.CLOB:\n{}", java_code
+        "CLOB 字段应生成 Types.CLOB:\n{}",
+        java_code
     );
     assert!(
         java_code.contains("@Column(sqlType = Types.BLOB)"),
-        "BLOB 字段应生成 Types.BLOB:\n{}", java_code
+        "BLOB 字段应生成 Types.BLOB:\n{}",
+        java_code
     );
 }
 
@@ -203,13 +267,15 @@ fn test_generate_field_with_auto_generate() {
         }]
     });
     let project = parse_project(value).expect("Project 校验失败");
-    let files = generate_java_entity(&project, "SYS_LOG", &JavaOptions::default()).expect("生成失败");
+    let files =
+        generate_java_entity(&project, "SYS_LOG", &JavaOptions::default()).expect("生成失败");
     let java_code = entity_content(&files);
 
     // strategy 非默认、timing=INSERT 省略、无 param
     assert!(
         java_code.contains("@GeneratedValue(strategy = \"snowflake\")"),
-        "snowflake+INSERT 应只输出 strategy:\n{}", java_code
+        "snowflake+INSERT 应只输出 strategy:\n{}",
+        java_code
     );
     // 三个参数都非默认:全输出
     assert!(
@@ -219,21 +285,26 @@ fn test_generate_field_with_auto_generate() {
     // 全默认(strategy=default + timing=INSERT + 无 param):无括号
     assert!(
         java_code.contains("@GeneratedValue\n"),
-        "全默认应输出无括号 @GeneratedValue:\n{}", java_code
+        "全默认应输出无括号 @GeneratedValue:\n{}",
+        java_code
     );
     assert!(
         !java_code.contains("@GeneratedValue()"),
-        "全默认不应带空括号:\n{}", java_code
+        "全默认不应带空括号:\n{}",
+        java_code
     );
     // enabled=false 不输出;共 3 个 @GeneratedValue
     assert!(
         java_code.matches("@GeneratedValue").count() == 3,
-        "enabled=false 不输出,应共 3 个 @GeneratedValue:\n{}", java_code
+        "enabled=false 不输出,应共 3 个 @GeneratedValue:\n{}",
+        java_code
     );
     // timing=INSERT_UPDATE 引用枚举常量,需 import GenerationTiming
     assert!(
-        java_code.contains("import io.github.jinghui70.rainbow.dbaccess.annotation.GenerationTiming;"),
-        "timing 枚举引用应 import GenerationTiming:\n{}", java_code
+        java_code
+            .contains("import io.github.jinghui70.rainbow.dbaccess.annotation.GenerationTiming;"),
+        "timing 枚举引用应 import GenerationTiming:\n{}",
+        java_code
     );
 }
 
@@ -263,11 +334,16 @@ fn test_enum_field_generates_enum_class() {
         }]
     });
     let project = parse_project(value).expect("Project 校验失败");
-    let files = generate_java_entity(&project, "USER_INFO", &JavaOptions::default()).expect("生成失败");
+    let files =
+        generate_java_entity(&project, "USER_INFO", &JavaOptions::default()).expect("生成失败");
 
     // 实体字段类型应为枚举类名(非 String)
     let entity = entity_content(&files);
-    assert!(entity.contains("private Gender gender;"), "枚举字段类型应为 Gender:\n{}", entity);
+    assert!(
+        entity.contains("private Gender gender;"),
+        "枚举字段类型应为 Gender:\n{}",
+        entity
+    );
 
     // 应有独立的 Gender 枚举文件
     assert_eq!(files.len(), 2, "应有实体 + 枚举共 2 个文件");
@@ -348,13 +424,19 @@ fn test_enum_reference_generates_no_enum_file() {
     let project = parse_project(value).expect("Project 校验失败");
 
     // 引用方(ORDER): 只产实体一个文件,字段类型=Type(目标类名)
-    let order_files = generate_java_entity(&project, "ORDER", &JavaOptions::default()).expect("生成失败");
+    let order_files =
+        generate_java_entity(&project, "ORDER", &JavaOptions::default()).expect("生成失败");
     assert_eq!(order_files.len(), 1, "引用方不应产枚举文件");
     let order = entity_content(&order_files);
-    assert!(order.contains("private Type orderType;"), "引用方字段类型应为 Type:\n{}", order);
+    assert!(
+        order.contains("private Type orderType;"),
+        "引用方字段类型应为 Type:\n{}",
+        order
+    );
 
     // 定义方(DICT): 产实体 + 枚举
-    let dict_files = generate_java_entity(&project, "DICT", &JavaOptions::default()).expect("生成失败");
+    let dict_files =
+        generate_java_entity(&project, "DICT", &JavaOptions::default()).expect("生成失败");
     assert_eq!(dict_files.len(), 2, "定义方应产枚举文件");
     assert_eq!(dict_files[1].path, "Type.java");
 }
@@ -382,12 +464,19 @@ fn test_enum_class_name_override() {
         }]
     });
     let project = parse_project(value).expect("Project 校验失败");
-    let files = generate_java_entity(&project, "USER_INFO", &JavaOptions::default()).expect("生成失败");
+    let files =
+        generate_java_entity(&project, "USER_INFO", &JavaOptions::default()).expect("生成失败");
 
     let entity = entity_content(&files);
-    assert!(entity.contains("private GenderEnum gender;"), "字段类型应为覆盖类名:\n{}", entity);
+    assert!(
+        entity.contains("private GenderEnum gender;"),
+        "字段类型应为覆盖类名:\n{}",
+        entity
+    );
     assert_eq!(files[1].path, "GenderEnum.java");
-    assert!(files[1].content.contains("public enum GenderEnum implements CodeEnum {"));
+    assert!(files[1]
+        .content
+        .contains("public enum GenderEnum implements CodeEnum {"));
 }
 
 #[test]
@@ -427,26 +516,34 @@ fn test_cross_group_ref_enum_imported() {
     let files = generate_java_entity(
         &project,
         "ORDER",
-        &JavaOptions { package: Some("com.example.order.entity".into()), ..Default::default() },
+        &JavaOptions {
+            package: Some("com.example.order.entity".into()),
+            ..Default::default()
+        },
     )
     .expect("生成失败");
     let entity = entity_content(&files);
     assert!(
         entity.contains("import com.example.core.entity.Gender;"),
-        "跨组引用应 import 定义方枚举类:\n{}", entity
+        "跨组引用应 import 定义方枚举类:\n{}",
+        entity
     );
 
     // 同组:同包 -> 不 import(同包 import 冗余)
     let same_pkg = generate_java_entity(
         &project,
         "ORDER",
-        &JavaOptions { package: Some("com.example.core.entity".into()), ..Default::default() },
+        &JavaOptions {
+            package: Some("com.example.core.entity".into()),
+            ..Default::default()
+        },
     )
     .expect("生成失败");
     let entity2 = entity_content(&same_pkg);
     assert!(
         !entity2.contains("import com.example.core.entity.Gender;"),
-        "同包引用不应 import:\n{}", entity2
+        "同包引用不应 import:\n{}",
+        entity2
     );
 }
 
@@ -487,16 +584,21 @@ fn test_ref_enum_import_uses_saved_java_package() {
     let files = generate_java_entity(
         &project,
         "ORDER",
-        &JavaOptions { package: Some("com.example.order.entity".into()), ..Default::default() },
+        &JavaOptions {
+            package: Some("com.example.order.entity".into()),
+            ..Default::default()
+        },
     )
     .expect("生成失败");
     let entity = entity_content(&files);
     assert!(
         entity.contains("import com.example.sys.user.entity.Gender;"),
-        "引用枚举 import 应使用定义表持久化的 javaPackage:\n{}", entity
+        "引用枚举 import 应使用定义表持久化的 javaPackage:\n{}",
+        entity
     );
     assert!(
         !entity.contains("com.example.core.entity.Gender"),
-        "不应再用默认规则包名:\n{}", entity
+        "不应再用默认规则包名:\n{}",
+        entity
     );
 }
