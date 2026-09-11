@@ -24,7 +24,11 @@ pub struct Project {
     #[serde(rename = "bizTypes")]
     pub biz_types: Vec<BizTypeDefine>,
     /// 自动生成策略(自定义;内置 default/now 在前端硬编码,不存项目)
-    #[serde(rename = "autoGenStrategies", default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(
+        rename = "autoGenStrategies",
+        default,
+        skip_serializing_if = "Vec::is_empty"
+    )]
     pub auto_gen_strategies: Vec<AutoGenStrategyDefine>,
     pub groups: Vec<GroupDefine>,
     pub tables: Vec<Table>,

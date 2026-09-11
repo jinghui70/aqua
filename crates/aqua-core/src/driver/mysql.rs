@@ -189,9 +189,16 @@ impl Driver for MysqlDriver {
     }
 
     async fn query_table_rows(&self, table: &str) -> Result<Vec<Map<String, Value>>, DriverError> {
-        let mut conn = self.pool.get_conn().await.map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
+        let mut conn = self
+            .pool
+            .get_conn()
+            .await
+            .map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
         let sql = format!("SELECT * FROM `{}`", table);
-        let result: Vec<Row> = conn.query(sql).await.map_err(|e| DriverError::QueryFailed(e.to_string()))?;
+        let result: Vec<Row> = conn
+            .query(sql)
+            .await
+            .map_err(|e| DriverError::QueryFailed(e.to_string()))?;
         let mut rows = Vec::new();
         for row in result {
             let mut map = Map::new();
@@ -206,8 +213,14 @@ impl Driver for MysqlDriver {
     }
 
     async fn execute_update(&self, sql: &str) -> Result<usize, DriverError> {
-        let mut conn = self.pool.get_conn().await.map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
-        conn.query_drop(sql).await.map_err(|e| DriverError::QueryFailed(e.to_string()))?;
+        let mut conn = self
+            .pool
+            .get_conn()
+            .await
+            .map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
+        conn.query_drop(sql)
+            .await
+            .map_err(|e| DriverError::QueryFailed(e.to_string()))?;
         Ok(0)
     }
 }

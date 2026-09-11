@@ -169,9 +169,16 @@ impl Driver for PostgresDriver {
     }
 
     async fn query_table_rows(&self, table: &str) -> Result<Vec<Map<String, Value>>, DriverError> {
-        let client = self.pool.get().await.map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
+        let client = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
         let sql = format!("SELECT * FROM {}", table);
-        let rows: Vec<Row> = client.query(&sql, &[]).await.map_err(|e| DriverError::QueryFailed(e.to_string()))?;
+        let rows: Vec<Row> = client
+            .query(&sql, &[])
+            .await
+            .map_err(|e| DriverError::QueryFailed(e.to_string()))?;
         let mut result = Vec::new();
         for row in rows {
             let mut map = Map::new();
@@ -186,8 +193,15 @@ impl Driver for PostgresDriver {
     }
 
     async fn execute_update(&self, sql: &str) -> Result<usize, DriverError> {
-        let client = self.pool.get().await.map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
-        let n = client.execute(sql, &[]).await.map_err(|e| DriverError::QueryFailed(e.to_string()))?;
+        let client = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
+        let n = client
+            .execute(sql, &[])
+            .await
+            .map_err(|e| DriverError::QueryFailed(e.to_string()))?;
         Ok(n as usize)
     }
 }

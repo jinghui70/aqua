@@ -67,7 +67,11 @@ async fn resolve_java_path() -> Option<PathBuf> {
 }
 
 fn java_exe_name() -> &'static str {
-    if cfg!(windows) { "java.exe" } else { "java" }
+    if cfg!(windows) {
+        "java.exe"
+    } else {
+        "java"
+    }
 }
 
 fn java_from_env_home() -> Option<PathBuf> {
@@ -107,7 +111,12 @@ async fn platform_java_candidates() -> Vec<PathBuf> {
     {
         // 发行版 JDK 惯例:/usr/lib/jvm/java-21-openjdk-amd64 等
         for name in newest_first_subdirs("/usr/lib/jvm", "") {
-            candidates.push(Path::new("/usr/lib/jvm").join(name).join("bin").join("java"));
+            candidates.push(
+                Path::new("/usr/lib/jvm")
+                    .join(name)
+                    .join("bin")
+                    .join("java"),
+            );
         }
     }
 
@@ -143,8 +152,7 @@ async fn platform_java_candidates() -> Vec<PathBuf> {
 /// 主 formula(openjdk)则直接在 bin/ 下。两种布局都试。
 fn homebrew_java_paths(formula_dir: &Path) -> Vec<PathBuf> {
     vec![
-        formula_dir
-            .join("libexec/openjdk.jdk/Contents/Home/bin/java"),
+        formula_dir.join("libexec/openjdk.jdk/Contents/Home/bin/java"),
         formula_dir.join("bin/java"),
     ]
 }
@@ -337,12 +345,10 @@ impl JdbcDriver {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
-        let mut child = cmd
-            .spawn()
-            .map_err(|e| {
-                log::error!("spawn connector 失败: {}", e);
-                DriverError::ConnectionFailed(format!("启动 connector 失败(需 JDK 17+): {}", e))
-            })?;
+        let mut child = cmd.spawn().map_err(|e| {
+            log::error!("spawn connector 失败: {}", e);
+            DriverError::ConnectionFailed(format!("启动 connector 失败(需 JDK 17+): {}", e))
+        })?;
 
         // 写 stdin
         if let Some(mut stdin) = child.stdin.take() {
@@ -380,13 +386,21 @@ impl JdbcDriver {
             };
             log::error!(
                 "connector 失败 exit={}: stdout={} stderr={}",
-                output.status.code().map(|c| c.to_string()).unwrap_or_else(|| "?".into()),
+                output
+                    .status
+                    .code()
+                    .map(|c| c.to_string())
+                    .unwrap_or_else(|| "?".into()),
                 stdout_str.trim(),
                 stderr_str.trim()
             );
             return Err(DriverError::ConnectionFailed(format!(
                 "connector 失败(exit={}): {}",
-                output.status.code().map(|c| c.to_string()).unwrap_or_else(|| "?".into()),
+                output
+                    .status
+                    .code()
+                    .map(|c| c.to_string())
+                    .unwrap_or_else(|| "?".into()),
                 detail.trim()
             )));
         }
@@ -589,14 +603,23 @@ impl Driver for JdbcDriver {
     }
 
     async fn query_table_rows(&self, table: &str) -> Result<Vec<Map<String, Value>>, DriverError> {
-        let resp = self.call("queryRows", Some(json!({ "table": table }))).await?;
+        let resp = self
+            .call("queryRows", Some(json!({ "table": table })))
+            .await?;
         let empty = Vec::new();
-        let rows = resp.get("rows").and_then(|v| v.as_array()).unwrap_or(&empty);
+        let rows = resp
+            .get("rows")
+            .and_then(|v| v.as_array())
+            .unwrap_or(&empty);
         // rows: [[v1, v2, ...], ...]; columns 从 resp.columns 取
         let columns: Vec<String> = resp
             .get("columns")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|c| c.as_str().map(|s| s.to_uppercase())).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|c| c.as_str().map(|s| s.to_uppercase()))
+                    .collect()
+            })
             .unwrap_or_default();
         let mut result = Vec::new();
         for row in rows {
@@ -613,7 +636,9 @@ impl Driver for JdbcDriver {
     }
 
     async fn execute_update(&self, sql: &str) -> Result<usize, DriverError> {
-        let resp = self.call("executeUpdate", Some(json!({ "sql": sql }))).await?;
+        let resp = self
+            .call("executeUpdate", Some(json!({ "sql": sql })))
+            .await?;
         let affected = resp.get("affected").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
         Ok(affected)
     }
@@ -706,7 +731,11 @@ mod tests {
     #[test]
     fn test_build_request_jdbc_url_passthrough() {
         // URL 直填:非空时透传 jdbcUrl
-        let req = build_request(&test_config(Some("jdbc:h2:file:/data/db")), "listTables", None);
+        let req = build_request(
+            &test_config(Some("jdbc:h2:file:/data/db")),
+            "listTables",
+            None,
+        );
         assert_eq!(req["jdbcUrl"], "jdbc:h2:file:/data/db");
         assert_eq!(req["action"], "listTables");
 
@@ -732,11 +761,15 @@ mod tests {
         assert_eq!(parse_java_major_version(temurin21), Some(21));
 
         // Java 8: "1.8.0_292" -> 8
-        let java8 = "java version \"1.8.0_292\"\nJava(TM) SE Runtime Environment (build 1.8.0_292-b10)";
+        let java8 =
+            "java version \"1.8.0_292\"\nJava(TM) SE Runtime Environment (build 1.8.0_292-b10)";
         assert_eq!(parse_java_major_version(java8), Some(8));
 
         // 版本输出在 stderr(实际场景),解析逻辑与位置无关
-        assert_eq!(parse_java_major_version("noise\nversion \"11.0.1\""), Some(11));
+        assert_eq!(
+            parse_java_major_version("noise\nversion \"11.0.1\""),
+            Some(11)
+        );
 
         // 无法解析
         assert_eq!(parse_java_major_version("no version here"), None);
@@ -784,7 +817,9 @@ mod tests {
         assert_eq!(
             paths,
             vec![
-                PathBuf::from("/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin/java"),
+                PathBuf::from(
+                    "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin/java"
+                ),
                 PathBuf::from("/opt/homebrew/opt/openjdk@21/bin/java"),
             ]
         );
@@ -793,7 +828,10 @@ mod tests {
     #[test]
     fn test_decode_console_utf8() {
         // 纯 ASCII / UTF-8:严格解码直通
-        assert_eq!(decode_console(b"{\"status\":\"ok\"}"), "{\"status\":\"ok\"}");
+        assert_eq!(
+            decode_console(b"{\"status\":\"ok\"}"),
+            "{\"status\":\"ok\"}"
+        );
         // UTF-8 中文(connector 正常 JSON 响应)
         assert_eq!(decode_console("连接成功".as_bytes()), "连接成功");
     }

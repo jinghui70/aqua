@@ -174,13 +174,37 @@ fn test_rejects_type_attrs_violations() {
 
     let errors = validate_project_result(project_json).unwrap_err();
     let has = |substr: &str| errors.iter().any(|e| e.message.contains(substr));
-    assert!(has("INT 不允许 length"), "INT 带 length 应报错: {:?}", errors);
+    assert!(
+        has("INT 不允许 length"),
+        "INT 带 length 应报错: {:?}",
+        errors
+    );
     assert!(has("INT 不允许 scale"), "INT 带 scale 应报错: {:?}", errors);
-    assert!(has("DECIMAL 不允许 length"), "DECIMAL 带 length 应报错: {:?}", errors);
-    assert!(has("VARCHAR 不允许 scale"), "VARCHAR 带 scale 应报错: {:?}", errors);
-    assert!(has("DOUBLE 不允许 scale"), "DOUBLE 带 scale 应报错: {:?}", errors);
+    assert!(
+        has("DECIMAL 不允许 length"),
+        "DECIMAL 带 length 应报错: {:?}",
+        errors
+    );
+    assert!(
+        has("VARCHAR 不允许 scale"),
+        "VARCHAR 带 scale 应报错: {:?}",
+        errors
+    );
+    assert!(
+        has("DOUBLE 不允许 scale"),
+        "DOUBLE 带 scale 应报错: {:?}",
+        errors
+    );
 
     // path 精确定位到属性级
-    assert!(errors.iter().any(|e| e.path.contains(".length")), "path 应含 .length: {:?}", errors);
-    assert!(errors.iter().any(|e| e.path.contains(".scale")), "path 应含 .scale: {:?}", errors);
+    assert!(
+        errors.iter().any(|e| e.path.contains(".length")),
+        "path 应含 .length: {:?}",
+        errors
+    );
+    assert!(
+        errors.iter().any(|e| e.path.contains(".scale")),
+        "path 应含 .scale: {:?}",
+        errors
+    );
 }

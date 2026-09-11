@@ -25,7 +25,8 @@ pub fn generate_ddl(project: &Project, options: &DdlOptions) -> String {
 
     for table in tables {
         if options.drop_if_exist {
-            let is_oracle = matches!(options.dialect, Dialect::Jdbc { ref name } if name == "oracle");
+            let is_oracle =
+                matches!(options.dialect, Dialect::Jdbc { ref name } if name == "oracle");
             if is_oracle {
                 output.push(format!(
                     "BEGIN\n   EXECUTE IMMEDIATE 'DROP TABLE {} PURGE';\nEXCEPTION\n   WHEN OTHERS THEN\n      IF SQLCODE != -942 THEN\n         RAISE;\n      END IF;\nEND;",
@@ -234,11 +235,7 @@ mod tests {
             table: "SYS_USER".into(),
             data: vec![],
         }];
-        let sql = generate_insert(
-            &project,
-            &entries,
-            &DdlOptions::default(),
-        );
+        let sql = generate_insert(&project, &entries, &DdlOptions::default());
         assert!(sql.is_empty());
         // 选中不存在的表 -> 无 INSERT
         let sql2 = generate_insert(
@@ -267,10 +264,20 @@ mod tests {
         let mut project = make_project();
         let f = &mut project.tables[0].fields[1]; // USER_NAME: not_null=true
         f.default_value = Some("'x'".into());
-        for dialect in [Dialect::Mysql, Dialect::Postgresql, Dialect::Jdbc { name: "oracle".into() }] {
+        for dialect in [
+            Dialect::Mysql,
+            Dialect::Postgresql,
+            Dialect::Jdbc {
+                name: "oracle".into(),
+            },
+        ] {
             let ddl = generate_ddl(
                 &project,
-                &DdlOptions { dialect: dialect.clone(), drop_if_exist: false, ..Default::default() },
+                &DdlOptions {
+                    dialect: dialect.clone(),
+                    drop_if_exist: false,
+                    ..Default::default()
+                },
             );
             // 定位 USER_NAME 那一行(ID 字段也 NOT NULL,须行级判断)
             let line = ddl
@@ -279,7 +286,12 @@ mod tests {
                 .unwrap_or_else(|| panic!("{:?}: 无 USER_NAME 行\n{}", dialect, ddl));
             let def_pos = line.find("DEFAULT 'x'").expect("有 DEFAULT");
             let nn_pos = line.find("NOT NULL").expect("有 NOT NULL");
-            assert!(def_pos < nn_pos, "{:?}: DEFAULT 应在 NOT NULL 前\n{}", dialect, line);
+            assert!(
+                def_pos < nn_pos,
+                "{:?}: DEFAULT 应在 NOT NULL 前\n{}",
+                dialect,
+                line
+            );
         }
     }
 }

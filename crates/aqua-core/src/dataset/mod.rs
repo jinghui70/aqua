@@ -134,15 +134,22 @@ fn sort_rows_by_pk(table: Option<&Table>, rows: &[Map<String, Value>]) -> Vec<Ma
         None => return rows.to_vec(),
     };
     let mut sorted = rows.to_vec();
-    sorted.sort_by(|a, b| compare_values(a.get(&pk_code).unwrap_or(&Value::Null), b.get(&pk_code).unwrap_or(&Value::Null)));
+    sorted.sort_by(|a, b| {
+        compare_values(
+            a.get(&pk_code).unwrap_or(&Value::Null),
+            b.get(&pk_code).unwrap_or(&Value::Null),
+        )
+    });
     sorted
 }
 
 fn compare_values(a: &Value, b: &Value) -> std::cmp::Ordering {
     match (a, b) {
-        (Value::Number(na), Value::Number(nb)) => {
-            na.as_f64().unwrap_or(0.0).partial_cmp(&nb.as_f64().unwrap_or(0.0)).unwrap_or(std::cmp::Ordering::Equal)
-        }
+        (Value::Number(na), Value::Number(nb)) => na
+            .as_f64()
+            .unwrap_or(0.0)
+            .partial_cmp(&nb.as_f64().unwrap_or(0.0))
+            .unwrap_or(std::cmp::Ordering::Equal),
         (Value::String(sa), Value::String(sb)) => sa.cmp(sb),
         (Value::Null, _) => std::cmp::Ordering::Less,
         (_, Value::Null) => std::cmp::Ordering::Greater,
@@ -186,15 +193,66 @@ mod tests {
             base_package: "com.example".to_string(),
             biz_types: vec![],
             auto_gen_strategies: vec![],
-            groups: vec![GroupDefine { code: "default".to_string(), name: "默认".to_string() }],
+            groups: vec![GroupDefine {
+                code: "default".to_string(),
+                name: "默认".to_string(),
+            }],
             tables: vec![Table {
                 code: "SYS_USER".to_string(),
                 name: "用户".to_string(),
                 group: "default".to_string(),
                 fields: vec![
-                    Field { prop: "id".into(), code: "ID".into(), name: "主键".into(), data_type: DataType::Long, length: None, precision: None, scale: None, biz_type: None, biz_type_data: None, is_key: Some(true), not_null: Some(true), auto_generate: None, default_value: None, enum_ref: None, comment: None },
-                    Field { prop: "userName".into(), code: "USER_NAME".into(), name: "用户名".into(), data_type: DataType::Varchar, length: Some(64), precision: None, scale: None, biz_type: None, biz_type_data: None, is_key: None, not_null: Some(true), auto_generate: None, default_value: None, enum_ref: None, comment: None },
-                    Field { prop: "amount".into(), code: "AMOUNT".into(), name: "金额".into(), data_type: DataType::Decimal, length: None, precision: Some(12), scale: Some(2), biz_type: None, biz_type_data: None, is_key: None, not_null: None, auto_generate: None, default_value: None, enum_ref: None, comment: None },
+                    Field {
+                        prop: "id".into(),
+                        code: "ID".into(),
+                        name: "主键".into(),
+                        data_type: DataType::Long,
+                        length: None,
+                        precision: None,
+                        scale: None,
+                        biz_type: None,
+                        biz_type_data: None,
+                        is_key: Some(true),
+                        not_null: Some(true),
+                        auto_generate: None,
+                        default_value: None,
+                        enum_ref: None,
+                        comment: None,
+                    },
+                    Field {
+                        prop: "userName".into(),
+                        code: "USER_NAME".into(),
+                        name: "用户名".into(),
+                        data_type: DataType::Varchar,
+                        length: Some(64),
+                        precision: None,
+                        scale: None,
+                        biz_type: None,
+                        biz_type_data: None,
+                        is_key: None,
+                        not_null: Some(true),
+                        auto_generate: None,
+                        default_value: None,
+                        enum_ref: None,
+                        comment: None,
+                    },
+                    Field {
+                        prop: "amount".into(),
+                        code: "AMOUNT".into(),
+                        name: "金额".into(),
+                        data_type: DataType::Decimal,
+                        length: None,
+                        precision: Some(12),
+                        scale: Some(2),
+                        biz_type: None,
+                        biz_type_data: None,
+                        is_key: None,
+                        not_null: None,
+                        auto_generate: None,
+                        default_value: None,
+                        enum_ref: None,
+                        comment: None,
+                    },
                 ],
                 java_package: None,
                 indexes: None,
@@ -212,7 +270,10 @@ mod tests {
         row2.insert("ID".into(), Value::Number(1.into()));
         row2.insert("USER_NAME".into(), Value::Null);
         row2.insert("AMOUNT".into(), Value::String("99.50".into()));
-        vec![DatasetEntry { table: "SYS_USER".into(), data: vec![row, row2] }]
+        vec![DatasetEntry {
+            table: "SYS_USER".into(),
+            data: vec![row, row2],
+        }]
     }
 
     #[test]
@@ -241,13 +302,25 @@ mod tests {
     #[test]
     fn test_validate_schema_mismatch() {
         let project = make_project();
-        let bad_table = vec![DatasetEntry { table: "NOT_EXIST".into(), data: vec![] }];
-        assert!(matches!(validate_against(&project, &bad_table), Err(DatasetError::TableNotFound(_))));
+        let bad_table = vec![DatasetEntry {
+            table: "NOT_EXIST".into(),
+            data: vec![],
+        }];
+        assert!(matches!(
+            validate_against(&project, &bad_table),
+            Err(DatasetError::TableNotFound(_))
+        ));
 
         let mut row = Map::new();
         row.insert("BAD_FIELD".into(), Value::Null);
-        let bad_field = vec![DatasetEntry { table: "SYS_USER".into(), data: vec![row] }];
-        assert!(matches!(validate_against(&project, &bad_field), Err(DatasetError::SchemaMismatch(_))));
+        let bad_field = vec![DatasetEntry {
+            table: "SYS_USER".into(),
+            data: vec![row],
+        }];
+        assert!(matches!(
+            validate_against(&project, &bad_field),
+            Err(DatasetError::SchemaMismatch(_))
+        ));
     }
 
     #[test]

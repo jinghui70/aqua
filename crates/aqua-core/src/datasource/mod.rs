@@ -64,12 +64,18 @@ pub fn extract_project_prefix(project_path: &str) -> Option<String> {
 /// 拼接配置文件路径：<dir>/<prefix>.aqua.conf
 pub fn config_path_for_project(project_path: &str) -> Result<PathBuf, DataSourceError> {
     let path = Path::new(project_path);
-    let dir = path.parent().ok_or_else(||
-        DataSourceError::Io(std::io::Error::new(std::io::ErrorKind::InvalidInput, "无效项目路径"))
-    )?;
-    let prefix = extract_project_prefix(project_path).ok_or_else(||
-        DataSourceError::Io(std::io::Error::new(std::io::ErrorKind::InvalidInput, "无法提取文件名前缀"))
-    )?;
+    let dir = path.parent().ok_or_else(|| {
+        DataSourceError::Io(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "无效项目路径",
+        ))
+    })?;
+    let prefix = extract_project_prefix(project_path).ok_or_else(|| {
+        DataSourceError::Io(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "无法提取文件名前缀",
+        ))
+    })?;
     Ok(dir.join(format!("{}.aqua.conf", prefix)))
 }
 
@@ -213,14 +219,26 @@ mod tests {
 
     #[test]
     fn test_extract_project_prefix_normal() {
-        assert_eq!(extract_project_prefix("/path/to/myproject.aqua"), Some("myproject".to_string()));
-        assert_eq!(extract_project_prefix("myproject.aqua"), Some("myproject".to_string()));
+        assert_eq!(
+            extract_project_prefix("/path/to/myproject.aqua"),
+            Some("myproject".to_string())
+        );
+        assert_eq!(
+            extract_project_prefix("myproject.aqua"),
+            Some("myproject".to_string())
+        );
     }
 
     #[test]
     fn test_extract_project_prefix_with_dots() {
-        assert_eq!(extract_project_prefix("/path/to/my.project.aqua"), Some("my.project".to_string()));
-        assert_eq!(extract_project_prefix("a.b.c.aqua"), Some("a.b.c".to_string()));
+        assert_eq!(
+            extract_project_prefix("/path/to/my.project.aqua"),
+            Some("my.project".to_string())
+        );
+        assert_eq!(
+            extract_project_prefix("a.b.c.aqua"),
+            Some("a.b.c".to_string())
+        );
     }
 
     #[test]
@@ -322,7 +340,11 @@ mod tests {
     fn test_load_missing_file_returns_empty() {
         let dir = tmp_dir();
         let project_path = dir.join("missing.aqua");
-        let out = load_db_config(project_path.to_str().unwrap(), dir.join("key").to_str().unwrap()).unwrap();
+        let out = load_db_config(
+            project_path.to_str().unwrap(),
+            dir.join("key").to_str().unwrap(),
+        )
+        .unwrap();
         assert!(out.is_empty());
         std::fs::remove_dir_all(&dir).ok();
     }

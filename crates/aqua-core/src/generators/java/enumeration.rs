@@ -55,7 +55,10 @@ pub fn generate_enum_class(def: &EnumDefine, package: Option<&str>) -> String {
         lines.push(String::new());
         lines.push("    private final String code;".to_string());
         lines.push(String::new());
-        lines.push(format!("    {}(String code) {{ this.code = code; }}", class_name));
+        lines.push(format!(
+            "    {}(String code) {{ this.code = code; }}",
+            class_name
+        ));
         lines.push(String::new());
         lines.push("    @Override".to_string());
         lines.push("    public String code() { return code; }".to_string());
@@ -94,14 +97,12 @@ mod tests {
                 },
             ]
         } else {
-            vec![
-                EnumValue {
-                    id: "ACTIVE".into(),
-                    name: "启用".into(),
-                    code: None,
-                    color: Some(EnumColor::Success),
-                },
-            ]
+            vec![EnumValue {
+                id: "ACTIVE".into(),
+                name: "启用".into(),
+                code: None,
+                color: Some(EnumColor::Success),
+            }]
         };
         EnumDefine {
             table_code: "T".into(),

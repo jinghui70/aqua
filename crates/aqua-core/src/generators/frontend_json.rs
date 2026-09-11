@@ -20,7 +20,10 @@ pub enum JsonUiDataType {
 /// 10 逻辑类型 -> json-ui 4 粗粒度类型。
 pub fn map_data_type(dt: DataType) -> JsonUiDataType {
     match dt {
-        DataType::Int | DataType::Long | DataType::Decimal | DataType::Double
+        DataType::Int
+        | DataType::Long
+        | DataType::Decimal
+        | DataType::Double
         | DataType::Tinyint => JsonUiDataType::Number,
         DataType::Varchar | DataType::Clob | DataType::Blob => JsonUiDataType::String,
         DataType::Date => JsonUiDataType::Date,
@@ -96,27 +99,22 @@ fn normalize_length_scale(
         DataType::Varchar => (length, None),
         DataType::Tinyint | DataType::Int | DataType::Long => (None, Some(0)),
         DataType::Decimal => (None, scale),
-        DataType::Double | DataType::Clob | DataType::Blob | DataType::Date
+        DataType::Double
+        | DataType::Clob
+        | DataType::Blob
+        | DataType::Date
         | DataType::Datetime => (None, None),
     }
 }
 
 /// Field -> JsonUiField 转换(排除 precision/comment)。
 /// defs 为全项目枚举定义索引;枚举字段(定义或引用)输出 bizType="Options" + bizTypeData=[{id,name}]。
-pub fn transform_field(
-    field: &Field,
-    defs: &HashMap<(String, String), EnumDefine>,
-) -> JsonUiField {
+pub fn transform_field(field: &Field, defs: &HashMap<(String, String), EnumDefine>) -> JsonUiField {
     let (length, scale) = normalize_length_scale(field.data_type, field.length, field.scale);
 
     // 枚举字段 -> Options + bizTypeData(引用方解析到定义方取值)
     let (biz_type, biz_type_data) = enum_to_options(field, defs)
-        .map(|vals| {
-            (
-                Some("Options".to_string()),
-                Some(serde_json::json!(vals)),
-            )
-        })
+        .map(|vals| (Some("Options".to_string()), Some(serde_json::json!(vals))))
         .unwrap_or((field.biz_type.clone(), field.biz_type_data.clone()));
 
     JsonUiField {
@@ -165,7 +163,11 @@ pub fn transform_table(table: &Table, defs: &HashMap<(String, String), EnumDefin
         type_: "model",
         code: table.code.clone(),
         name: table.name.clone(),
-        fields: table.fields.iter().map(|f| transform_field(f, defs)).collect(),
+        fields: table
+            .fields
+            .iter()
+            .map(|f| transform_field(f, defs))
+            .collect(),
     }
 }
 
@@ -179,10 +181,7 @@ pub fn generate_frontend_json(project: &Project, options: &FrontendJsonOptions) 
             .find(|t| t.code == *table_code)
             .unwrap_or_else(|| panic!("Table not found: {}", table_code))
     } else {
-        project
-            .tables
-            .first()
-            .expect("项目无表,无法生成 model")
+        project.tables.first().expect("项目无表,无法生成 model")
     };
 
     let defs = project.enum_defs();
@@ -331,24 +330,48 @@ mod tests {
                 comment: None,
             }],
             biz_types: vec![],
-        auto_gen_strategies: vec![],
+            auto_gen_strategies: vec![],
             groups: vec![],
         };
         let json = generate_frontend_json(&project, &FrontendJsonOptions::default());
 
         // JsonModelSchema:顶层 type=model + code/name(单表,无 tables 包裹)
-        assert!(json.contains("\"type\": \"model\""), "顶层应有 type:model:\n{}", json);
-        assert!(!json.contains("\"tables\""), "不应再有 tables 包裹:\n{}", json);
+        assert!(
+            json.contains("\"type\": \"model\""),
+            "顶层应有 type:model:\n{}",
+            json
+        );
+        assert!(
+            !json.contains("\"tables\""),
+            "不应再有 tables 包裹:\n{}",
+            json
+        );
 
         // 只看 field 对象片段(table 也有 name 字段,避免 find 匹配到 table.name)
         let field_json = &json[json.find("\"fields\"").unwrap()..];
         let pos = |k: &str| field_json.find(k).unwrap_or(usize::MAX);
         // code < prop < name < dataType
-        assert!(pos("\"code\"") < pos("\"prop\""), "code 应在 prop 前:\n{}", json);
-        assert!(pos("\"prop\"") < pos("\"name\""), "prop 应在 name 前:\n{}", json);
-        assert!(pos("\"name\"") < pos("\"dataType\""), "name 应在 dataType 前:\n{}", json);
+        assert!(
+            pos("\"code\"") < pos("\"prop\""),
+            "code 应在 prop 前:\n{}",
+            json
+        );
+        assert!(
+            pos("\"prop\"") < pos("\"name\""),
+            "prop 应在 name 前:\n{}",
+            json
+        );
+        assert!(
+            pos("\"name\"") < pos("\"dataType\""),
+            "name 应在 dataType 前:\n{}",
+            json
+        );
         // bizType/bizTypeData 靠后(在 notNull 之后)
-        assert!(pos("\"notNull\"") < pos("\"bizType\""), "bizType 应靠后:\n{}", json);
+        assert!(
+            pos("\"notNull\"") < pos("\"bizType\""),
+            "bizType 应靠后:\n{}",
+            json
+        );
     }
 
     /// 构造最小 Field(仅类型 + length/scale 不同),供 length/scale 输出测试复用。
@@ -375,44 +398,37 @@ mod tests {
     #[test]
     fn test_length_scale_by_data_type() {
         // VARCHAR: 保留 length, 不输出 scale(即便 Field 上有脏 scale)
-        let s = serde_json::to_string(&transform_field(&mk_field(
-            DataType::Varchar,
-            Some(8),
-            Some(2),
-        ), &no_defs()))
+        let s = serde_json::to_string(&transform_field(
+            &mk_field(DataType::Varchar, Some(8), Some(2)),
+            &no_defs(),
+        ))
         .unwrap();
         assert!(s.contains("\"length\":8"), "VARCHAR 应输出 length:\n{}", s);
         assert!(!s.contains("scale"), "VARCHAR 不应输出 scale:\n{}", s);
 
         // TINYINT/INT/LONG: 不输出 length(即便有脏值), 输出 scale:0
         for dt in [DataType::Tinyint, DataType::Int, DataType::Long] {
-            let s = serde_json::to_string(&transform_field(&mk_field(dt, Some(10), None), &no_defs()))
-                .unwrap();
+            let s =
+                serde_json::to_string(&transform_field(&mk_field(dt, Some(10), None), &no_defs()))
+                    .unwrap();
             assert!(!s.contains("length"), "{:?} 不应输出 length:\n{}", dt, s);
-            assert!(
-                s.contains("\"scale\":0"),
-                "{:?} 应输出 scale:0:\n{}",
-                dt,
-                s
-            );
+            assert!(s.contains("\"scale\":0"), "{:?} 应输出 scale:0:\n{}", dt, s);
         }
 
         // DECIMAL: 不输出 length, 保留原 scale
-        let s = serde_json::to_string(&transform_field(&mk_field(
-            DataType::Decimal,
-            Some(10),
-            Some(2),
-        ), &no_defs()))
+        let s = serde_json::to_string(&transform_field(
+            &mk_field(DataType::Decimal, Some(10), Some(2)),
+            &no_defs(),
+        ))
         .unwrap();
         assert!(!s.contains("length"), "DECIMAL 不应输出 length:\n{}", s);
         assert!(s.contains("\"scale\":2"), "DECIMAL 应输出原 scale:\n{}", s);
 
         // DOUBLE: 均不输出(§3.1 不允许 precision/scale)
-        let s = serde_json::to_string(&transform_field(&mk_field(
-            DataType::Double,
-            Some(10),
-            Some(2),
-        ), &no_defs()))
+        let s = serde_json::to_string(&transform_field(
+            &mk_field(DataType::Double, Some(10), Some(2)),
+            &no_defs(),
+        ))
         .unwrap();
         assert!(!s.contains("length"), "DOUBLE 不应输出 length:\n{}", s);
         assert!(!s.contains("scale"), "DOUBLE 不应输出 scale:\n{}", s);
@@ -424,8 +440,11 @@ mod tests {
             DataType::Date,
             DataType::Datetime,
         ] {
-            let s = serde_json::to_string(&transform_field(&mk_field(dt, Some(10), Some(2)), &no_defs()))
-                .unwrap();
+            let s = serde_json::to_string(&transform_field(
+                &mk_field(dt, Some(10), Some(2)),
+                &no_defs(),
+            ))
+            .unwrap();
             assert!(!s.contains("length"), "{:?} 不应输出 length:\n{}", dt, s);
             assert!(!s.contains("scale"), "{:?} 不应输出 scale:\n{}", dt, s);
         }
@@ -469,14 +488,22 @@ mod tests {
             m
         };
         let json = serde_json::to_string(&transform_field(&field, &defs)).unwrap();
-        assert!(json.contains("\"bizType\":\"Options\""), "枚举字段应输出 bizType=Options:\n{}", json);
+        assert!(
+            json.contains("\"bizType\":\"Options\""),
+            "枚举字段应输出 bizType=Options:\n{}",
+            json
+        );
         // 定义了 color 的项输出 color;code 不输出
         assert!(
             json.contains("[{\"id\":\"MALE\",\"name\":\"男\",\"color\":\"blue\"},{\"id\":\"FEMALE\",\"name\":\"女\",\"color\":\"red\"}]"),
             "bizTypeData 应含已定义的 color:\n{}", json
         );
         let data_seg = &json[json.find("bizTypeData").unwrap()..];
-        assert!(!data_seg.contains("\"code\""), "bizTypeData 不应含 code:\n{}", data_seg);
+        assert!(
+            !data_seg.contains("\"code\""),
+            "bizTypeData 不应含 code:\n{}",
+            data_seg
+        );
     }
 
     #[test]
@@ -516,11 +543,16 @@ mod tests {
             m
         };
         let json = serde_json::to_string(&transform_field(&ref_field, &defs)).unwrap();
-        assert!(json.contains("\"bizType\":\"Options\""), "引用方应输出 bizType=Options:\n{}", json);
+        assert!(
+            json.contains("\"bizType\":\"Options\""),
+            "引用方应输出 bizType=Options:\n{}",
+            json
+        );
         // 引用方解析定义方取值,含 color(定义方有);code 仍不输出
         assert!(
             json.contains("[{\"id\":\"MALE\",\"name\":\"男\",\"color\":\"green\"}]"),
-            "引用方 bizTypeData 解析定义方(含 color):\n{}", json
+            "引用方 bizTypeData 解析定义方(含 color):\n{}",
+            json
         );
     }
 }

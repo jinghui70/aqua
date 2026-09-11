@@ -60,7 +60,10 @@ mod tests {
         let current = AQUA_VERSION;
 
         // 相同版本
-        assert_eq!(check_version_compatibility(current), VersionCheck::Compatible);
+        assert_eq!(
+            check_version_compatibility(current),
+            VersionCheck::Compatible
+        );
 
         // 低版本文件
         let result = check_version_compatibility("1.0.0");

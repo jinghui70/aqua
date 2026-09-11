@@ -57,17 +57,11 @@ pub fn validate_project(project: &Project) -> Result<(), Vec<ValidationError>> {
 
             // prop 不能为空
             if field.prop.is_empty() {
-                errors.push(ValidationError::new(
-                    format!("{}.prop", base),
-                    "不能为空",
-                ));
+                errors.push(ValidationError::new(format!("{}.prop", base), "不能为空"));
             }
             // name 不能为空
             if field.name.is_empty() {
-                errors.push(ValidationError::new(
-                    format!("{}.name", base),
-                    "不能为空",
-                ));
+                errors.push(ValidationError::new(format!("{}.name", base), "不能为空"));
             }
 
             // code 表内重复(空 code 跳过,空由保存清理处理)
@@ -133,10 +127,7 @@ pub fn validate_project(project: &Project) -> Result<(), Vec<ValidationError>> {
 
             // VARCHAR length 不能为空; DECIMAL precision/scale 不能为空
             if field.data_type == DataType::Varchar && field.length.is_none() {
-                errors.push(ValidationError::new(
-                    format!("{}.length", base),
-                    "不能为空",
-                ));
+                errors.push(ValidationError::new(format!("{}.length", base), "不能为空"));
             }
             if field.data_type == DataType::Decimal {
                 if field.precision.is_none() {
@@ -146,10 +137,7 @@ pub fn validate_project(project: &Project) -> Result<(), Vec<ValidationError>> {
                     ));
                 }
                 if field.scale.is_none() {
-                    errors.push(ValidationError::new(
-                        format!("{}.scale", base),
-                        "不能为空",
-                    ));
+                    errors.push(ValidationError::new(format!("{}.scale", base), "不能为空"));
                 }
             }
 
@@ -334,7 +322,9 @@ mod tests {
             ]}]}"#,
         );
         let errs = validate_project(&p).unwrap_err();
-        assert!(errs.iter().any(|e| e.path.ends_with(".prop") && e.message.contains("重复")));
+        assert!(errs
+            .iter()
+            .any(|e| e.path.ends_with(".prop") && e.message.contains("重复")));
     }
 
     #[test]
@@ -421,8 +411,12 @@ mod tests {
             ]}]}"#,
         );
         let errs = validate_project(&p).unwrap_err();
-        assert!(errs.iter().any(|e| e.path.ends_with(".length") && e.message.contains("不能为空")));
-        assert!(errs.iter().any(|e| e.path.ends_with(".scale") && e.message.contains("不能为空")));
+        assert!(errs
+            .iter()
+            .any(|e| e.path.ends_with(".length") && e.message.contains("不能为空")));
+        assert!(errs
+            .iter()
+            .any(|e| e.path.ends_with(".scale") && e.message.contains("不能为空")));
     }
 
     #[test]
@@ -433,8 +427,12 @@ mod tests {
             ]}]}"#,
         );
         let errs = validate_project(&p).unwrap_err();
-        assert!(errs.iter().any(|e| e.path.ends_with(".prop") && e.message.contains("不能为空")));
-        assert!(errs.iter().any(|e| e.path.ends_with(".name") && e.message.contains("不能为空")));
+        assert!(errs
+            .iter()
+            .any(|e| e.path.ends_with(".prop") && e.message.contains("不能为空")));
+        assert!(errs
+            .iter()
+            .any(|e| e.path.ends_with(".name") && e.message.contains("不能为空")));
     }
 
     #[test]

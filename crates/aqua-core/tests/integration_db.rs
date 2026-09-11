@@ -155,7 +155,10 @@ async fn mysql_full_roundtrip() {
     let driver2 = create_driver(config.clone(), None, "connector.jar").expect("创建导入驱动失败");
     let imported = import_from_db(
         driver2.as_ref(),
-        &[TableInfo { name: "SYS_USER".to_string(), comment: None }],
+        &[TableInfo {
+            name: "SYS_USER".to_string(),
+            comment: None,
+        }],
         Some("com.example".to_string()),
     )
     .await
@@ -240,7 +243,9 @@ async fn pg_full_roundtrip() {
         .await
         .expect("list_tables 失败");
     assert!(
-        tables.iter().any(|t| t.name.eq_ignore_ascii_case("sys_user")),
+        tables
+            .iter()
+            .any(|t| t.name.eq_ignore_ascii_case("sys_user")),
         "应包含 sys_user 表,实际: {:?}",
         tables
     );
@@ -259,9 +264,16 @@ async fn pg_full_roundtrip() {
 
     // 4. import_from_db
     let driver2 = create_driver(config.clone(), None, "connector.jar").expect("创建导入驱动失败");
-    let imported = import_from_db(driver2.as_ref(), &[TableInfo { name: "SYS_USER".to_string(), comment: None }], Some("com.example".to_string()))
-        .await
-        .expect("导入失败");
+    let imported = import_from_db(
+        driver2.as_ref(),
+        &[TableInfo {
+            name: "SYS_USER".to_string(),
+            comment: None,
+        }],
+        Some("com.example".to_string()),
+    )
+    .await
+    .expect("导入失败");
 
     assert!(
         imported
@@ -321,5 +333,8 @@ async fn h2_test_connection_jdbc_url_mode() {
         jdbc_url: Some("jdbc:h2:mem:aqua_url_it;DB_CLOSE_DELAY=-1".to_string()),
     };
     let driver = create_driver(config, None, &connector_jar()).expect("创建 H2 驱动失败");
-    driver.test_connection().await.expect("URL 模式 H2 连接应成功");
+    driver
+        .test_connection()
+        .await
+        .expect("URL 模式 H2 连接应成功");
 }
