@@ -5,8 +5,12 @@ use aqua_core::version::{check_version_compatibility, VersionCheck, AQUA_VERSION
 use serde::{Deserialize, Serialize};
 
 /// 项目打开结果,包含版本检查信息。
+///
+/// 注意:enum 容器上的 `rename_all` 只重命名变体名,不重命名变体内部字段——
+/// 字段驼峰必须用 `rename_all_fields`,否则 file_version 以蛇形落到 JSON,
+/// 前端读 fileVersion 得到 undefined(版本提示不显示版本号)。
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "status", rename_all = "camelCase")]
+#[serde(tag = "status", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ProjectOpenResult {
     /// 成功打开,版本兼容
     Success { project: Project },
@@ -119,4 +123,36 @@ pub async fn update_gitignore(project_path: String) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// wire 契约:tagged enum 的变体名与字段名都必须驼峰(前端按 status/fileVersion/currentVersion 取值)。
+    #[test]
+    fn test_project_open_result_wire_camel_case() {
+        let result = ProjectOpenResult::CanOpen {
+            project: serde_json::from_value(serde_json::json!({
+                "version": "1.0.6", "basePackage": "com.example",
+                "bizTypes": [], "enums": [], "groups": [], "tables": []
+            }))
+            .unwrap(),
+            file_version: "1.0.6".to_string(),
+            current_version: "1.0.7".to_string(),
+        };
+        let json = serde_json::to_value(&result).unwrap();
+        assert_eq!(json["status"], "canOpen");
+        assert_eq!(json["fileVersion"], "1.0.6");
+        assert_eq!(json["currentVersion"], "1.0.7");
+
+        let result = ProjectOpenResult::NeedUpgrade {
+            file_version: "1.1.0".to_string(),
+            current_version: "1.0.7".to_string(),
+        };
+        let json = serde_json::to_value(&result).unwrap();
+        assert_eq!(json["status"], "needUpgrade");
+        assert_eq!(json["fileVersion"], "1.1.0");
+        assert_eq!(json["currentVersion"], "1.0.7");
+    }
 }
