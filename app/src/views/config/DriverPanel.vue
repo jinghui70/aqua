@@ -1,14 +1,12 @@
 <script setup lang="ts">
-// 数据库配置弹窗:管理 JDBC 驱动安装 + 数据库显隐。
+// 驱动管理面板(设置对话框):JDBC 驱动安装/卸载 + 数据库显隐。从 DatabaseConfigDialog 迁移。
 import { ref, onMounted } from "vue";
 import { ElMessage } from "element-plus";
-import { useUiStore } from "@/stores/ui";
 import { useTauri } from "@/composables/useTauri";
 import { useDatabaseStore } from "@/stores/database";
 import { pickDriverJar } from "@/composables/useFileDialog";
 import type { DatabaseInfo } from "@/types/schema";
 
-const ui = useUiStore();
 const tauri = useTauri();
 const dbStore = useDatabaseStore();
 
@@ -63,7 +61,7 @@ async function onUninstall(d: DatabaseInfo) {
 </script>
 
 <template>
-  <el-dialog draggable v-model="ui.databaseConfigVisible" title="驱动管理" width="680px" :close-on-click-modal="false">
+  <div>
     <el-table v-loading="loading" :data="dbStore.databases" size="small">
       <el-table-column label="数据库" prop="label" min-width="120" />
       <el-table-column label="类型" width="80">
@@ -105,5 +103,5 @@ async function onUninstall(d: DatabaseInfo) {
     <div class="mt-12 text-12 text-gray-400">
       native(MySQL/PostgreSQL)与 H2 驱动内置;Oracle 等外置 JDBC 库需安装驱动 jar。未装驱动的外置库不出现在下拉中。
     </div>
-  </el-dialog>
+  </div>
 </template>

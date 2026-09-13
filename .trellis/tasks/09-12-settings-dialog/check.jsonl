@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/app/frontend/type-safety.md", "reason": "TS strict 与类型对齐检查(SettingsPanel 类型导出)"}
+{"file": ".trellis/tasks/09-12-settings-dialog/prd.md", "reason": "验收标准 AC1-AC7 逐条核对"}
+{"file": ".trellis/tasks/09-12-settings-dialog/design.md", "reason": "对照设计验证清理完整性与 anyDialogOpen 覆盖"}

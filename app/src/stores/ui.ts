@@ -4,6 +4,9 @@ import { computed, ref } from "vue";
 
 export type ExportKind = "ddl" | "diff" | "strconst";
 
+/** 设置对话框分类(与 SettingsDialog 左侧导航对应)。 */
+export type SettingsPanel = "settings" | "datasource" | "biztype" | "strategy" | "driver";
+
 export const useUiStore = defineStore("ui", () => {
   // 导出弹窗(三个独立)
   const ddlExportVisible = ref(false);
@@ -16,10 +19,12 @@ export const useUiStore = defineStore("ui", () => {
     else strConstExportVisible.value = true;
   }
 
-  // 数据库配置弹窗(驱动安装/显隐)
-  const databaseConfigVisible = ref(false);
-  function openDatabaseConfig() {
-    databaseConfigVisible.value = true;
+  // 设置对话框(项目设置/数据源/业务类型/自动生成策略/驱动管理;Cmd+, / 菜单打开)
+  const settingsVisible = ref(false);
+  const settingsPanel = ref<SettingsPanel>("settings");
+  function openSettings(panel: SettingsPanel = "settings") {
+    settingsPanel.value = panel;
+    settingsVisible.value = true;
   }
 
   // 导入向导弹窗
@@ -61,7 +66,7 @@ export const useUiStore = defineStore("ui", () => {
       ddlExportVisible.value ||
       diffExportVisible.value ||
       strConstExportVisible.value ||
-      databaseConfigVisible.value ||
+      settingsVisible.value ||
       importVisible.value ||
       recentVisible.value ||
       newProjectVisible.value ||
@@ -73,8 +78,9 @@ export const useUiStore = defineStore("ui", () => {
     diffExportVisible,
     strConstExportVisible,
     openExport,
-    databaseConfigVisible,
-    openDatabaseConfig,
+    settingsVisible,
+    settingsPanel,
+    openSettings,
     importVisible,
     openImport,
     recentVisible,

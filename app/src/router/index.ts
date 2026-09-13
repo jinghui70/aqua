@@ -34,11 +34,6 @@ const routes = [
     name: "dataset",
     component: () => import("@/views/DatasetManage.vue"),
   },
-  {
-    path: "/config",
-    name: "config",
-    component: () => import("@/views/ConfigCenter.vue"),
-  },
 ];
 
 export const router = createRouter({

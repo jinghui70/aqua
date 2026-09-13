@@ -57,17 +57,13 @@ const { doSave, handle } = useMenuActions();
     <el-divider direction="vertical" />
 
     <!-- 管理组 -->
-    <el-button size="default" @click="router.push('/config')">
+    <el-button size="default" @click="ui.openSettings()">
       <span class="i-mdi-cog w-16 h-16 mr-4" />
       配置
     </el-button>
     <el-button size="default" @click="router.push('/dataset')">
       <span class="i-mdi-table w-16 h-16 mr-4" />
       数据集
-    </el-button>
-    <el-button size="default" @click="ui.openDatabaseConfig">
-      <span class="i-mdi-database-cog w-16 h-16 mr-4" />
-      驱动管理
     </el-button>
 
     <el-divider direction="vertical" />

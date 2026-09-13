@@ -13,7 +13,7 @@ import AppToolbar from "./AppToolbar.vue";
 import DdlExportDialog from "@/components/DdlExportDialog.vue";
 import DiffExportDialog from "@/components/DiffExportDialog.vue";
 import StrConstExportDialog from "@/components/StrConstExportDialog.vue";
-import DatabaseConfigDialog from "@/components/DatabaseConfigDialog.vue";
+import SettingsDialog from "@/components/SettingsDialog.vue";
 import ImportWizard from "@/components/ImportWizard.vue";
 import RecentProjectsDialog from "@/components/RecentProjectsDialog.vue";
 import NewProjectDialog from "@/components/NewProjectDialog.vue";
@@ -22,8 +22,8 @@ import ExitConfirmDialog from "@/components/ExitConfirmDialog.vue";
 const store = useProjectStore();
 const route = useRoute();
 const router = useRouter();
-// 配置/数据集页覆盖工作区(全屏,不显示分组树+TabWorkspace)
-const isFullPage = computed(() => route.path === "/config" || route.path === "/dataset");
+// 数据集页覆盖工作区(全屏,不显示分组树+TabWorkspace);配置改为设置对话框,不再是全屏页
+const isFullPage = computed(() => route.path === "/dataset");
 // 无项目 -> /welcome;有项目且在 /welcome -> /(工作区)
 watch(
   () => store.currentProject,
@@ -59,7 +59,7 @@ watch(
     <DdlExportDialog />
     <DiffExportDialog />
     <StrConstExportDialog />
-    <DatabaseConfigDialog />
+    <SettingsDialog />
     <ImportWizard />
     <RecentProjectsDialog />
     <NewProjectDialog />

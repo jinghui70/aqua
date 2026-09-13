@@ -17,11 +17,16 @@ use tauri::{Emitter, Manager};
 
 /// 构建原生窗口菜单(§6.1),菜单事件通过 "menu" event 发到前端。
 fn build_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<tauri::menu::Menu<R>> {
-    // 保存单独构造:带 Cmd/Ctrl+S 快捷键(SubmenuBuilder.text 无 accelerator 变体)。
-    // 触发后 emit menu("file.save") → useMenuActions.handle,与点工具栏保存按钮同一链路。
+    // 保存/设置单独构造:带 accelerator(SubmenuBuilder.text 无 accelerator 变体)。
+    // 触发后 emit menu("file.save"/"app.settings") → useMenuActions.handle,与工具栏同一链路。
     let save = MenuItemBuilder::new("保存")
         .id("file.save")
         .accelerator("CmdOrCtrl+S")
+        .build(app)?;
+    // 设置对话框入口(macOS 标准 Cmd+,;Tauri 2 无 preferences 预置项,自建 MenuItem)
+    let settings = MenuItemBuilder::new("设置...")
+        .id("app.settings")
+        .accelerator("CmdOrCtrl+Comma")
         .build(app)?;
     let file_builder = SubmenuBuilder::new(app, "文件")
         .text("file.new", "新建项目")
@@ -30,9 +35,9 @@ fn build_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<tau
         .item(&save)
         .text("file.saveAs", "另存为")
         .text("file.close", "关闭项目");
-    // 非 macOS: 文件菜单末尾加退出(macOS 的退出在应用菜单)
+    // 非 macOS: 文件菜单末尾加设置 + 退出(macOS 的设置在应用菜单、退出在应用菜单)
     #[cfg(not(target_os = "macos"))]
-    let file_builder = file_builder.separator().quit();
+    let file_builder = file_builder.separator().item(&settings).separator().quit();
     let file = file_builder.build()?;
     let help = SubmenuBuilder::new(app, "帮助")
         .text("help.guide", "用户指南")
@@ -41,12 +46,13 @@ fn build_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<tau
 
     let builder = MenuBuilder::new(app);
 
-    // macOS: 第一个 submenu 是应用菜单(显示 app 名),需含 about/quit,
+    // macOS: 第一个 submenu 是应用菜单(显示 app 名),需含 about/settings/quit,
     // 否则业务菜单首项会被当成应用菜单与 app 名重叠。
     #[cfg(target_os = "macos")]
     let builder = {
         let app_menu = SubmenuBuilder::new(app, "aqua")
             .about(None)
+            .item(&settings)
             .separator()
             .quit()
             .build()?;
