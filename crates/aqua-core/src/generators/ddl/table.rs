@@ -76,7 +76,11 @@ fn field_definition(field: &Field, dialect: &Dialect) -> String {
     };
 
     let default = if let Some(ref val) = field.default_value {
-        format!(" DEFAULT {}", val) // 已转义,直接用
+        if val.trim().is_empty() {
+            String::new() // 空字符串视为无默认值
+        } else {
+            format!(" DEFAULT {}", val) // 已转义,直接用
+        }
     } else {
         String::new()
     };

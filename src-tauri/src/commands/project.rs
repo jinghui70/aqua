@@ -62,6 +62,27 @@ pub async fn project_save(path: String, mut project: Project) -> Result<(), Stri
     // 保存时自动升级版本为当前 app 版本
     project.version = AQUA_VERSION.to_string();
 
+    // 归一化:空字符串 defaultValue/comment 转 None
+    for table in &mut project.tables {
+        for field in &mut table.fields {
+            if let Some(ref val) = field.default_value {
+                if val.trim().is_empty() {
+                    field.default_value = None;
+                }
+            }
+            if let Some(ref val) = field.comment {
+                if val.trim().is_empty() {
+                    field.comment = None;
+                }
+            }
+        }
+        if let Some(ref val) = table.comment {
+            if val.trim().is_empty() {
+                table.comment = None;
+            }
+        }
+    }
+
     let json =
         serde_json::to_string_pretty(&project).map_err(|e| format!("JSON 序列化失败: {}", e))?;
 

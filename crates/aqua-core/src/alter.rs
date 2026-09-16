@@ -124,7 +124,11 @@ fn column_def(field: &Field, dialect: &Dialect) -> String {
         ""
     };
     let default = if let Some(ref v) = field.default_value {
-        format!(" DEFAULT {}", v)
+        if v.trim().is_empty() {
+            String::new() // 空字符串视为无默认值
+        } else {
+            format!(" DEFAULT {}", v)
+        }
     } else {
         String::new()
     };
