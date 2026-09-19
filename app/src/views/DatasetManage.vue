@@ -80,8 +80,13 @@ async function confirmIO() {
   if (!store.currentProject || !selectedPath.value) return;
   const source = ioSources.value.find((s) => s.sourceName === ioSource.value);
   if (!source) return;
+  // 导入导出都必须选表
+  if (!ioTables.value.length) {
+    ElMessage.warning("请选择表");
+    return;
+  }
   const { sourceName: _, ...config } = source;
-  const tables = ioTables.value.length ? ioTables.value : undefined;
+  const tables = ioTables.value;
   try {
     if (ioMode.value === "import") {
       const result = await tauri.datasetImport(selectedPath.value, store.currentProject, config, tables);
@@ -306,33 +311,37 @@ loadDatasets();
         <el-button size="small" style="margin-left: 8px" @click="cancelEdit">取消</el-button>
       </template>
       <div class="flex-1" />
-      <el-checkbox v-model="hideEmpty">隐藏无数据表</el-checkbox>
     </div>
 
     <!-- 主体:表树 + 数据网格(splitter 可拖动) -->
     <el-splitter class="flex-1 min-h-0">
       <el-splitter-panel :size="240" :min="180" :max="500">
-        <div class="h-full overflow-y-auto p-4">
-          <el-tree
-            :data="treeData"
-            :props="{ children: 'children', label: 'label' }"
-            node-key="id"
-            default-expand-all
-            :expand-on-click-node="false"
-            @node-click="onNodeClick"
-          >
-            <template #default="{ data }">
-              <div class="flex items-center w-full overflow-hidden">
-                <span
-                  class="flex items-center gap-4 min-w-0 flex-1"
-                  :class="data.type === 'table' ? 'text-13' : 'font-bold text-13'"
-                >
-                  <span class="flex-shrink-0">{{ data.type === "group" ? "📁" : "📄" }}</span>
-                  <span class="truncate min-w-0">{{ data.label }}</span>
-                </span>
-              </div>
-            </template>
-          </el-tree>
+        <div class="h-full flex flex-col overflow-hidden">
+          <div class="flex items-center px-4 pt-4 pb-2 flex-shrink-0">
+            <el-checkbox v-model="hideEmpty">隐藏无数据表</el-checkbox>
+          </div>
+          <div class="flex-1 overflow-y-auto px-4 pb-4">
+            <el-tree
+              :data="treeData"
+              :props="{ children: 'children', label: 'label' }"
+              node-key="id"
+              default-expand-all
+              :expand-on-click-node="false"
+              @node-click="onNodeClick"
+            >
+              <template #default="{ data }">
+                <div class="flex items-center w-full overflow-hidden">
+                  <span
+                    class="flex items-center gap-4 min-w-0 flex-1"
+                    :class="data.type === 'table' ? 'text-13' : 'font-bold text-13'"
+                  >
+                    <span class="flex-shrink-0">{{ data.type === "group" ? "📁" : "📄" }}</span>
+                    <span class="truncate min-w-0">{{ data.label }}</span>
+                  </span>
+                </div>
+              </template>
+            </el-tree>
+          </div>
         </div>
       </el-splitter-panel>
 
@@ -406,7 +415,6 @@ loadDatasets();
           <el-button size="small" @click="ioTableSelectVisible = true">
             选表{{ ioTables.length ? ` (${ioTables.length})` : "" }}
           </el-button>
-          <span v-if="!ioTables.length" class="text-12 text-gray-400 ml-8">未选则全部表</span>
         </el-form-item>
       </el-form>
       <div v-if="ioMode === 'export'" class="text-12 text-red-400 mb-8">

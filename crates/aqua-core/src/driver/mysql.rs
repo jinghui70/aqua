@@ -218,10 +218,12 @@ impl Driver for MysqlDriver {
             .get_conn()
             .await
             .map_err(|e| DriverError::ConnectionFailed(e.to_string()))?;
-        conn.query_drop(sql)
+        let result = conn
+            .query_iter(sql)
             .await
             .map_err(|e| DriverError::QueryFailed(e.to_string()))?;
-        Ok(0)
+        let affected = result.affected_rows() as usize;
+        Ok(affected)
     }
 }
 
