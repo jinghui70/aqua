@@ -127,6 +127,8 @@ function applyRefTarget() {
   if (!draft.value.code) draft.value.code = target.code;
   if (!draft.value.prop) draft.value.prop = target.prop;
   if (!draft.value.name) draft.value.name = target.name;
+  // 对齐目标类型时清理不适用属性(§3.1),避免旧类型 length/precision 残留
+  cleanupDataType(draft.value, target.dataType);
   draft.value.dataType = target.dataType;
   draft.value.length = target.length;
 }
@@ -196,6 +198,10 @@ function onBizTypeChange(bizType: string | undefined) {
     ensureEnumDefaults();
     draft.value.bizTypeData = undefined;
     draft.value.dataType = DataType.Varchar;
+    // 强制 VARCHAR 时清理精度并补默认长度(原类型可能无 length)
+    draft.value.precision = undefined;
+    draft.value.scale = undefined;
+    if (draft.value.length == null) draft.value.length = 32;
   } else if (bizType) {
     draft.value.enum = undefined;
     const def = bizTypes.value.find((b) => b.bizType === bizType);
@@ -206,12 +212,32 @@ function onBizTypeChange(bizType: string | undefined) {
       if (isFirstSelection || !bizTypeSupports(def, dt)) {
         dt = def.supportedDataTypes[0]?.dataType ?? dt;
         draft.value.dataType = dt;
+        // dataType 改变时清理不适用属性(§3.1):如 VARCHAR 遗留 length 切到 TINYINT 必须清除
+        cleanupDataType(draft.value, dt);
       }
       applyDefaults(draft.value, def, dt);
       draft.value.bizTypeData = initBizTypeData(def) as Field["bizTypeData"];
     }
   } else {
     draft.value.enum = undefined;
+  }
+}
+
+// 清理不适用属性(§3.1): VARCHAR 仅 length,DECIMAL 仅 precision/scale,其余无
+function cleanupDataType(f: Field, dt: DataType) {
+  switch (dt) {
+    case DataType.Varchar:
+      f.precision = undefined;
+      f.scale = undefined;
+      break;
+    case DataType.Decimal:
+      f.length = undefined;
+      break;
+    default:
+      f.length = undefined;
+      f.precision = undefined;
+      f.scale = undefined;
+      break;
   }
 }
 
@@ -226,20 +252,7 @@ const showDataTypeSelect = computed(
 // 弹窗内切 dataType: 清理不适用属性(§3.1) + 按 bizType 填默认长度精度
 function onDataTypeChange() {
   if (!draft.value) return;
-  switch (draft.value.dataType) {
-    case DataType.Varchar:
-      draft.value.precision = undefined;
-      draft.value.scale = undefined;
-      break;
-    case DataType.Decimal:
-      draft.value.length = undefined;
-      break;
-    default:
-      draft.value.length = undefined;
-      draft.value.precision = undefined;
-      draft.value.scale = undefined;
-      break;
-  }
+  cleanupDataType(draft.value, draft.value.dataType);
   const def = currentBizType.value;
   if (def) applyDefaults(draft.value, def, draft.value.dataType);
 }

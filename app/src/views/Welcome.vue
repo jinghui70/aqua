@@ -62,7 +62,7 @@ function basename(path: string): string {
       <!-- 标题 -->
       <div class="text-center mb-40">
         <div class="text-32 font-bold text-gray-700">Aqua</div>
-        <div class="text-14 text-gray-400 mt-8">JSON-SSOT 数据库结构设计</div>
+        <div class="text-14 text-gray-400 mt-8">数据库结构设计</div>
       </div>
 
       <!-- 操作卡片 -->

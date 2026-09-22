@@ -55,17 +55,17 @@ export function useMenuActions() {
             "5. 导出菜单生成 DDL / diff / StrConst,Java 页生成实体类",
           ].join("<br/>"),
           "用户指南",
-          { confirmButtonText: "确定", dangerouslyUseHTMLString: true }
+          { confirmButtonText: "确定", dangerouslyUseHTMLString: true },
         );
         break;
       case "help.about":
         ElMessageBox.alert(
-          `aqua v2 — JSON-SSOT 数据库结构管理工具<br/><br/>版本: ${APP_VERSION}`,
+          `Aqua 数据库结构管理工具<br/><br/>版本: ${APP_VERSION}`,
           "关于",
           {
             confirmButtonText: "确定",
             dangerouslyUseHTMLString: true,
-          }
+          },
         );
         break;
       default:
